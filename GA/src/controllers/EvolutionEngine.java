@@ -155,8 +155,6 @@ public class EvolutionEngine {
         // --- Fase 1: Inizializzazione ---
         List<Individual> oldGeneration = firstGeneration();
 
-        // Calcola la fitness iniziale per l'intera popolazione.
-
         // Esegui la valutazione della fitness su core CPU multipli
         oldGeneration.parallelStream().forEach(ind -> {
             // La lambda expression (ind -> ...) viene eseguita in parallelo
@@ -205,7 +203,8 @@ public class EvolutionEngine {
                     // Ritorna l'oggetto creato
                     return child;
                 })
-                // La funzione collect() si occupa di raccogliere in modo thread-safe tutti i risultati
+                // si potrebbe usare la funzione collect() che si occupa di raccogliere in modo thread-safe tutti i risultati
+                // anche toList() offre le stesse funzioni thread safe.
                 .toList(); //genera lista immutabile
 
             // Aggiungi tutti i figli generati in parallelo alla newGeneration

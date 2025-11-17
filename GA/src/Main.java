@@ -100,3 +100,18 @@ public class Main {
         System.out.println(bestSolution);
     }
 }
+
+// RENDERE LA DOMAINFACTORY UNA SINGLETON
+// aggiungere quindi l'attributo di tipo "singletonClass" e un check (if) per ritornare sempre lo stessa
+// istanza.
+/**
+ * singletonClass singleton = null
+ * ...
+ * if (singleton == null) {
+ *     return new singletonClass;
+ * } else {
+ *     return singleton;
+ * }
+ * */
+
+// stampare il risultato in un file di testo, andando a chiamare il file : "Individual_17-11-2025_11:56:08"
