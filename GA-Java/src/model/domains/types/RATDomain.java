@@ -7,11 +7,12 @@ import model.domains.Domain;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
 
+// RAT -> Right Angled Triangle
 /**
  * Implementa l'interfaccia Domain definendo un'area di vincolo di forma triangolare rettangola.
  * * Il triangolo è posizionato nel primo quadrante con l'angolo retto all'origine (0, 0).
  */
-public class RightAngledTriangle implements Domain {
+public class RATDomain implements Domain {
 
     // ------------------- ATTRIBUTI -------------------
 
@@ -29,7 +30,7 @@ public class RightAngledTriangle implements Domain {
      * @param height L'altezza (cateto Y).
      * @throws IllegalArgumentException Se base o altezza non sono positivi.
      */
-    public RightAngledTriangle(double base, double height) {
+    public RATDomain(double base, double height) {
 
         if (base <= 0 || height <= 0) {
             throw new IllegalArgumentException("Base and height must be strictly positive (> 0).");

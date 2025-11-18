@@ -51,7 +51,7 @@ public class DomainFactory {
             case ELLIPSE ->
                 new EllipseDomain(params.get("semi-width"), params.get("semi-height"));
             case RIGHT_ANGLED_TRIANGLE ->
-                new RightAngledTriangle(params.get("base"), params.get("height"));
+                new RATDomain(params.get("base"), params.get("height"));
             case FRAME ->
                 new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outherHeight"));
             case ANNULUS ->

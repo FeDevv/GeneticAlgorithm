@@ -1,4 +1,4 @@
-package view;
+package org.example.view;
 
 public class EvolutionConsoleView {
     // --- MESSAGGIO DI INIZIALIZZAZIONE ---
@@ -15,7 +15,9 @@ public class EvolutionConsoleView {
     public void displayRetryWarning(int currentAttempt, int maxAttempts, double lastTimeSecs) {
         System.out.println("⚠️ WARNING: Invalid solution found.");
         System.out.printf("Attempt #%d of %d\n", currentAttempt, maxAttempts);
-        System.out.printf("Estimated time for next attempt: ~%.2f seconds.\n", lastTimeSecs);
+        if (currentAttempt!=maxAttempts) {
+            System.out.printf("Estimated time for next attempt: ~%.2f seconds.\n", lastTimeSecs);
+        }
     }
 
     // --- MESSAGGI DI RISULTATO ---
@@ -26,11 +28,11 @@ public class EvolutionConsoleView {
     }
 
     /* Teoricamente lascio la visualizzazione del risultato ad altre classi, non al controller.
-    *   public static void displayFinalSolution(double fitness, String details) {
-    *       System.out.printf("Fitness Finale: %.6f\n", fitness);
-    *       System.out.println("Dettagli Soluzione: " + details);
-    *   }
-    */
+     *   public static void displayFinalSolution(double fitness, String details) {
+     *       System.out.printf("Fitness Finale: %.6f\n", fitness);
+     *       System.out.println("Dettagli Soluzione: " + details);
+     *   }
+     */
 
 
     // --- MESSAGGI DI ERRORE ---
