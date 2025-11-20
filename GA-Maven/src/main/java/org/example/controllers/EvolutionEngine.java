@@ -8,6 +8,7 @@ import org.example.service.Crossover;
 import org.example.service.FitnessCalculator;
 import org.example.service.Mutation;
 import org.example.service.Selection;
+import org.example.utils.GeneticConfig;
 import org.example.utils.RandomUtils;
 import org.example.view.EvolutionConsoleView;
 
@@ -25,32 +26,6 @@ import java.util.stream.IntStream;
  * un problema di ottimizzazione vincolato a un {@code Domain} geometrico.
  */
 public class EvolutionEngine {
-
-    // ==================================================================================
-    // ⚙️ CONFIGURAZIONE E ATTRIBUTI IMMUTABILI
-    // ==================================================================================
-
-    // Configurazione dei Parametri AG, fissi per l'esecuzione.
-    //Numero massimo di generazioni da eseguire.
-    private final int GENERATIONS = 800;
-
-    // Dimensione fissa di ogni popolazione in ogni generazione.
-    private final int POPULATION_SIZE = 100;
-
-    // Numero di individui selezionati per il torneo durante la selezione.
-    private final int TOURNAMENT_SIZE = 3;
-
-    // Percentuale della popolazione (gli individui migliori) da preservare tramite elitismo.
-    private final double ELITES_PERCENTAGE = 0.05;
-
-    // Probabilità di eseguire l'operatore di Crossover su una coppia di genitori.
-    private final double CROSSOVER_PROB = 0.9;
-
-    // Forza iniziale dell'operatore di Mutazione (utilizzata, ad esempio, per ricottura simulata o riduzione progressiva).
-    private final double INITIAL_MUTATION_STRENGTH = 1.0;
-
-    // Probabilità di eseguire l'operatore di Mutazione su un gene (Point) di un nuovo individuo.
-    private final double MUTATION_PROB = 0.02;
 
     // Il vincolo spaziale del problema. Definisce l'area valida per i punti degli individui.
     private final Domain domain;
@@ -107,9 +82,9 @@ public class EvolutionEngine {
         // Inizializzazione dei servizi: sono istanze costanti (Singleton) per tutta l'esecuzione.
         // I servizi sono configurati con i parametri AG e le dipendenze necessarie.
         this.fitnessCalculator = new FitnessCalculator(domain, pointRadius);
-        this.gammaRays = new Mutation(MUTATION_PROB, INITIAL_MUTATION_STRENGTH, domain, GENERATIONS);
-        this.mixer = new Crossover(CROSSOVER_PROB);
-        this.selector = new Selection(TOURNAMENT_SIZE, ELITES_PERCENTAGE);
+        this.gammaRays = new Mutation(GeneticConfig.MUTATION_PROB, GeneticConfig.INITIAL_MUTATION_STRENGTH, domain, GeneticConfig.GENERATIONS);
+        this.mixer = new Crossover(GeneticConfig.CROSSOVER_PROB);
+        this.selector = new Selection(GeneticConfig.TOURNAMENT_SIZE, GeneticConfig.ELITES_PERCENTAGE);
     }
 
     // ==================================================================================
@@ -133,8 +108,8 @@ public class EvolutionEngine {
      * Crea la prima generazione di individui (popolazione iniziale) in modo casuale.
      */
     private List<Individual> firstGeneration() {
-        List<Individual> firstGen = new ArrayList<>(POPULATION_SIZE);
-        for (int i = 0; i < POPULATION_SIZE; i++) {
+        List<Individual> firstGen = new ArrayList<>(GeneticConfig.POPULATION_SIZE);
+        for (int i = 0; i < GeneticConfig.POPULATION_SIZE; i++) {
             firstGen.add(buildIndividual());
         }
         return firstGen;
@@ -165,17 +140,17 @@ public class EvolutionEngine {
         solution = currentBestSolution(oldGeneration, null);
 
         // --- Fase 2: Ciclo di Evoluzione ---
-        for (int i = 0; i < GENERATIONS; i++) {
+        for (int i = 0; i < GeneticConfig.GENERATIONS; i++) {
 
             final List<Individual> currentGeneration = oldGeneration;
-            List<Individual> newGeneration = new ArrayList<>(POPULATION_SIZE);
+            List<Individual> newGeneration = new ArrayList<>(GeneticConfig.POPULATION_SIZE);
 
             // 1. Elitismo: seleziona i migliori della generazione precedente.
             List<Individual> elites = selector.selectElites(oldGeneration);
             newGeneration.addAll(elites);
 
             // 2. Crossover e Mutazione: riempie il resto della popolazione.
-            int childrenToGenerate = POPULATION_SIZE - elites.size();
+            int childrenToGenerate = GeneticConfig.POPULATION_SIZE - elites.size();
 
             // Genera i figli in parallelo e raccoglili in una lista temporanea
             final int currentGenerationAge = i;
@@ -228,7 +203,7 @@ public class EvolutionEngine {
         double lastExecutionTimeMs;
         double totalExecutionTimeMs = 0;
 
-        view.displayStartMessage(GENERATIONS, POPULATION_SIZE);
+        view.displayStartMessage(GeneticConfig.GENERATIONS, GeneticConfig.POPULATION_SIZE);
 
         do {
             Instant startTime = Instant.now();
