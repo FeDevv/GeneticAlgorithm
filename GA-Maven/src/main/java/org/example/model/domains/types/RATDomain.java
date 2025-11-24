@@ -61,17 +61,13 @@ public class RATDomain implements Domain {
         // L'equazione della retta è y = H - (H/B) * x.
         // La condizione d'inclusione è: y <= H - (H/B) * x
 
-        boolean isInsideHypotenuse = (y <= this.height - (this.height / this.base) * x);
-
         // Il punto è fuori se non soddisfa la condizione dell'ipotenusa.
         // NOTA: Poiché l'intero dominio è nel primo quadrante, usiamo
         // la Bounding Box per la prima parte del controllo.
 
-        // Per mantenere la logica !(isPointInside):
-        // isPointInside = (x >= 0) && (y >= 0) && (y <= H - (H/B)x)
-
-        // La nostra implementazione semplificata:
-        return !isInsideHypotenuse;
+        // isPointOutside = (x < 0) && (y < 0) && (y > H - (H/B)x)
+        // le prime due condizioni sono gia controllate, manca la terza
+        return (y > this.height - (this.height / this.base) * x);
     }
 
     /**

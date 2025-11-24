@@ -3,6 +3,10 @@ package org.example.utils;
 import org.example.model.Point;
 
 public class PenaltyHelper {
+
+    private PenaltyHelper() {
+        throw new IllegalStateException("Utility class");
+    }
     /**
      * Calcola la penalità di overlap tra due punti, se si sovrappongono.
      * @param point1 Primo punto.

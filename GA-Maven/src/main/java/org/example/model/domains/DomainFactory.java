@@ -56,12 +56,9 @@ public class DomainFactory {
                     new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outherHeight"));
             case ANNULUS ->
                     new AnnulusDomain(params.get("innerRadius"), params.get("outerRadius"));
-            /*
-            default ->
-                // Meccanismo di sicurezza: Cattura eventuali nuovi tipi non ancora gestiti nel factory.
-                    throw new IllegalArgumentException("Domain type not supported " + type);
-
-            */
+            //default ->
+            //     Meccanismo di sicurezza: Cattura eventuali nuovi tipi non ancora gestiti nel factory.
+            //        throw new IllegalArgumentException("Domain type not supported " + type);
         };
 
     }

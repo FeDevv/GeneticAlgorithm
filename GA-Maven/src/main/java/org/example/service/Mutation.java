@@ -75,8 +75,8 @@ public class Mutation {
                 // * Scelta Implementativa: Strategia ibrida per l'efficienza.
                 // Previene la generazione di troppi individui palesemente fuori dominio,
                 // riducendo il lavoro per la FitnessCalculator.
-                double finalX = clamp(newX, minX, maxX);
-                double finalY = clamp(newY, minY, maxY);
+                double finalX = Math.clamp(newX, minX, maxX);
+                double finalY = Math.clamp(newY, minY, maxY);
 
                 // Crea un nuovo oggetto Point (necessario perché Point è immutabile).
                 Point newPoint = new Point(finalX, finalY, radius);
@@ -91,13 +91,6 @@ public class Mutation {
     }
 
     // ------------------- METODI UTILITY -------------------
-
-    /**
-     * Limita un valore 'value' all'interno di un intervallo chiuso [min, max].
-     */
-    private double clamp(double value, double min, double max) {
-        return Math.max(min, Math.min(max, value));
-    }
 
     private double calculateAdaptiveStrength(int g) {
         // Per evitare divisione per zero se g=0, usiamo (g + 1).

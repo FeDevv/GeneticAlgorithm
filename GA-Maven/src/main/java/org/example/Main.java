@@ -13,8 +13,11 @@ import java.util.Optional;
 import java.util.Scanner;
 
 public class Main {
+
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
+
         int individualSize = 0;
         double pointRadius = 0.0;
 
@@ -47,8 +50,7 @@ public class Main {
                 // **AGGIUNTA:** Controlla se il valore è positivo
                 if (individualSize <= 0) {
                     System.out.println("❌ Error: The genome length must be a positive integer (> 0). Retry.");
-                    // Il loop esterno 'while (individualSize <= 0)' si ripete
-                }
+                } // Il loop esterno 'while (individualSize <= 0)' si ripete
 
             } else {
                 System.out.println("❌ Invalid Input. Please enter a positive integer. Retry.");
@@ -71,7 +73,7 @@ public class Main {
                 if (pointRadius <= 0) {
                     System.out.println("❌ Error: The radius has to be strictly greater than 0.");
                 } else if (pointRadius > maxRadiusLimit) {
-                    System.out.printf("❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).\n", pointRadius, maxRadiusLimit);
+                    System.out.printf("❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).%n", pointRadius, maxRadiusLimit);
                 }
 
             } else {
@@ -79,7 +81,7 @@ public class Main {
                 scanner.next(); // Scarta l'input non valido
             }
         }
-        System.out.printf("\n✅ Valid radius entered: %.2f\n", pointRadius);
+        System.out.printf("\n✅ Valid radius entered: %.2f%n", pointRadius);
 
         scanner.close(); // Chiude lo scanner dopo aver finito di leggere l'input
 
@@ -98,7 +100,7 @@ public class Main {
 
         // Output dei Risultati
 
-        System.out.printf("Best solution's Fitness: %.6f\n", bestSolution.getFitness());
+        System.out.printf("Best solution's Fitness: %.6f%n", bestSolution.getFitness());
         System.out.println(bestSolution);
     }
 }
@@ -124,3 +126,5 @@ public class Main {
  *     return singleton;
  * }
  * */
+
+// usare effettivamente %n al posto di \n

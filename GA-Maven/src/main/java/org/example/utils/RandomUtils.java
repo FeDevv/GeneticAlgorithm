@@ -11,6 +11,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class RandomUtils {
 
+    private RandomUtils() {
+        throw new IllegalStateException("Utility class");
+    }
+
     // ------------------- METODI DI UTILITÀ -------------------
 
     /**
