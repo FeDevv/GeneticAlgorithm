@@ -61,8 +61,8 @@ public class OverlapSpatial implements OverlapStrategy {
         double penalty = 0.0;
 
         // Fase 2: Calcolo delle collisioni usando la griglia
-        for (Point p_i : chromosomes) {
-            penalty += calculatePenaltyForPoint(p_i, grid, overlapWeight, distanceCalculator);
+        for (Point referencePoint : chromosomes) {
+            penalty += calculatePenaltyForPoint(referencePoint, grid, overlapWeight, distanceCalculator);
         }
 
         return penalty;
@@ -88,14 +88,14 @@ public class OverlapSpatial implements OverlapStrategy {
 
     // Calcola le penalità per un singolo punto ispezionando solo le 9 celle limitrofe (3x3).
     private double calculatePenaltyForPoint(
-            Point p_i,
+            Point referencePoint,
             Map<Cell, List<Point>> grid,
             double overlapWeight,
             DistanceCalculator distCalc
     ) {
         double localPenalty = 0.0;
-        int iCell = getCellIndex(p_i.getX());
-        int jCell = getCellIndex(p_i.getY());
+        int iCell = getCellIndex(referencePoint.getX());
+        int jCell = getCellIndex(referencePoint.getY());
 
         for (int di = -1; di <= 1; di++) {
             for (int dj = -1; dj <= 1; dj++) {
@@ -103,7 +103,7 @@ public class OverlapSpatial implements OverlapStrategy {
 
                 if (neighbors == null) continue;
 
-                localPenalty += processNeighbors(p_i, neighbors, overlapWeight, distCalc);
+                localPenalty += processNeighbors(referencePoint, neighbors, overlapWeight, distCalc);
             }
         }
         return localPenalty;
@@ -111,16 +111,16 @@ public class OverlapSpatial implements OverlapStrategy {
 
     // Itera sui vicini trovati nella cella specifica e applica la penalità se necessario.
     private double processNeighbors(
-            Point p_i,
+            Point referencePoint,
             List<Point> neighbors,
             double overlapWeight,
             DistanceCalculator distCalc
     ) {
         double penalty = 0.0;
-        for (Point p_j : neighbors) {
-            if (shouldSkipPair(p_i, p_j)) continue;
+        for (Point neighborPoint : neighbors) {
+            if (shouldSkipPair(referencePoint, neighborPoint)) continue;
 
-            penalty += PenaltyHelper.calculatePairPenalty(p_i, p_j, overlapWeight, distCalc);
+            penalty += PenaltyHelper.calculatePairPenalty(referencePoint, neighborPoint, overlapWeight, distCalc);
         }
         return penalty;
     }
