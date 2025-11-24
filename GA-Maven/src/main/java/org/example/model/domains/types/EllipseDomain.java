@@ -66,8 +66,7 @@ public class EllipseDomain implements Domain {
         // Per velocizzare il calcolo, usiamo i quadrati (similmente al CircleDomain).
         double result = (x * x / (semiWidth * semiWidth)) + (y * y / (semiHeight * semiHeight));
 
-        // stiamo verificando !(isPointInside)
-        return !(result <= 1.0);
+        return (result > 1.0);
     }
 
     /**

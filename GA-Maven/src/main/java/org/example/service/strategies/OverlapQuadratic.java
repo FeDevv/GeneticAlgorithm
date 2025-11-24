@@ -34,7 +34,7 @@ public class OverlapQuadratic implements OverlapStrategy{
 
         // Ciclo esterno: Seleziona il punto di riferimento p_i. Complessità O(N).
         for (int i = 0; i < n; i++) {
-            Point p_i = chromosomes.get(i);
+            Point referencePoint = chromosomes.get(i);
 
             // Ciclo interno: Confronta p_i con tutti i punti successivi p_j. Complessità O(N).
             // L'indice j = i + 1 è cruciale per due motivi:
@@ -42,9 +42,9 @@ public class OverlapQuadratic implements OverlapStrategy{
             // 2. Garantisce che ogni coppia (i, j) sia contata ESATTAMENTE una volta,
             //    impedendo il doppio conteggio della penalità (i vs j e j vs i).
             for (int j = i + 1; j < n; j++) {
-                Point p_j = chromosomes.get(j);
+                Point neighborPoint = chromosomes.get(j);
 
-                penalty += PenaltyHelper.calculatePairPenalty(p_i, p_j, overlapWeight, distanceCalculator);
+                penalty += PenaltyHelper.calculatePairPenalty(referencePoint, neighborPoint, overlapWeight, distanceCalculator);
 
             }
         }

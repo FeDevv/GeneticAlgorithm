@@ -89,13 +89,11 @@ public class OverlapSpatial implements OverlapStrategy{
 
                     for (Point p_j : neighbors) {
 
-                        // 1. Evita l'auto-confronto (p_i con sé stesso).
-                        if (p_i == p_j) continue;
-
-                        // 2. Evita il doppio conteggio: Forziamo un ordinamento (p_i vs p_j, ma non p_j vs p_i).
+                        // Evita l'auto-confronto (p_i con sé stesso). [prima condizione]
+                        // Evita il doppio conteggio: Forziamo un ordinamento (p_i vs p_j, ma non p_j vs p_i).
                         // System.identityHashCode fornisce un ID univoco basato sull'oggetto, garantendo che l'ordine
                         // sia deterministico e che ogni coppia venga processata una sola volta.
-                        if (System.identityHashCode(p_i) > System.identityHashCode(p_j)) continue;
+                        if (p_i == p_j || System.identityHashCode(p_i) > System.identityHashCode(p_j)) continue;
 
                         penalty += PenaltyHelper.calculatePairPenalty(p_i, p_j, overlapWeight, distanceCalculator);
 

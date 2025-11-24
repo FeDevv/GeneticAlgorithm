@@ -56,7 +56,7 @@ public class CircleDomain implements Domain {
     public boolean isPointOutside(double x, double y) {
         // Equazione: x² + y² <= r²
         // sto facendo !(isPointInside)
-        return !((x * x + y * y) <= (radius * radius));
+        return (x * x + y * y) > (radius * radius);
     }
 
     /**

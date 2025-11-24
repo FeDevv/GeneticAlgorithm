@@ -131,10 +131,10 @@ public class EvolutionEngine {
         List<Individual> oldGeneration = firstGeneration();
 
         // Esegui la valutazione della fitness su core CPU multipli
-        oldGeneration.parallelStream().forEach(ind -> {
-            // La lambda expression (ind -> ...) viene eseguita in parallelo
-            ind.setFitness(fitnessCalculator.getFitness(ind));
-        });
+        // La lambda expression (ind -> ...) viene eseguita in parallelo
+        oldGeneration.parallelStream().forEach(ind ->
+            ind.setFitness(fitnessCalculator.getFitness(ind))
+        );
 
         // Stabilisce la prima soluzione globale migliore.
         solution = currentBestSolution(oldGeneration, null);
@@ -257,22 +257,22 @@ public class EvolutionEngine {
      */
     private Individual currentBestSolution(List<Individual> individuals, Individual currentSolution) {
         // Trova il migliore della generazione corrente (KING)
-        Individual KING = individuals.getFirst();
+        Individual king = individuals.getFirst();
 
         for (int i = 1; i < individuals.size(); i++) {
-            if (KING.getFitness() < individuals.get(i).getFitness()) {
-                KING = individuals.get(i);
+            if (king.getFitness() < individuals.get(i).getFitness()) {
+                king = individuals.get(i);
             }
         }
 
         // Confronta con il record globale precedente.
         if (currentSolution == null) {
-            return KING;
+            return king;
         }
 
         // Restituisce il migliore tra il KING e il record storico.
-        if (KING.getFitness() > currentSolution.getFitness()) {
-            return KING;
+        if (king.getFitness() > currentSolution.getFitness()) {
+            return king;
         } else {
             return currentSolution;
         }

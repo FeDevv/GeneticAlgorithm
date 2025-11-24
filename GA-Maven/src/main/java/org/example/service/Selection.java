@@ -75,7 +75,7 @@ public class Selection {
      */
     public Individual tournament(List<Individual> oldPopulation) {
         // Estrae N indici univoci dalla popolazione
-        List<Integer> indices = RandomUtils.UniqueIndices(tournamentSize, oldPopulation.size());
+        List<Integer> indices = RandomUtils.uniqueIndices(tournamentSize, oldPopulation.size());
         List<Individual> participants = new ArrayList<>();
 
         for (int i : indices) {

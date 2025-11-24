@@ -20,7 +20,7 @@ public class RandomUtils {
      * @param maxExclusive Il limite superiore del range (es. la dimensione della popolazione).
      * @return Una List<Integer> di indici univoci.
      */
-    public static List<Integer> UniqueIndices(int n, int maxExclusive) {
+    public static List<Integer> uniqueIndices(int n, int maxExclusive) {
         Set<Integer> uniqueIndices = new HashSet<>();
         // Usa ThreadLocalRandom per eliminare la contesa tra thread
         ThreadLocalRandom currentRandom = ThreadLocalRandom.current();
@@ -37,7 +37,7 @@ public class RandomUtils {
      * @return 0 o 1.
      * Usato per decisioni binarie (es. Uniform Crossover).
      */
-    public static int CoinToss() {
+    public static int coinToss() {
         // Usa ThreadLocalRandom
         return ThreadLocalRandom.current().nextInt(2);
     }

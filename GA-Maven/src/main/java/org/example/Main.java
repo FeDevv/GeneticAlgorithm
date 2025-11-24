@@ -103,9 +103,18 @@ public class Main {
     }
 }
 
-// RENDERE LA DOMAINFACTORY UNA SINGLETON
-// aggiungere quindi l'attributo di tipo "singletonClass" e un check (if) per ritornare sempre lo stessa
-// istanza.
+
+
+/*
+* OBIETTIVI DI OGGI
+* 1. elimina tutti i code smell
+* 2. rendere la domainfactory un singleton *
+* 3. aggiungere la funzionalità, tramite "Apache Common CSV" di salvare localmente su fogli di calcolo il risultato
+* 4. ricontrollare i commenti
+* */
+
+// * aggiungere quindi l'attributo di tipo "singletonClass" e un check (if) per ritornare sempre lo stessa istanza.
+
 /**
  * singletonClass singleton = null
  * ...
@@ -115,11 +124,3 @@ public class Main {
  *     return singleton;
  * }
  * */
-
-// stampare il risultato in un file di testo, andando a chiamare il file : "Individual_17-11-2025_11:56:08"
-
-// portare il progetto in MAVEN
-
-// aggiungere la funzione per portare il progetto in un foglio di calcolo (CSV) con la libreria esterna : Apache Common CSV
-
-// ricontrollare bene i commenti!!!! IMPORTANTE

@@ -42,9 +42,9 @@ public class Mutation {
     /**
      * Esegue l'operazione di mutazione su un individuo.
      * Il processo è in-place, modificando l'individuo passato come parametro.
-     * @param I L'individuo da mutare.
+     * @param individual L'individuo da mutare.
      */
-    public void mutate(Individual I, int currentGeneration) {
+    public void mutate(Individual individual, int currentGeneration) {
 
         double adaptiveStrenght = calculateAdaptiveStrength(currentGeneration);
 
@@ -57,12 +57,12 @@ public class Mutation {
         double maxY = boundingBox.getMaxY();
 
         // Cicla su ogni cromosoma (per ogni punto).
-        for (int i = 0; i < I.getDimension(); i++) {
+        for (int i = 0; i < individual.getDimension(); i++) {
 
             // Controlla la probabilità di mutazione per questo gene.
             if (RandomUtils.randDouble() < mutationProbability) {
 
-                Point oldPoint = I.getChromosomes().get(i);
+                Point oldPoint = individual.getChromosomes().get(i);
                 double radius = oldPoint.getRadius(); // Mantiene il raggio invariato.
 
                 // Calcola la perturbazione casuale (Mutazione Gaussiana / Creep Mutation).
@@ -83,7 +83,7 @@ public class Mutation {
 
                 // Sostituisce il vecchio gene con il nuovo gene mutato (Mutazione in-place).
                 // L'uso di setChromosome() è necessario per aggirare la vista immutabile del getter.
-                I.setChromosome(i, newPoint);
+                individual.setChromosome(i, newPoint);
             }
         }
         // * Scelta Implementativa: La mutazione avviene "in-place" (modificando il riferimento all'individuo I),
