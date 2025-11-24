@@ -92,16 +92,19 @@ public class Mutation {
 
     // ------------------- METODI UTILITY -------------------
 
-    private double calculateAdaptiveStrength(int g) {
-        // Per evitare divisione per zero se g=0, usiamo (g + 1).
-        // Il fattore di decadimento (1.0 + (double)g / totalGenerations) è una scelta comune.
+    private double calculateAdaptiveStrength(int gen) {
+        // Implementazione attuale: Decadimento Inverso
+        // La formula usa (1 + 5 * progresso) al denominatore per ridurre la forza
+        // in modo non lineare ma mantenendo una coda lunga.
 
-        // Un approccio si avrebbe usando un decadimento Lineare (Raggiunge 0 alla fine)
-        // il decayFactor sarà = 1.0 - ((double)g / totalGenerations);
-        // e il valore di ritorno = initialStrength * max(0.01, decayFactor); // Minimo 0.01
+        /* * NOTA DI DESIGN:
+         * Un'alternativa valida è il "Decadimento Lineare".
+         * In quel caso, la forza si ridurrebbe sottraendo progressivamente il rapporto
+         * tra generazione corrente e totale, fino a toccare un minimo (es. 0.01).
+         */
 
         // Decadimento Inverso (Mantiene un valore minimo)
-        return this.initialMutationStrength / (1.0 + 5.0 * ((double)g / this.totalGenerations));
         // 5.0 è una costante che regola quanto velocemente la forza decade.
+        return this.initialMutationStrength / (1.0 + 5.0 * ((double)gen / this.totalGenerations));
     }
 }

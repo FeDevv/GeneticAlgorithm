@@ -11,46 +11,43 @@ import java.util.Map;
 
 /**
  * Strategia di calcolo dell'overlap basata sull'Hashing Spaziale (Griglia Uniforme).
- * Questa implementazione riduce la complessità media da O(N^2) a O(N) ed è usata per popolazioni grandi.
+ * <p>
+ * Questa implementazione riduce la complessità temporale media da O(N^2) a O(N).
+ * È ideale per popolazioni numerose dove la densità locale non è eccessiva.
  */
-public class OverlapSpatial implements OverlapStrategy{
+public class OverlapSpatial implements OverlapStrategy {
 
-    // Record per rappresentare la chiave della cella nella griglia.
-    // Essendo un record, fornisce automaticamente un'implementazione corretta di
-    // hashCode() e equals(), essenziale per l'uso come chiave in una HashMap.
+    /**
+     * Record immutabile per la chiave della mappa (coordinate discrete della griglia).
+     * I record forniscono implementazioni ottimizzate di equals() e hashCode().
+     */
     private record Cell(int i, int j) {}
 
-    // Dimensione fissa del lato di una cella quadrata.
-    // Viene calcolata una sola volta nel costruttore.
+    // Dimensione del lato di una cella. Calcolata per garantire che i check siano limitati ai vicini.
     private final double cellSize;
 
     /**
-     * Costruttore della strategia di Hashing Spaziale.
-     * @param maxRadius Il raggio massimo assoluto tra tutti i punti nel problema.
+     * Costruttore della strategia.
+     *
+     * @param maxRadius Il raggio massimo possibile di un punto (o cerchio) nel problema.
      */
     public OverlapSpatial(double maxRadius) {
-        // La dimensione della cella è fissata a 2 * R_max.
-        // Questo garantisce che un cerchio con raggio r_i possa interagire solo con i punti
-        // nelle celle immediatamente adiacenti (un'area 3x3).
+        // Impostiamo la cella a 2 * R_max.
+        // Questo garantisce matematicamente che un cerchio possa sovrapporsi solo
+        // con elementi presenti nella sua cella o nelle 8 celle adiacenti (Area 3x3).
         this.cellSize = 2.0 * maxRadius;
     }
 
     /**
-     * Mappa una coordinata continua (X o Y) all'indice intero discreto della cella (i o j).
-     * Si basa sulla CELL_SIZE fissa.
-     */
-    private int getCellIndex(double coordinate) {
-        // Utilizza Math.floor per mappare in modo coerente i punti all'indice intero corretto.
-        return (int) Math.floor(coordinate / cellSize);
-    }
-
-    /**
-     * Calcola la penalità totale derivante dalla sovrapposizione utilizzando la griglia spaziale.
-     * Complessità: O(N) per la costruzione + O(N) per il controllo = O(N) totale medio.
-     * * @param chromosomes La lista dei punti da valutare.
-     * @param overlapWeight Il peso da applicare alla penalità.
-     * @param distanceCalculator L'utility per calcolare la distanza.
-     * @return La penalità totale di overlap.
+     * Calcola la penalità totale di sovrapposizione.
+     * <p>
+     * L'algoritmo costruisce prima una griglia temporanea (Map) e poi itera sui punti
+     * controllando solo le celle vicine, evitando il confronto quadratico "tutti contro tutti".
+     *
+     * @param chromosomes Lista dei punti (genoma) da valutare.
+     * @param overlapWeight Fattore di penalità per ogni sovrapposizione rilevata.
+     * @param distanceCalculator Utility per il calcolo delle distanze euclidee.
+     * @return La penalità totale accumulata.
      */
     @Override
     public double calculateOverlap(
@@ -58,50 +55,81 @@ public class OverlapSpatial implements OverlapStrategy{
             double overlapWeight,
             DistanceCalculator distanceCalculator
     ) {
+        // Fase 1: Indicizzazione spaziale dei punti
+        Map<Cell, List<Point>> grid = populateGrid(chromosomes);
+
         double penalty = 0.0;
 
-        // La griglia Map<Cell, List<Point>> è locale al metodo e viene ricostruita
-        // ad ogni chiamata O(N), poiché le posizioni dei punti cambiano di continuo (mutazione/crossover).
-        Map<Cell, List<Point>> grid = new HashMap<>();
+        // Fase 2: Calcolo delle collisioni usando la griglia
+        for (Point p_i : chromosomes) {
+            penalty += calculatePenaltyForPoint(p_i, grid, overlapWeight, distanceCalculator);
+        }
 
-        // Fase 1: Popolamento griglia (Complessità O(N))
-        // Mappa ogni punto alla sua cella (i, j).
+        return penalty;
+    }
+
+    /**
+     * Converte una coordinata continua (double) in un indice discreto (int).
+     */
+    private int getCellIndex(double coordinate) {
+        return (int) Math.floor(coordinate / cellSize);
+    }
+
+    // Costruisce la Hash Map spaziale associando ogni punto alla sua cella di appartenenza.
+    private Map<Cell, List<Point>> populateGrid(List<Point> chromosomes) {
+        Map<Cell, List<Point>> grid = new HashMap<>();
         for (Point p : chromosomes) {
             int i = getCellIndex(p.getX());
             int j = getCellIndex(p.getY());
-            // Aggiunge il punto alla lista associata alla chiave Cell(i, j), creando la lista se necessario.
             grid.computeIfAbsent(new Cell(i, j), k -> new ArrayList<>()).add(p);
         }
+        return grid;
+    }
 
-        // Fase 2: Controllo overlap locale (Complessità O(N) medio)
-        // Per ogni punto, controlla solo un numero costante (9) di celle.
-        for (Point p_i : chromosomes) {
-            int iCell = getCellIndex(p_i.getX());
-            int jCell = getCellIndex(p_i.getY());
+    // Calcola le penalità per un singolo punto ispezionando solo le 9 celle limitrofe (3x3).
+    private double calculatePenaltyForPoint(
+            Point p_i,
+            Map<Cell, List<Point>> grid,
+            double overlapWeight,
+            DistanceCalculator distCalc
+    ) {
+        double localPenalty = 0.0;
+        int iCell = getCellIndex(p_i.getX());
+        int jCell = getCellIndex(p_i.getY());
 
-            // Ciclo 3x3: Itera attraverso gli offset [-1, 0, 1] per gli indici i e j.
-            for (int di = -1; di <= 1; di++) {
-                for (int dj = -1; dj <= 1; dj++) {
+        for (int di = -1; di <= 1; di++) {
+            for (int dj = -1; dj <= 1; dj++) {
+                List<Point> neighbors = grid.get(new Cell(iCell + di, jCell + dj));
 
-                    // Recupera i vicini nella cella corrente/adiacente (iCell + di, jCell + dj)
-                    List<Point> neighbors = grid.get(new Cell(iCell + di, jCell + dj));
-                    if (neighbors == null) continue;
+                if (neighbors == null) continue;
 
-                    for (Point p_j : neighbors) {
-
-                        // Evita l'auto-confronto (p_i con sé stesso). [prima condizione]
-                        // Evita il doppio conteggio: Forziamo un ordinamento (p_i vs p_j, ma non p_j vs p_i).
-                        // System.identityHashCode fornisce un ID univoco basato sull'oggetto, garantendo che l'ordine
-                        // sia deterministico e che ogni coppia venga processata una sola volta.
-                        if (p_i == p_j || System.identityHashCode(p_i) > System.identityHashCode(p_j)) continue;
-
-                        penalty += PenaltyHelper.calculatePairPenalty(p_i, p_j, overlapWeight, distanceCalculator);
-
-                    }
-                }
+                localPenalty += processNeighbors(p_i, neighbors, overlapWeight, distCalc);
             }
+        }
+        return localPenalty;
+    }
+
+    // Itera sui vicini trovati nella cella specifica e applica la penalità se necessario.
+    private double processNeighbors(
+            Point p_i,
+            List<Point> neighbors,
+            double overlapWeight,
+            DistanceCalculator distCalc
+    ) {
+        double penalty = 0.0;
+        for (Point p_j : neighbors) {
+            if (shouldSkipPair(p_i, p_j)) continue;
+
+            penalty += PenaltyHelper.calculatePairPenalty(p_i, p_j, overlapWeight, distCalc);
         }
         return penalty;
     }
 
+    // Determina se una coppia deve essere saltata per evitare auto-confronti o doppi conteggi.
+    private boolean shouldSkipPair(Point p1, Point p2) {
+        // 1. p1 == p2: Evita di confrontare il punto con se stesso.
+        // 2. Hash > Hash: Impone un ordinamento deterministico per processare la coppia (A, B) una volta sola,
+        //    evitando di contare la penalità due volte (una per A->B e una per B->A).
+        return p1 == p2 || System.identityHashCode(p1) > System.identityHashCode(p2);
+    }
 }
