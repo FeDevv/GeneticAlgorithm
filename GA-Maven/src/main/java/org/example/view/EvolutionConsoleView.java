@@ -1,5 +1,6 @@
 package org.example.view;
 
+@SuppressWarnings("java:S106")
 public class EvolutionConsoleView {
     // --- MESSAGGIO DI INIZIALIZZAZIONE ---
 
@@ -13,7 +14,7 @@ public class EvolutionConsoleView {
     // --- MESSAGGI DI TENTATIVO / RIPROVA ---
 
     public void displayRetryWarning(int currentAttempt, int maxAttempts, double lastTimeSecs) {
-        System.out.println("⚠️ WARNING: Invalid solution found.");
+        System.out.println("\n⚠️ WARNING: Invalid solution found.");
         System.out.printf("Attempt #%d of %d%n", currentAttempt, maxAttempts);
         if (currentAttempt!=maxAttempts) {
             System.out.printf("Estimated time for next attempt: ~%.2f seconds.%n", lastTimeSecs);

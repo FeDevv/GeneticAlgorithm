@@ -12,9 +12,10 @@ import java.awt.geom.Rectangle2D;
 import java.util.Optional;
 import java.util.Scanner;
 
+
 public class Main {
 
-
+    @SuppressWarnings("java:S106")
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
 
@@ -81,7 +82,7 @@ public class Main {
                 scanner.next(); // Scarta l'input non valido
             }
         }
-        System.out.printf("\n✅ Valid radius entered: %.2f%n", pointRadius);
+        System.out.printf("%n✅ Valid radius entered: %.2f%n", pointRadius);
 
         scanner.close(); // Chiude lo scanner dopo aver finito di leggere l'input
 

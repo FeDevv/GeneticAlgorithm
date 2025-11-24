@@ -13,6 +13,7 @@ import java.util.Scanner;
  * Questa classe è responsabile esclusiva di tutta la logica di I/O (System.out e Scanner)
  * e di contenere tutte le stringhe di output visibili all'utente.
  */
+@SuppressWarnings("java:S106")
 public class DomainConsoleView {
 
     private final Scanner scanner;
@@ -120,7 +121,7 @@ public class DomainConsoleView {
      * @param types La lista di {@code DomainType} da mostrare.
      */
     public void showMenu(List<DomainType> types) {
-        System.out.println("\n--- Select domain type ---");
+        System.out.println("%n--- Select domain type ---");
         for (DomainType type : types) {
             System.out.println(type.getMenuId() + ") " + type.getDisplayName());
         }
