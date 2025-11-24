@@ -96,11 +96,11 @@ public class Mutation {
         // Per evitare divisione per zero se g=0, usiamo (g + 1).
         // Il fattore di decadimento (1.0 + (double)g / totalGenerations) è una scelta comune.
 
-        // Esempio 1: Decadimento Lineare (Raggiunge 0 alla fine)
-        // double decayFactor = 1.0 - ((double)g / this.totalGenerations);
-        // return this.initialStrength * Math.max(0.01, decayFactor); // Minimo 0.01
+        // Un approccio si avrebbe usando un decadimento Lineare (Raggiunge 0 alla fine)
+        // il decayFactor sarà = 1.0 - ((double)g / this.totalGenerations);
+        // e il valore di ritorno = this.initialStrength * Math.max(0.01, decayFactor); // Minimo 0.01
 
-        // Esempio 2: Decadimento Inverso (Mantiene un valore minimo)
+        // Decadimento Inverso (Mantiene un valore minimo)
         return this.initialMutationStrength / (1.0 + 5.0 * ((double)g / this.totalGenerations));
         // 5.0 è una costante che regola quanto velocemente la forza decade.
     }

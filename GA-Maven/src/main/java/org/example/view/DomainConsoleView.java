@@ -100,7 +100,7 @@ public class DomainConsoleView {
                     // 2. Controllo Valore (Non positivo)
                     if (value <= 0) {
                         System.out.println("\n❌Invalid value. The parameter '" + key + "' must be strictly positive (> 0). Retry.");
-                        // Il loop 'while (value <= 0)' si ripete
+                        // Il loop while si ripete se si è arrivati qua
                     } else {
                         // Valore valido trovato
                         params.put(key, value);
@@ -121,7 +121,7 @@ public class DomainConsoleView {
      * @param types La lista di {@code DomainType} da mostrare.
      */
     public void showMenu(List<DomainType> types) {
-        System.out.println("%n--- Select domain type ---");
+        System.out.println("\n--- Select domain type ---");
         for (DomainType type : types) {
             System.out.println(type.getMenuId() + ") " + type.getDisplayName());
         }

@@ -56,9 +56,13 @@ public class DomainFactory {
                     new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outherHeight"));
             case ANNULUS ->
                     new AnnulusDomain(params.get("innerRadius"), params.get("outerRadius"));
-            //default ->
-            //     Meccanismo di sicurezza: Cattura eventuali nuovi tipi non ancora gestiti nel factory.
-            //        throw new IllegalArgumentException("Domain type not supported " + type);
+            /*
+            * Qui potenzialmente andrebbe il default con una Exception IllegalArgument
+            * per catturare tipi non ancora gestiti nella factory.
+            * Ciò non è necessario in quanto i tipi possibili vengono da un Enum, quindi la scelta è sempre
+            * limitata a valori possibili
+            * */
+
         };
 
     }

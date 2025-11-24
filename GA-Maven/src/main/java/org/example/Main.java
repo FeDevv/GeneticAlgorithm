@@ -48,10 +48,10 @@ public class Main {
             if (scanner.hasNextInt()) {
                 individualSize = scanner.nextInt();
 
-                // **AGGIUNTA:** Controlla se il valore è positivo
+                // Controlla se il valore è positivo
                 if (individualSize <= 0) {
                     System.out.println("❌ Error: The genome length must be a positive integer (> 0). Retry.");
-                } // Il loop esterno 'while (individualSize <= 0)' si ripete
+                }
 
             } else {
                 System.out.println("❌ Invalid Input. Please enter a positive integer. Retry.");

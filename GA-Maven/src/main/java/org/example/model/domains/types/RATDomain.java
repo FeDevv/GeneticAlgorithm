@@ -57,15 +57,18 @@ public class RATDomain implements Domain {
         boolean outsideAxes = (x < 0) || (y < 0);
         if (outsideAxes) return true;
 
-        // 3. Condizione dell'Ipotenusa: Il punto deve essere sotto la retta che collega (B, 0) a (0, H).
+        // 3. Condizione dell'Ipotenusa: Il punto deve essere sopra la retta che collega (B, 0) a (0, H).
         // L'equazione della retta è y = H - (H/B) * x.
-        // La condizione d'inclusione è: y <= H - (H/B) * x
+        // La condizione d'inclusione è: y > H - (H/B) * x
 
         // Il punto è fuori se non soddisfa la condizione dell'ipotenusa.
         // NOTA: Poiché l'intero dominio è nel primo quadrante, usiamo
         // la Bounding Box per la prima parte del controllo.
 
-        // isPointOutside = (x < 0) && (y < 0) && (y > H - (H/B)x)
+        // il punto è fuori se:
+        // si trova in valori di x negativi (x < 0)
+        // si trova in valori di y negativi (y < 0)
+        // si trova sopra l'ipotenusa (y > H - (H/B)x)
         // le prime due condizioni sono gia controllate, manca la terza
         return (y > this.height - (this.height / this.base) * x);
     }
