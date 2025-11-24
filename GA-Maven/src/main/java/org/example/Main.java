@@ -42,7 +42,7 @@ public class Main {
         // prendi la dimensione dell'individuo (quante piante da piantare?)
         // Il tuo codice aggiornato
         while (individualSize <= 0) {
-            System.out.print("Define the genome length (number of Points, strictly positive (> 0)): ");
+            System.out.print("Enter genome length (number of points, > 0): ");
 
             // 1. Controlla se l'input è un intero
             if (scanner.hasNextInt()) {
@@ -51,18 +51,17 @@ public class Main {
                 // Controlla se il valore è positivo
                 if (individualSize <= 0) {
                     System.out.println("\n❌ Error: The genome length must be a positive integer (> 0). Retry.");
-                    continue; // messo per raggiungere comportamento grafico desiderato
                 }
 
             } else {
                 System.out.println("\n❌ Invalid Input. Please enter a positive integer. Retry.");
                 scanner.next(); // Scarta l'input non valido (non numerico)
-                continue; // messo per raggiungere comportamento grafico desiderato
             }
 
-            //grafica
-            System.out.println();
         }
+
+        //grafica
+        System.out.println();
 
         //Tutta questa parte poi andrà nel controller finale. Per ora la metto qua.
         Rectangle2D boundingBox = problemDomain.getBoundingBox();
@@ -79,7 +78,7 @@ public class Main {
                 if (pointRadius <= 0) {
                     System.out.println("\n❌ Error: The radius has to be strictly greater than 0.");
                 } else if (pointRadius > maxRadiusLimit) {
-                    System.out.printf("\n❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).%n", pointRadius, maxRadiusLimit);
+                    System.out.printf("%n❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).%n", pointRadius, maxRadiusLimit);
                 }
 
             } else {
