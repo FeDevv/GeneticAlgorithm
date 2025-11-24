@@ -97,8 +97,8 @@ public class Mutation {
         // Il fattore di decadimento (1.0 + (double)g / totalGenerations) è una scelta comune.
 
         // Un approccio si avrebbe usando un decadimento Lineare (Raggiunge 0 alla fine)
-        // il decayFactor sarà = 1.0 - ((double)g / this.totalGenerations);
-        // e il valore di ritorno = this.initialStrength * Math.max(0.01, decayFactor); // Minimo 0.01
+        // il decayFactor sarà = 1.0 - ((double)g / totalGenerations);
+        // e il valore di ritorno = initialStrength * max(0.01, decayFactor); // Minimo 0.01
 
         // Decadimento Inverso (Mantiene un valore minimo)
         return this.initialMutationStrength / (1.0 + 5.0 * ((double)g / this.totalGenerations));
