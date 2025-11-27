@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.services;
 
 import org.example.model.Individual;
 import org.example.model.Point;

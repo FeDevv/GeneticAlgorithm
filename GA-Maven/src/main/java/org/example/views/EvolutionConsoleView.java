@@ -1,4 +1,4 @@
-package org.example.view;
+package org.example.views;
 
 @SuppressWarnings("java:S106")
 public class EvolutionConsoleView {

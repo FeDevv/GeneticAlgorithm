@@ -1,4 +1,4 @@
-package org.example.service.strategies;
+package org.example.services.strategies;
 
 import org.example.model.Point;
 import org.example.utils.DistanceCalculator;

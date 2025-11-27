@@ -3,7 +3,7 @@ package org.example.controllers;
 import org.example.model.domains.Domain;
 import org.example.model.domains.DomainFactory;
 import org.example.model.domains.DomainType;
-import org.example.view.DomainConsoleView;
+import org.example.views.DomainConsoleView;
 
 import java.util.Arrays;
 import java.util.Map;

@@ -4,13 +4,13 @@ import org.example.exceptions.MaxAttemptsExceededException;
 import org.example.model.Individual;
 import org.example.model.Point;
 import org.example.model.domains.Domain;
-import org.example.service.Crossover;
-import org.example.service.FitnessCalculator;
-import org.example.service.Mutation;
-import org.example.service.Selection;
+import org.example.services.Crossover;
+import org.example.services.FitnessCalculator;
+import org.example.services.Mutation;
+import org.example.services.Selection;
 import org.example.utils.GeneticConfig;
 import org.example.utils.RandomUtils;
-import org.example.view.EvolutionConsoleView;
+import org.example.views.EvolutionConsoleView;
 
 import java.time.Duration;
 import java.time.Instant;

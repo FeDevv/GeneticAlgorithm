@@ -1,4 +1,4 @@
-package org.example.view;
+package org.example.views;
 
 import org.example.model.domains.DomainType;
 

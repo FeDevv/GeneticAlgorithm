@@ -5,8 +5,8 @@ import org.example.controllers.DomainController;
 import org.example.controllers.EvolutionEngine;
 import org.example.model.Individual;
 import org.example.model.domains.Domain;
-import org.example.view.DomainConsoleView;
-import org.example.view.EvolutionConsoleView;
+import org.example.views.DomainConsoleView;
+import org.example.views.EvolutionConsoleView;
 
 import java.awt.geom.Rectangle2D;
 import java.util.Optional;
@@ -114,10 +114,9 @@ public class Main {
 
 /*
 * OBIETTIVI DI OGGI
-* 1. elimina tutti i code smell
-* 2. rendere la domainfactory un singleton *
-* 3. aggiungere la funzionalità, tramite "Apache Common CSV" di salvare localmente su fogli di calcolo il risultato
-* 4. ricontrollare i commenti
+* 1. rendere la domainfactory un singleton *
+* 2. aggiungere la funzionalità, tramite "Apache Common CSV" di salvare localmente su fogli di calcolo il risultato
+* 3. ricontrollare i commenti
 * */
 
 // * aggiungere quindi l'attributo di tipo "singletonClass" e un check (if) per ritornare sempre lo stessa istanza.
@@ -132,4 +131,3 @@ public class Main {
  * }
  * */
 
-// usare effettivamente %n al posto di \n
