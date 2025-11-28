@@ -110,13 +110,13 @@ public class Main {
     }
 }
 
-
-
 /*
-* OBIETTIVI DI OGGI
+* OBIETTIVI
 * 1. rendere la domainfactory un singleton *
 * 2. aggiungere la funzionalità, tramite "Apache Common CSV" di salvare localmente su fogli di calcolo il risultato
 * 3. ricontrollare i commenti
+* 4. creare una interfaccia unica di inizializzazione per sostituire la roba nel main
+* 5. spostare tutte le interazioni relative al GA in un controller adeguato, magari chiamato initializerController
 * */
 
 // * aggiungere quindi l'attributo di tipo "singletonClass" e un check (if) per ritornare sempre lo stessa istanza.
