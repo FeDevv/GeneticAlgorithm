@@ -5,10 +5,8 @@ public class EvolutionConsoleView {
     // --- MESSAGGIO DI INIZIALIZZAZIONE ---
 
     public void displayStartMessage(int generations, int populationSize) {
-        System.out.println("\n🧬 Starting Genetic Algorithm...");
-        System.out.printf("Configuration: %d Generations | %d Individuals.%n%n",
-                generations, populationSize);
-        System.out.println("Executing Evolutionary Cycle ...");
+        //System.out.printf("Configuration: %d Generations | %d Individuals.%n%n", generations, populationSize);
+        System.out.println("\nExecuting Evolutionary Cycle ...");
     }
 
     // --- MESSAGGI DI TENTATIVO / RIPROVA ---
@@ -25,7 +23,7 @@ public class EvolutionConsoleView {
 
     public void displaySuccess(int attempt, double timeSecs) {
         System.out.println("\n✅ Success! Valid solution found at attempt #" + attempt + ".");
-        System.out.printf("Execution time: %.2f seconds.%n%n", timeSecs);
+        System.out.printf("   -> Execution time: %.2f seconds.%n%n", timeSecs);
     }
 
     // Lascio la visualizzazione del risultato ad altre classi.

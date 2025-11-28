@@ -1,6 +1,7 @@
-package org.example.utils;
+package org.example.services.ga.strategies;
 
 import org.example.model.Point;
+import org.example.utils.DistanceCalculator;
 
 public class PenaltyHelper {
 

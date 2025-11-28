@@ -98,4 +98,10 @@ public class FrameDomain implements Domain {
     public Rectangle2D getBoundingBox() {
         return this.boundingBox;
     }
+
+    @Override
+    public String toString() {
+        return "Frame { inner width = " + innerWidth + ", inner height = " + innerHeight +
+                ", outer width = " + outerWidth + ", outer height = " + outerHeight + " }";
+    }
 }

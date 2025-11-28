@@ -1,4 +1,4 @@
-package org.example.utils;
+package org.example.config;
 
 /**
  * Classe di configurazione globale per i parametri dell'Algoritmo Genetico.

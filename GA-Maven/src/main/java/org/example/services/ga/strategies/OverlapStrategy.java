@@ -1,4 +1,4 @@
-package org.example.services.strategies;
+package org.example.services.ga.strategies;
 
 import org.example.model.Point;
 import org.example.utils.DistanceCalculator;

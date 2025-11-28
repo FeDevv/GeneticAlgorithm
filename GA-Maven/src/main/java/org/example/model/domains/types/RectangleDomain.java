@@ -84,4 +84,9 @@ public class RectangleDomain implements Domain {
     public Rectangle2D getBoundingBox() {
         return this.boundingBox;
     }
+
+    @Override
+    public String toString() {
+        return "Rectangle { width = " + width + ", height = " + height + " }";
+    }
 }

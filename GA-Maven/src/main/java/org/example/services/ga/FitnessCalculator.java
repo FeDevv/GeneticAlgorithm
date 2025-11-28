@@ -1,11 +1,11 @@
-package org.example.services;
+package org.example.services.ga;
 
 import org.example.model.Individual;
 import org.example.model.Point;
 import org.example.model.domains.Domain;
-import org.example.services.strategies.OverlapQuadratic;
-import org.example.services.strategies.OverlapSpatial;
-import org.example.services.strategies.OverlapStrategy;
+import org.example.services.ga.strategies.OverlapQuadratic;
+import org.example.services.ga.strategies.OverlapSpatial;
+import org.example.services.ga.strategies.OverlapStrategy;
 import org.example.utils.DistanceCalculator;
 
 import java.util.List;

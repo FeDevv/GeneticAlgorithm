@@ -101,4 +101,9 @@ public class AnnulusDomain implements Domain {
     public Rectangle2D getBoundingBox() {
         return this.boundingBox;
     }
+
+    @Override
+    public String toString() {
+        return "Annulus { inner radius = " + innerRadius + ", outer radius = " + outerRadius + " }";
+    }
 }

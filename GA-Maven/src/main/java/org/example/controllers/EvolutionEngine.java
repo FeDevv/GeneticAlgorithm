@@ -4,11 +4,11 @@ import org.example.exceptions.MaxAttemptsExceededException;
 import org.example.model.Individual;
 import org.example.model.Point;
 import org.example.model.domains.Domain;
-import org.example.services.Crossover;
-import org.example.services.FitnessCalculator;
-import org.example.services.Mutation;
-import org.example.services.Selection;
-import org.example.utils.GeneticConfig;
+import org.example.services.ga.Crossover;
+import org.example.services.ga.FitnessCalculator;
+import org.example.services.ga.Mutation;
+import org.example.services.ga.Selection;
+import org.example.config.GeneticConfig;
 import org.example.utils.RandomUtils;
 import org.example.views.EvolutionConsoleView;
 

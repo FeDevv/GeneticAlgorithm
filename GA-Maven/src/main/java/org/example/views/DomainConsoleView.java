@@ -29,7 +29,7 @@ public class DomainConsoleView {
 
     //Visualizza un messaggio di successo dopo la creazione di un dominio.
     public void showSuccess() {
-        System.out.println("\n✅ Domain successfully created!\n");
+        System.out.println("\n✅ Domain successfully created!");
     }
 
     /**

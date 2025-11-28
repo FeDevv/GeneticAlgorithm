@@ -84,4 +84,9 @@ public class CircleDomain implements Domain {
     public Rectangle2D getBoundingBox() {
         return this.boundingBox;
     }
+
+    @Override
+    public String toString() {
+        return "Circle { radius = " + radius + " }";
+    }
 }

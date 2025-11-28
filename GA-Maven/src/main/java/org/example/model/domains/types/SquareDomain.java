@@ -86,4 +86,9 @@ public class SquareDomain implements Domain {
     public Rectangle2D getBoundingBox() {
         return this.boundingBox;
     }
+
+    @Override
+    public String toString() {
+        return "Square { side = " + side + " }";
+    }
 }

@@ -1,4 +1,4 @@
-package org.example.services;
+package org.example.services.ga;
 
 import org.example.model.Individual;
 import org.example.utils.RandomUtils;

@@ -90,4 +90,9 @@ public class EllipseDomain implements Domain {
         return this.boundingBox;
     }
 
+    @Override
+    public String toString() {
+        return "Ellipse { semi-width = " + semiWidth + ", semi-height = " + semiHeight + " }";
+    }
+
 }
