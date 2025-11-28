@@ -45,10 +45,10 @@ public class AppConsoleView {
             if (scanner.hasNextInt()) {
                 size = scanner.nextInt();
                 if (size <= 0) {
-                    System.out.println("\n❌ Error: The genome length must be a positive integer (> 0). Retry.");
+                    System.out.print("\n❌ Error: The genome length must be a positive integer (> 0). Retry.");
                 }
             } else {
-                System.out.println("\n❌ Invalid Input. Please enter a positive integer. Retry.");
+                System.out.print("\n❌ Invalid Input. Please enter a positive integer. Retry.");
                 scanner.next(); // Pulisce il buffer
             }
         }
