@@ -16,9 +16,9 @@ public class ExportController {
     private final ExportConsoleView view;
     private final ExporterFactory factory;
 
-    public ExportController(ExportConsoleView view) {
+    public ExportController(ExportConsoleView view, ExporterFactory factory) {
         this.view = view;
-        this.factory = new ExporterFactory();
+        this.factory = factory;
     }
 
     /**

@@ -1,7 +1,10 @@
 package org.example.controllers;
 
+import org.apache.xmlbeans.impl.store.DomImpl;
 import org.example.model.Individual;
 import org.example.model.domains.Domain;
+import org.example.model.domains.DomainFactory;
+import org.example.services.export.ExporterFactory;
 import org.example.views.AppConsoleView;
 import org.example.views.DomainConsoleView;
 import org.example.views.EvolutionConsoleView;
@@ -21,10 +24,17 @@ public class AppController {
     private final Scanner scanner;
     private final AppConsoleView appView;
 
+    // Riferimenti alle factory (Dependency Injection)
+    private final ExporterFactory exporterFactory;
+    private final DomainFactory domainFactory;
+
     public AppController() {
         // Inizializza le risorse condivise
         this.scanner = new Scanner(System.in);
         this.appView = new AppConsoleView(scanner);
+
+        this.exporterFactory = ExporterFactory.getInstance();
+        this.domainFactory = DomainFactory.getInstance();
     }
 
     /**
@@ -41,7 +51,7 @@ public class AppController {
 
             // --- FASE 1: SELEZIONE E CREAZIONE DOMINIO ---
             DomainConsoleView domainView = new DomainConsoleView(scanner);
-            DomainController domainController = new DomainController(domainView);
+            DomainController domainController = new DomainController(domainView, domainFactory);
 
             // Questo è il punto di uscita: se l'utente sceglie "0", createDomain ritorna Empty
             Optional<Domain> domainOptional = domainController.createDomain();
@@ -81,7 +91,7 @@ public class AppController {
 
             // --- FASE 4: EXPORT ---
             ExportConsoleView exportView = new ExportConsoleView(scanner);
-            ExportController exportController = new ExportController(exportView);
+            ExportController exportController = new ExportController(exportView, exporterFactory);
 
             exportController.handleExport(bestSolution, problemDomain, pointRadius);
 

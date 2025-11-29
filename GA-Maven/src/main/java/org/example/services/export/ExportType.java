@@ -13,7 +13,8 @@ public enum ExportType {
     CSV(1, "CSV (Comma Separated Values)"),
     EXCEL(2, "Excel (Excel file)"),
     TXT(3, "TXT (Plain text report)"),
-    JSON(4, "Json (JavaScript Object Notation)")
+    JSON(4, "Json (JavaScript Object Notation)"),
+    PDF(5, "PDF (Portable Document Format)");
 
     // Placeholder per futuri formati (es. TXT, JSON)
     // TXT(2, "TXT (Plain Text)")

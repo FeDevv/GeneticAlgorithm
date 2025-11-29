@@ -1,7 +1,13 @@
 package org.example.services.export.types;
 
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xddf.usermodel.chart.*;
+import org.apache.poi.xssf.usermodel.*;
+import org.apache.poi.xddf.usermodel.XDDFLineProperties;
+import org.apache.poi.xddf.usermodel.XDDFNoFillProperties;
+import org.apache.poi.xddf.usermodel.XDDFShapeProperties;
+
 import org.example.model.Individual;
 import org.example.model.Point;
 import org.example.model.domains.Domain;
@@ -19,19 +25,26 @@ public class ExcelExporter extends BaseExporter {
 
     @Override
     protected String getExtension() {
-        return ".xlsx"; // Formato Excel moderno
+        return ".xlsx"; // Formato Excel
     }
 
     @Override
     protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
 
-        // 1. Creiamo il Workbook (il file Excel in memoria)
-        try (Workbook workbook = new XSSFWorkbook()) {
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            // Nota: Dobbiamo usare XSSFSheet (specifico XML) per il supporto drawing
+            XSSFSheet sheet = workbook.createSheet("Solution Data");
 
-            // 2. Creiamo un Foglio (Sheet)
-            Sheet sheet = workbook.createSheet("Solution Data");
+            // --- STILI ---
+            CellStyle sixDecimalStyle = workbook.createCellStyle();
+            sixDecimalStyle.setDataFormat(workbook.createDataFormat().getFormat("0.000000"));
 
-            // --- METADATI (Righe iniziali) ---
+            CellStyle headerStyle = workbook.createCellStyle();
+            Font headerFont = workbook.createFont();
+            headerFont.setBold(true);
+            headerStyle.setFont(headerFont);
+
+            // --- METADATI ---
             int rowIndex = 0;
 
             // Riga 0: Info Dominio
@@ -39,62 +52,135 @@ public class ExcelExporter extends BaseExporter {
             domainRow.createCell(0).setCellValue("Domain Info:");
             domainRow.createCell(1).setCellValue(domain.toString());
 
-            // Riga 1: Raggio (distanza tra i punti)
+            // Riga 1: Raggio
             Row radiusRow = sheet.createRow(rowIndex++);
             radiusRow.createCell(0).setCellValue("Target Distance:");
             radiusRow.createCell(1).setCellValue(radius);
 
-            // Riga 2: Numero otale di punti
+            // Riga 2: Totale Punti
             Row pointsRow = sheet.createRow(rowIndex++);
             pointsRow.createCell(0).setCellValue("Total Points:");
-            pointsRow.createCell(1).setCellValue(individual.getDimension());
+            pointsRow.createCell(1).setCellValue(individual.getChromosomes().size());
 
             // Riga 3: Fitness
             Row fitnessRow = sheet.createRow(rowIndex++);
             fitnessRow.createCell(0).setCellValue("Fitness:");
-            fitnessRow.createCell(1).setCellValue(individual.getFitness());
+            Cell fitnessCell = fitnessRow.createCell(1);
+            fitnessCell.setCellValue(individual.getFitness());
+            fitnessCell.setCellStyle(sixDecimalStyle);
 
-            // Riga 4: Vuota (spaziatrice)
-            rowIndex++;
+            rowIndex++; // Riga vuota
 
-            // --- HEADER TABELLA DATI ---
+            // --- HEADER TABELLA ---
+            int headerRowIndex = rowIndex; // Memorizziamo dove sono gli header
             Row headerRow = sheet.createRow(rowIndex++);
-
-            // Stile per l'header (Grassetto) - Opzionale ma carino
-            CellStyle headerStyle = workbook.createCellStyle();
-            Font headerFont = workbook.createFont();
-            headerFont.setBold(true);
-            headerStyle.setFont(headerFont);
-
             for (int i = 0; i < HEADERS.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(HEADERS[i]);
                 cell.setCellStyle(headerStyle);
             }
 
-            // --- DATI (Punti) ---
+            // --- DATI ---
             List<Point> points = individual.getChromosomes();
             int idCounter = 0;
+            int firstDataRow = rowIndex; // Prima riga di dati veri (per il grafico)
 
             for (Point point : points) {
                 Row row = sheet.createRow(rowIndex++);
-
-                row.createCell(0).setCellValue(idCounter++); // ID
-                row.createCell(1).setCellValue(point.getX()); // X
-                row.createCell(2).setCellValue(point.getY()); // Y
+                row.createCell(0).setCellValue(idCounter++);
+                row.createCell(1).setCellValue(point.getX());
+                row.createCell(2).setCellValue(point.getY());
             }
 
+            int lastDataRow = rowIndex - 1; // Ultima riga di dati
+
             // --- AUTO-SIZE COLONNE ---
-            // Adatta la larghezza delle colonne al contenuto (così si legge bene)
             for (int i = 0; i < HEADERS.length; i++) {
                 sheet.autoSizeColumn(i);
             }
 
-            // 3. Scrittura fisica su disco
-            // BaseExporter ci ha dato il 'path', noi apriamo uno stream verso quel path.
+            // --- GENERAZIONE GRAFICO ---
+            // Creiamo il grafico
+            createScatterChart(sheet, firstDataRow, lastDataRow);
+
+            // --- SALVATAGGIO ---
             try (OutputStream fileOut = Files.newOutputStream(path)) {
                 workbook.write(fileOut);
             }
         }
     }
+
+    /**
+     * Metodo helper per creare il grafico a dispersione (Scatter Plot).
+     * Disegna un grafico X/Y collegato ai dati delle colonne B (X) e C (Y).
+     *
+     * @param sheet Il foglio di lavoro su cui disegnare.
+     * @param firstRow Indice della prima riga contenente dati numerici.
+     * @param lastRow Indice dell'ultima riga contenente dati numerici.
+     */
+    private void createScatterChart(XSSFSheet sheet, int firstRow, int lastRow) {
+
+        // 1. Creiamo l'area di disegno (Drawing Patriarch)
+        XSSFDrawing drawing = sheet.createDrawingPatriarch();
+
+        // 2. Definiamo la posizione e dimensione del grafico (Anchor)
+        // Colonna 4 (E) -> Colonna 15 (P) | Riga 0 -> Riga 25
+        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 4, 0, 15, 25);
+
+        // 3. Creiamo l'oggetto grafico vuoto
+        XSSFChart chart = drawing.createChart(anchor);
+        chart.setTitleText("Solution Distribution");
+        chart.setTitleOverlay(false);
+
+        // 4. Creiamo la Legenda
+        XDDFChartLegend legend = chart.getOrAddLegend();
+        legend.setPosition(LegendPosition.TOP_RIGHT);
+
+        // 5. Definiamo gli Assi
+        // Scatter Plot richiede DUE assi di valore (Value Axis), non Categorie.
+        XDDFValueAxis bottomAxis = chart.createValueAxis(AxisPosition.BOTTOM);
+        bottomAxis.setTitle("X Coordinate");
+
+        XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+        leftAxis.setTitle("Y Coordinate");
+
+        // 6. Definiamo le Sorgenti Dati (Data Sources)
+        // Usiamo XDDFNumericalDataSource per specificare che sono numeri Double
+        // Colonna 1 = X, Colonna 2 = Y
+        XDDFNumericalDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(firstRow, lastRow, 1, 1));
+        XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(firstRow, lastRow, 2, 2));
+
+        // 7. Configuriamo i dati del grafico
+        XDDFScatterChartData data = (XDDFScatterChartData) chart.createData(ChartTypes.SCATTER, bottomAxis, leftAxis);
+        XDDFChartData.Series series = data.addSeries(xs, ys);
+        series.setTitle("Chromosomes", null);
+
+        // Cast sicuro e configurazione stile
+        if (series instanceof XDDFScatterChartData.Series scatterSeries) {
+
+            // Stile dei punti (Pallini)
+            scatterSeries.setMarkerStyle(MarkerStyle.CIRCLE);
+            scatterSeries.setMarkerSize((short) 5);
+
+            // --- RIMUOVERE LA LINEA DI CONNESSIONE ---
+            // 1. Creiamo un oggetto per le proprietà della forma
+            XDDFShapeProperties properties = new XDDFShapeProperties();
+
+            // 2. Creiamo un oggetto per le proprietà della linea
+            XDDFLineProperties lineProperties = new XDDFLineProperties();
+
+            // 3. Diciamo che il riempimento della linea è "NESSUNO" (Invisibile)
+            lineProperties.setFillProperties(new XDDFNoFillProperties());
+
+            // 4. Applichiamo le proprietà alla serie
+            properties.setLineProperties(lineProperties);
+            scatterSeries.setShapeProperties(properties);
+            // ------------------------------------------
+        }
+
+        // 8. Disegniamo il grafico
+        chart.plot(data);
+    }
+
+
 }

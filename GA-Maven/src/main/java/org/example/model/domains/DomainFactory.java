@@ -18,33 +18,55 @@ import java.util.Map;
 public class DomainFactory {
 
     /**
-     * Metodo pubblico per creare un'istanza di Domain.
+     * 1. Costruttore Privato.
+     * Impedisce l'istanziazione diretta tramite 'new DomainFactory()'.
+     */
+    private DomainFactory() {
+        // Logica di inizializzazione vuota (stateless)
+    }
+
+    /**
+     * 2. Inner Class Statica (Lazy Holder).
+     * Viene caricata in memoria dalla JVM solo quando viene invocato getInstance().
+     * Garantisce la Thread-Safety nativa senza bisogno di 'synchronized'.
+     */
+    private static class FactoryHolder {
+        private static final DomainFactory INSTANCE = new DomainFactory();
+    }
+
+    /**
+     * 3. Punto di Accesso Globale.
+     * Restituisce l'unica istanza esistente della factory.
+     * @return L'istanza Singleton.
+     */
+    public static DomainFactory getInstance() {
+        return FactoryHolder.INSTANCE;
+    }
+
+    // -----------------------------------------------------------
+    // SEZIONE BUSINESS LOGIC (Invariata)
+    // -----------------------------------------------------------
+
+    /**
+     * Metodo pubblico per creare un'istanza di un Domain.
      * È il punto d'ingresso del pattern Factory Method: delega la logica
      * di istanziazione specifica a un blocco {@code switch}.
      *
      * @param type Il tipo di dominio da creare, fornito tramite l'enum {@code DomainType}.
-     * @param params La mappa dei parametri di configurazione, dove la chiave è il nome del parametro
-     * e il valore è il dato numerico (es. {"radius": 10.0}).
-     * @return L'istanza concreta del {@code Domain} richiesto, trattata come interfaccia {@code Domain}.
-     * @throws IllegalArgumentException Se i parametri sono mancanti/nulli o se il {@code DomainType}
-     * non è supportato da questa factory.
+     * @param params La mappa dei parametri di configurazione.
+     * @return L'istanza concreta del {@code Domain} richiesto.
+     * @throws IllegalArgumentException Se i parametri sono mancanti/nulli o invalidi.
      */
     public Domain createDomain(DomainType type, Map<String, Double> params) {
 
-        // 1. Validazione: Controlla che tutti i parametri richiesti dall'enum siano presenti.
-        // @implNote La validazione preventiva impedisce l'instanziazione con valori nulli/mancanti,
-        // evitando potenziali eccezioni a runtime nei costruttori dei domini.
+        // 1. Validazione
         validateParameters(type, params);
 
         // 2. Creazione (switch-case sull'enum)
-        // Cuore del factory. L'uso dello switch expression è pulito e type-safe.
         return switch (type) {
             case CIRCLE ->
-                // L'esistenza della chiave "raggio" è garantita dal metodo validateParameters.
-                // La validazione del valore (raggio > 0) è gestita all'interno del costruttore di CircleDomain.
                     new CircleDomain(params.get("radius"));
             case RECTANGLE ->
-                // L'esistenza delle chiavi "larghezza" e "altezza" è garantita dalla validazione.
                     new RectangleDomain(params.get("width"), params.get("height"));
             case SQUARE ->
                     new SquareDomain(params.get("side"));
@@ -56,56 +78,33 @@ public class DomainFactory {
                     new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outherHeight"));
             case ANNULUS ->
                     new AnnulusDomain(params.get("innerRadius"), params.get("outerRadius"));
-            /*
-            * Qui potenzialmente andrebbe il default con una Exception IllegalArgument
-            * per catturare tipi non ancora gestiti nella factory.
-            * Ciò non è necessario in quanto i tipi possibili vengono da un Enum, quindi la scelta è sempre
-            * limitata a valori possibili
-            * */
-
         };
-
     }
 
     /**
-     * Metodo helper privato responsabile della validazione della presenza e della non-nullità dei parametri.
-     *
-     * @param type Il tipo di dominio, usato per ottenere la lista dei nomi dei parametri obbligatori (metadati).
-     * @param params La mappa dei parametri forniti dal codice client/utente.
-     * @throws IllegalArgumentException Se un parametro obbligatorio è mancante o il suo valore è {@code null}.
+     * Metodo helper privato responsabile della validazione.
      */
     private void validateParameters(DomainType type, Map<String, Double> params) {
 
-        // 1. Ottiene la lista dei nomi dei parametri obbligatori dall'enum (metadati).
         List<String> requiredKeys = type.getRequiredParameters();
 
-        // 2. Itera sui requisiti e controlla la mappa fornita.
         for (String key : requiredKeys) {
             Double value = params.get(key);
 
             // --- VALIDAZIONE 1: PRESENZA E NULLITÀ ---
-            // Controlla se il parametro è assente o se il valore è nullo.
             if (!params.containsKey(key) || value == null) {
-                // Lancia un errore specifico e descrittivo
                 throw new IllegalArgumentException(
                         "Missing or null parameter for the domain '" + type.getDisplayName() + "': " + key
                 );
             }
 
             // --- VALIDAZIONE 2: VALORE POSITIVO ---
-            // Controlla che il valore sia strettamente maggiore di zero.
-            // Larghezza, altezza e raggio, ... devono essere > 0.
             if (value <= 0) {
-                // Lancia un errore specifico se il valore è invalido (negativo o zero).
-                // teoricamente qua non ci si arriva mai, in quanto l'errore dato da valori non conformi
-                // è gestito precedentemente.
                 throw new IllegalArgumentException(
                         "Invalid value for parameter '" + key + "' in domain '" + type.getDisplayName() + "'. " +
                                 "Value must be strictly positive (> 0). Found: " + value
                 );
             }
         }
-        // La validazione del limite superiore (es. raggio max) resta delegata al codice chiamante (View/Controller)
-        // o al costruttore del Domain specifico per ragioni contestuali.
     }
 }

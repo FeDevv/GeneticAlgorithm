@@ -21,7 +21,7 @@ import java.util.Optional;
 public class DomainController {
 
     // Dipendenza dalla Factory: il Controller usa la Factory per creare gli oggetti Domain.
-    private final DomainFactory factory = new DomainFactory();
+    private final DomainFactory factory;
 
     // Dipendenza dalla View: Il Controller usa la View per tutte le interazioni con l'utente (I/O).
     private final DomainConsoleView view;
@@ -30,8 +30,10 @@ public class DomainController {
      * Costruttore che inietta la dipendenza della View.
      * @param view L'istanza della View (es. {@code DomainConsoleView}) che gestirà l'I/O.
      */
-    public DomainController(DomainConsoleView view) {
+    public DomainController(DomainConsoleView view, DomainFactory factory) {
         this.view = view;
+
+        this.factory = factory;
     }
 
     /**

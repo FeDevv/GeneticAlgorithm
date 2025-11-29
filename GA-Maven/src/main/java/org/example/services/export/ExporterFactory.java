@@ -1,9 +1,6 @@
 package org.example.services.export;
 
-import org.example.services.export.types.CSVExporter;
-import org.example.services.export.types.ExcelExporter;
-import org.example.services.export.types.JsonExporter;
-import org.example.services.export.types.TxtExporter;
+import org.example.services.export.types.*;
 
 /**
  * Factory per la creazione delle istanze di esportazione.
@@ -11,29 +8,39 @@ import org.example.services.export.types.TxtExporter;
  */
 public class ExporterFactory {
 
+    // 1. Costruttore Privato
+    // Fondamentale: impedisce a chiunque di fare 'new ExporterFactory()'
+    private ExporterFactory() {
+        // Qui potresti mettere log di inizializzazione se servissero
+    }
+
+    // 2. Inner Class Statica (Lazy Holder)
+    // Questa classe non viene caricata in memoria finché qualcuno non chiama getInstance().
+    // La JVM garantisce che il caricamento delle classi statiche sia Thread-Safe.
+    private static class FactoryHolder {
+        private static final ExporterFactory INSTANCE = new ExporterFactory();
+    }
+
+    // 3. Global Access Point
+    public static ExporterFactory getInstance() {
+        return FactoryHolder.INSTANCE;
+    }
+
     /**
-     * Crea un'istanza concreta di BaseExporter basata sul tipo richiesto.
-     *
-     * @param type Il tipo di export scelto dall'enum.
-     * @return L'istanza concreta che estende BaseExporter.
-     * @throws IllegalArgumentException se il tipo è null.
+     * Metodo di business (la logica Factory vera e propria).
+     * Non cambia nulla rispetto a prima.
      */
     public BaseExporter createExporter(ExportType type) {
-
-        // 1. Validazione preventiva (stile difensivo come nella tua DomainFactory)
         if (type == null) {
             throw new IllegalArgumentException("ExportType cannot be null.");
         }
 
-        // 2. Switch expression per l'istanziazione
         return switch (type) {
             case CSV -> new CSVExporter();
             case EXCEL -> new ExcelExporter();
             case TXT -> new TxtExporter();
             case JSON -> new JsonExporter();
-
-
-            // Non serve default, l'enum copre tutti i casi possibili noti.
+            case PDF -> new PdfExporter();
         };
     }
 }

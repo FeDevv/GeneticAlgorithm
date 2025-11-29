@@ -20,20 +20,7 @@ public class Main {
 
 /*
 * OBIETTIVI
-* 1. rendere le factory un singleton *
-* 2. ricontrollare i commenti
-* 3. rimuovi i code smell
+* 1. RISCRIVERE I COMMENTI
+* 2. rimuovi i code smell
+* 3. fai i controller come li vuole il prof
 * */
-
-// * aggiungere quindi l'attributo di tipo "singletonClass" e un check (if) per ritornare sempre lo stessa istanza.
-
-/**
- * singletonClass singleton = null
- * ...
- * if (singleton == null) {
- *     return new singletonClass;
- * } else {
- *     return singleton;
- * }
- * */
-
