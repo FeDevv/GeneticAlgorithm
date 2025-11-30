@@ -26,7 +26,7 @@ public class TxtExporter extends BaseExporter {
             // Intestazione artistica o formale
             writer.write("========================================");
             writer.newLine();
-            writer.write("      GENETIC ALGORITHM REPORT");
+            writer.write("            TERRAIN REPORT");
             writer.newLine();
             writer.write("========================================");
             writer.newLine();

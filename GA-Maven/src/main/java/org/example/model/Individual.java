@@ -100,7 +100,6 @@ public class Individual {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        //sb.append("Individual : ").append("\n");
         sb.append("\n");
         for (Point p : chromosomes) {
             sb.append(p.toString()).append("\n");

@@ -203,7 +203,7 @@ public class EvolutionEngine {
         double lastExecutionTimeMs;
         double totalExecutionTimeMs = 0;
 
-        view.displayStartMessage(GeneticConfig.GENERATIONS, GeneticConfig.POPULATION_SIZE);
+        view.displayStartMessage();
 
         do {
             Instant startTime = Instant.now();

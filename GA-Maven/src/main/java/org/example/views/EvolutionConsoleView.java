@@ -4,8 +4,7 @@ package org.example.views;
 public class EvolutionConsoleView {
     // --- MESSAGGIO DI INIZIALIZZAZIONE ---
 
-    public void displayStartMessage(int generations, int populationSize) {
-        //System.out.printf("Configuration: %d Generations | %d Individuals.%n%n", generations, populationSize);
+    public void displayStartMessage() {
         System.out.println("\nExecuting Evolutionary Cycle ...");
     }
 

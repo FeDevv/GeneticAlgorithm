@@ -72,7 +72,6 @@ public class ExcelExporter extends BaseExporter {
             rowIndex++; // Riga vuota
 
             // --- HEADER TABELLA ---
-            int headerRowIndex = rowIndex; // Memorizziamo dove sono gli header
             Row headerRow = sheet.createRow(rowIndex++);
             for (int i = 0; i < HEADERS.length; i++) {
                 Cell cell = headerRow.createCell(i);

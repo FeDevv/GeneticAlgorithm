@@ -21,6 +21,5 @@ public class Main {
 /*
 * OBIETTIVI
 * 1. RISCRIVERE I COMMENTI
-* 2. rimuovi i code smell
-* 3. fai i controller come li vuole il prof
+* 2. fai i controller come li vuole il prof
 * */

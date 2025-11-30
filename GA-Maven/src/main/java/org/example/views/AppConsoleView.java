@@ -6,18 +6,20 @@ import java.util.Scanner;
  * View principale dell'applicazione.
  * Gestisce l'interazione utente di alto livello (benvenuto, configurazione parametri globali).
  */
+@SuppressWarnings("java:S106")
 public class AppConsoleView {
 
     private final Scanner scanner;
+    private final static String SEPARATOR = "=========================================";
 
     public AppConsoleView(Scanner scanner) {
         this.scanner = scanner;
     }
 
     public void showWelcomeMessage() {
-        System.out.println("=========================================");
+        System.out.println(SEPARATOR);
         System.out.println("   \t\t🧬 TERRAIN OPTIMIZER 🧬   ");
-        System.out.println("=========================================");
+        System.out.println(SEPARATOR);
     }
 
     public void showNewSessionMessage() {
@@ -28,9 +30,9 @@ public class AppConsoleView {
 
     public void exitOnDemand() {
         System.out.println("\n🚫 Domain creation canceled. Exiting session.");
-        System.out.println("\n=========================================");
+        System.out.println("\n" + SEPARATOR);
         System.out.println("   \t👋 Session Terminated. See you!   ");
-        System.out.println("=========================================");
+        System.out.println(SEPARATOR);
     }
 
     /**
@@ -75,14 +77,14 @@ public class AppConsoleView {
                 if (radius <= 0) {
                     System.out.println("\n❌ Error: The radius has to be strictly greater than 0.");
                 } else if (radius > maxLimit) {
-                    System.out.printf("\n❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).%n", radius, maxLimit);
+                    System.out.printf("%n❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).%n", radius, maxLimit);
                 }
             } else {
                 System.out.println("\n❌ Invalid Input. You must enter a number.");
                 scanner.next(); // Pulisce il buffer
             }
         }
-        System.out.printf("\n✅ Valid radius entered: %.2f%n", radius);
+        System.out.printf("%n✅ Valid radius entered: %.2f%n", radius);
         return radius;
     }
 
