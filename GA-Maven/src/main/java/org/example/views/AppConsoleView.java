@@ -10,7 +10,7 @@ import java.util.Scanner;
 public class AppConsoleView {
 
     private final Scanner scanner;
-    private final static String SEPARATOR = "=========================================";
+    private static final String SEPARATOR = "=========================================";
 
     public AppConsoleView(Scanner scanner) {
         this.scanner = scanner;
