@@ -21,5 +21,7 @@ public class Main {
 /*
 * OBIETTIVI
 * 1. RISCRIVERE I COMMENTI
-* 2. fai i controller come li vuole il prof
+* 2. SUDDIVIDI CONTROLLER GRAFICO E CONTROLLER LOGICO - crea proprio due classi distinte,
+*    i controller grafici seguono un'interfaccia. il controller logico chiama il controller
+*    grafico che è stato istanziato dalla factory apposita.
 * */
