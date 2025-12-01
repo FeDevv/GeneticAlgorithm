@@ -12,6 +12,7 @@ public class ExportConsoleView {
 
     /**
      * Costruttore con iniezione dello Scanner per mantenere coerenza con l'architettura.
+     *
      * @param scanner L'oggetto condiviso per l'input.
      */
     public ExportConsoleView(Scanner scanner) {
@@ -22,6 +23,7 @@ public class ExportConsoleView {
 
     /**
      * Visualizza il menu dei formati di export disponibili.
+     *
      * @param types La lista di enum ExportType da mostrare.
      */
     public void showMenu(List<ExportType> types) {
@@ -34,6 +36,7 @@ public class ExportConsoleView {
 
     /**
      * Messaggio di successo.
+     *
      * @param path Il percorso dove è stato salvato il file.
      */
     public void showSuccess(String path) {
@@ -43,6 +46,7 @@ public class ExportConsoleView {
 
     /**
      * Messaggio di errore (utilizza System.err come da tua convenzione).
+     *
      * @param msg Il messaggio di dettaglio.
      */
     public void showError(String msg) {
@@ -89,16 +93,24 @@ public class ExportConsoleView {
      * @return Il nome del file inserito dall'utente.
      */
     public String readFilename() {
-        String filename = "";
+        String filename;
 
-        while (filename.trim().isEmpty()) {
+        // Consumiamo eventuali residui di "a capo" nel buffer se necessario.
+        scanner.nextLine();
+
+        while (true) {
             System.out.print("Enter filename (without extension): ");
 
-            // Nota: usiamo next() invece di nextLine() per evitare problemi con
-            // i caratteri di "a capo" rimasti nel buffer dopo nextInt().
-            // Questo significa che il nome file non deve contenere spazi (es. "run_1" ok, "run 1" no).
-            if (scanner.hasNext()) {
-                filename = scanner.next();
+            // Leggiamo tutta la riga inserita dall'utente
+            filename = scanner.nextLine().trim();
+
+            if (filename.isEmpty()) {
+                System.out.println("\n❌Errore: Il nome del file non può essere vuoto.");
+            } else if (filename.contains(" ")) {
+                System.out.println("\n❌Errore: Il nome del file non deve contenere spazi. Riprova.");
+            } else {
+                // Se non è vuoto e non ha spazi, è valido
+                break;
             }
         }
         return filename;

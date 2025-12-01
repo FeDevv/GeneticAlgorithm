@@ -24,4 +24,5 @@ public class Main {
 * 2. SUDDIVIDI CONTROLLER GRAFICO E CONTROLLER LOGICO - crea proprio due classi distinte,
 *    i controller grafici seguono un'interfaccia. il controller logico chiama il controller
 *    grafico che è stato istanziato dalla factory apposita.
+* 3. gestire i nomi con gli spazi! quando vado a salvare i nomi, non devono esservi spazi!
 * */
