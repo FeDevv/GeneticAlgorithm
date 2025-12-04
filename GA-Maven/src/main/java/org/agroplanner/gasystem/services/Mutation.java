@@ -1,0 +1,110 @@
+package org.agroplanner.gasystem.services;
+
+import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
+import org.agroplanner.domainsystem.model.Domain;
+import org.agroplanner.shared.utils.RandomUtils;
+
+public class Mutation {
+
+    // ------------------- ATTRIBUTI (Parametri di Configurazione) -------------------
+
+    // La probabilità che un singolo gene (Point) subisca una mutazione.
+    private final double mutationProbability;
+
+    // L'ampiezza massima della perturbazione applicata alle coordinate X e Y.
+    private final double initialMutationStrength;
+
+    // Riferimento al dominio per ottenere i limiti (Bounding Box) per il clamping.
+    private final Domain domain;
+
+    //
+    private final int totalGenerations;
+
+    // ------------------- COSTRUTTORE -------------------
+
+    /**
+     * Costruisce l'operatore di Mutazione con i parametri di controllo e il dominio.
+     * @param mutationProbability La probabilità che la mutazione avvenga su un gene.
+     * @param initialMutationStrength L'entità della perturbazione.
+     * @param domain Il riferimento al dominio del problema.
+     * * Scelta Implementativa: L'uso di 'final' per tutti i campi garantisce l'immutabilità della configurazione.
+     */
+    public Mutation(double mutationProbability, double initialMutationStrength, Domain domain, int totalGenerations) {
+        this.mutationProbability = mutationProbability;
+        this.initialMutationStrength = initialMutationStrength;
+        this.domain = domain;
+        this.totalGenerations = totalGenerations;
+    }
+
+    // ------------------- METODO PRINCIPALE -------------------
+
+    /**
+     * Esegue l'operazione di mutazione su un individuo.
+     * Il processo è in-place, modificando l'individuo passato come parametro.
+     * @param individual L'individuo da mutare.
+     */
+    public void mutate(Individual individual, int currentGeneration) {
+
+        double adaptiveStrenght = calculateAdaptiveStrength(currentGeneration);
+
+        // Estrae i limiti della Bounding Box (il rettangolo che contiene il dominio).
+        // Questo viene fatto una volta per l'efficienza.
+        java.awt.geom.Rectangle2D boundingBox = domain.getBoundingBox();
+        double minX = boundingBox.getMinX();
+        double minY = boundingBox.getMinY();
+        double maxX = boundingBox.getMaxX();
+        double maxY = boundingBox.getMaxY();
+
+        // Cicla su ogni cromosoma (per ogni punto).
+        for (int i = 0; i < individual.getDimension(); i++) {
+
+            // Controlla la probabilità di mutazione per questo gene.
+            if (RandomUtils.randDouble() < mutationProbability) {
+
+                Point oldPoint = individual.getChromosomes().get(i);
+                double radius = oldPoint.getRadius(); // Mantiene il raggio invariato.
+
+                // Calcola la perturbazione casuale (Mutazione Gaussiana / Creep Mutation).
+                // (RandomUtils.randDouble() * 2 - 1) genera un valore tra [-1.0, 1.0).
+                double newX = oldPoint.getX() + (RandomUtils.randDouble() * 2 - 1) * adaptiveStrenght;
+                double newY = oldPoint.getY() + (RandomUtils.randDouble() * 2 - 1) * adaptiveStrenght;
+
+                // 🌟 APPLICAZIONE DEL SOFT-CLAMPING
+                // Forza le coordinate all'interno dei limiti della Bounding Box.
+                // * Scelta Implementativa: Strategia ibrida per l'efficienza.
+                // Previene la generazione di troppi individui palesemente fuori dominio,
+                // riducendo il lavoro per la FitnessCalculator.
+                double finalX = Math.clamp(newX, minX, maxX);
+                double finalY = Math.clamp(newY, minY, maxY);
+
+                // Crea un nuovo oggetto Point (necessario perché Point è immutabile).
+                Point newPoint = new Point(finalX, finalY, radius);
+
+                // Sostituisce il vecchio gene con il nuovo gene mutato (Mutazione in-place).
+                // L'uso di setChromosome() è necessario per aggirare la vista immutabile del getter.
+                individual.setChromosome(i, newPoint);
+            }
+        }
+        // * Scelta Implementativa: La mutazione avviene "in-place" (modificando il riferimento all'individuo I),
+        // come è tipico per gli operatori genetici.
+    }
+
+    // ------------------- METODI UTILITY -------------------
+
+    private double calculateAdaptiveStrength(int gen) {
+        // Implementazione attuale: Decadimento Inverso
+        // La formula usa (1 + 5 * progresso) al denominatore per ridurre la forza
+        // in modo non lineare ma mantenendo una coda lunga.
+
+        /* * NOTA DI DESIGN:
+         * Un'alternativa valida è il "Decadimento Lineare".
+         * In quel caso, la forza si ridurrebbe sottraendo progressivamente il rapporto
+         * tra generazione corrente e totale, fino a toccare un minimo (es. 0.01).
+         */
+
+        // Decadimento Inverso (Mantiene un valore minimo)
+        // 5.0 è una costante che regola quanto velocemente la forza decade.
+        return this.initialMutationStrength / (1.0 + 5.0 * ((double)gen / this.totalGenerations));
+    }
+}
