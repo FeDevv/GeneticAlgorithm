@@ -123,8 +123,8 @@ public class ExcelExporter extends BaseExporter {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
         // 2. Definiamo la posizione e dimensione del grafico (Anchor)
-        // Colonna 4 (E) -> Colonna 15 (P) | Riga 0 -> Riga 25
-        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 4, 0, 15, 25);
+        // Colonna 4 (E) -> Colonna 14 (P) | Riga 0 -> Riga 28
+        XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 4, 0, 14, 28);
 
         // 3. Creiamo l'oggetto grafico vuoto
         XSSFChart chart = drawing.createChart(anchor);
