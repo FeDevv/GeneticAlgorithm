@@ -1,11 +1,11 @@
 package org.agroplanner.shared.exceptions;
 
 public abstract class TerrainExceptions extends RuntimeException {
-    public TerrainExceptions(String message) {
+    protected TerrainExceptions(String message) {
         super(message);
     }
 
-    public TerrainExceptions(String message, Throwable cause) {
+    protected TerrainExceptions(String message, Throwable cause) {
         super(message, cause);
     }
 }
