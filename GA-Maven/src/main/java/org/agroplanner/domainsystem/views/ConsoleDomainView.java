@@ -4,6 +4,7 @@ import org.agroplanner.domainsystem.model.DomainType;
 
 import java.util.*;
 
+@SuppressWarnings("java:S106")
 public class ConsoleDomainView implements DomainViewContract {
 
     private final Scanner scanner;

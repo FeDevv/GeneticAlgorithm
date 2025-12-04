@@ -16,4 +16,5 @@ public class Main {
 /*
 * OBIETTIVI
 * 1. RISCRIVERE I COMMENTI
+* 2. fare un clear della console quando si cambia view/controller
 * */

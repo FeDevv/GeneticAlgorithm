@@ -1,5 +1,6 @@
 package org.agroplanner.gasystem.views;
 
+@SuppressWarnings("java:S106")
 public class ConsoleEvolutionView implements EvolutionViewContract {
 
     @Override

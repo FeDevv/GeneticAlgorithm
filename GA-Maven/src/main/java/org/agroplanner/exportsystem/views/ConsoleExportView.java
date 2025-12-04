@@ -5,7 +5,7 @@ import org.agroplanner.exportsystem.model.ExportType;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
-
+@SuppressWarnings("java:S106")
 public class ConsoleExportView implements ExportViewContract {
 
     private final Scanner scanner;

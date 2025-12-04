@@ -2,6 +2,7 @@ package org.agroplanner.overseer.views;
 
 import java.util.Scanner;
 
+@SuppressWarnings("java:S106")
 public class ConsoleAppView implements AppViewContract {
     private final Scanner scanner;
     private static final String SEPARATOR = "=========================================";
