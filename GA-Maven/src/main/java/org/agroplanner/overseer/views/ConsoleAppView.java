@@ -108,7 +108,7 @@ public class ConsoleAppView implements AppViewContract {
         System.out.println("\n🔄 Restarting session from domain selection...");
         System.out.println("-".repeat(50));
 
-        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(2000); } catch (InterruptedException _) { Thread.currentThread().interrupt(); }
     }
 
     @Override

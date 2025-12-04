@@ -51,7 +51,7 @@ public class EvolutionConsoleController {
 
         // 3. FALLIMENTO CRITICO
         String failureDetails = String.format(
-                "Converge failed after %d attempts (%.2fs).\n   -> Best invalid fitness found: %.6f",
+                "Converge failed after %d attempts (%.2fs).%n   -> Best invalid fitness found: %.6f",
                 MAX_RETRY_ATTEMPTS,
                 totalTimeMs / 1000.0,
                 lastSolution.getFitness()
