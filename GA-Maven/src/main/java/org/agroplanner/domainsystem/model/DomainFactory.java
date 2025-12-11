@@ -8,63 +8,67 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Implementazione concreta del <b>Factory Method Pattern</b>.
- * <p>
- * Questa classe è responsabile esclusiva della creazione e della validazione preliminare
- * degli oggetti {@code Domain} concreti (es. {@code CircleDomain}, {@code RectangularDomain}).
- * Utilizza {@code DomainType} (i metadati) per sapere quali parametri sono necessari
- * e quale oggetto istanziare.
- * <p>
- * Aderisce al Single Responsibility Principle (SRP): il suo unico compito è la creazione.
+ * <p><strong>Factory for Domain Instantiation.</strong></p>
+ *
+ * <p>This class implements the <strong>Factory Method Pattern</strong> to centralize the creation logic
+ * of concrete {@link Domain} objects (e.g., Circle, Rectangle).
+ * Its responsibilities adhere to the <strong>Single Responsibility Principle (SRP)</strong>:</p>
+ * <ul>
+ * <li>It decouples the creation logic from the client (Service/Controller).</li>
+ * <li>It performs preliminary validation on input parameters based on the {@link DomainType} metadata.</li>
+ * </ul>
+ *
+ * <p><strong>Pattern:</strong> Singleton (Initialization-on-demand holder idiom).</p>
  */
 public class DomainFactory {
 
     /**
-     * 1. Costruttore Privato.
-     * Impedisce l'istanziazione diretta tramite 'new DomainFactory()'.
+     * Private constructor to prevent direct instantiation.
      */
     private DomainFactory() {
         // Logica di inizializzazione vuota (stateless)
     }
 
     /**
-     * 2. Inner Class Statica (Lazy Holder).
-     * Viene caricata in memoria dalla JVM solo quando viene invocato getInstance().
-     * Garantisce la Thread-Safety nativa senza bisogno di 'synchronized'.
+     * Static Inner Class (Lazy Holder).
+     * <p>
+     * This class is loaded by the JVM only when {@code getInstance()} is invoked for the first time.
+     * This idiom guarantees native Thread-Safety without the overhead of synchronized blocks.
+     * </p>
      */
     private static class FactoryHolder {
         private static final DomainFactory INSTANCE = new DomainFactory();
     }
 
     /**
-     * 3. Punto di Accesso Globale.
-     * Restituisce l'unica istanza esistente della factory.
-     * @return L'istanza Singleton.
+     * Retrieves the global singleton instance of the factory.
+     * @return The singleton instance.
      */
     public static DomainFactory getInstance() {
         return FactoryHolder.INSTANCE;
     }
 
-    // -----------------------------------------------------------
-    // SEZIONE BUSINESS LOGIC (Invariata)
-    // -----------------------------------------------------------
+    // ------------------- BUSINESS LOGIC -------------------
 
     /**
-     * Metodo pubblico per creare un'istanza di un Domain.
-     * È il punto d'ingresso del pattern Factory Method: delega la logica
-     * di istanziazione specifica a un blocco {@code switch}.
+     * Creates a concrete instance of a Domain based on the provided type and parameters.
+     * <p>
+     * This method acts as the entry point for the creation process. It delegates the specific
+     * instantiation to a switch expression after validating the inputs.
+     * </p>
      *
-     * @param type Il tipo di dominio da creare, fornito tramite l'enum {@code DomainType}.
-     * @param params La mappa dei parametri di configurazione.
-     * @return L'istanza concreta del {@code Domain} richiesto.
-     * @throws IllegalArgumentException Se i parametri sono mancanti/nulli o invalidi.
+     * @param type   The metadata describing the domain to create.
+     * @param params The map containing configuration values (e.g., width, radius).
+     * @return A new instance of the specific {@link Domain} implementation.
+     * @throws InvalidInputException     If required parameters are missing, null, or if the type is unsupported.
+     * @throws DomainConstraintException If parameters are present but mathematically invalid (e.g., negative).
      */
     public Domain createDomain(DomainType type, Map<String, Double> params) {
 
-        // 1. Validazione
+        // Pre-creation Validation
         validateParameters(type, params);
 
-        // 2. Creazione (switch-case sull'enum)
+        // Instantiation (Switch Expression)
         return switch (type) {
             case CIRCLE ->
                     new CircleDomain(params.get("radius"));
@@ -77,14 +81,25 @@ public class DomainFactory {
             case RIGHT_ANGLED_TRIANGLE ->
                     new RATDomain(params.get("base"), params.get("height"));
             case FRAME ->
-                    new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outherHeight"));
+                    new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outerHeight"));
             case ANNULUS ->
                     new AnnulusDomain(params.get("innerRadius"), params.get("outerRadius"));
+            // Defensive Programming: Covers the case where an Enum is added but the Factory is not updated.
+            default -> throw new InvalidInputException("Unsupported domain type implementation: " + type);
         };
     }
 
     /**
-     * Metodo helper privato responsabile della validazione.
+     * internal helper method for validation.
+     * <p>
+     * Checks that all required parameters defined in {@link DomainType#getRequiredParameters()}
+     * are present, non-null, and strictly positive.
+     * </p>
+     *
+     * @param type   The domain type.
+     * @param params The input parameters.
+     * @throws InvalidInputException     If a key is missing or value is null.
+     * @throws DomainConstraintException If a value is <= 0.
      */
     private void validateParameters(DomainType type, Map<String, Double> params) {
 
@@ -93,16 +108,17 @@ public class DomainFactory {
         for (String key : requiredKeys) {
             Double value = params.get(key);
 
-            // --- VALIDAZIONE 1: PRESENZA E NULLITÀ ---
-            // Se manca un parametro, non è un vincolo di dominio violato, è proprio la richiesta malformata.
+            // --- VALIDATION 1: PRESENCE & NULLITY ---
+            // If a parameter is missing, the request itself is malformed.
             if (!params.containsKey(key) || value == null) {
                 throw new InvalidInputException(
                         "Missing or null parameter for the domain '" + type.getDisplayName() + "': " + key
                 );
             }
 
-            // --- VALIDAZIONE 2: VALORE POSITIVO ---
-            // Questo è un vincolo del dominio (le dimensioni devono essere positive).
+            // --- VALIDATION 2: BASIC CONSTRAINTS ---
+            // Basic geometric rule: dimensions must be positive.
+            // More complex constraints (e.g., inner < outer) are handled by the specific Domain constructors.
             if (value <= 0) {
                 throw new DomainConstraintException(key, "must be strictly positive (> 0).");
             }

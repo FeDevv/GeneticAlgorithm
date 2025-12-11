@@ -1,44 +1,44 @@
 package org.agroplanner.gasystem.model;
 
+/**
+ * <p><strong>The Fundamental Unit of the Genetic Algorithm (The Gene).</strong></p>
+ *
+ * <p>This class represents a geometric point with a radius (a circular entity) in the 2D space.
+ * In the context of the Genetic Algorithm, a {@code Point} acts as a <strong>Gene</strong>:
+ * an atomic, indivisible part of a solution ({@link Individual}).</p>
+ *
+ * <p><strong>Architectural Choice: Immutability.</strong><br>
+ * This class is designed to be completely immutable (all fields are {@code final}).
+ * This provides several critical benefits:</p>
+ * <ul>
+ * <li><strong>Thread Safety:</strong> Instances can be safely shared across parallel streams without synchronization.</li>
+ * <li><strong>Genetic Isolation:</strong> When Mutation or Crossover operators act, they create <em>new</em> points
+ * rather than modifying existing ones. This prevents side-effects where mutating a child accidentally mutates the parent.</li>
+ * </ul>
+ */
 public class Point {
-    // ------------------- ATTRIBUTI (Stato del Gene) -------------------
+    // ------------------- STATE -------------------
 
-    // Le coordinate spaziali del centro dell'oggetto.
+    /** The X coordinate of the center. */
     private final double x;
+
+    /** The Y coordinate of the center. */
     private final double y;
 
-    // Il raggio (dimensione) dell'oggetto.
+    /**
+     * The radius (size) of the object.
+     * Defines the spatial footprint for overlap calculations.
+     */
     private final double radius;
 
-    /*
-     * Scelta Implementativa: Uso di 'final' per tutti i campi.
-     * Questo rende la classe Point **totalmente immutabile**.
-     * * Beneficio: Quando un individuo è sottoposto a Mutazione o Crossover,
-     * il gene originale non viene mai modificato; viene sempre **creato un nuovo Point**.
-     * Questo previene bug di riferimento e semplifica notevolmente la gestione dell'isolamento genetico,
-     * specialmente nella classe Crossover.
-     */
-
-    // ------------------- COSTRUTTORI -------------------
+    // ------------------- CONSTRUCTORS -------------------
 
     /**
-     * Costruttore parziale usato per il solo posizionamento (es. test o calcoli di distanza
-     * dove il raggio non è rilevante per l'overlap).
-     * * @param x Coordinata X.
-     * @param y Coordinata Y.
-     * * Nota: Imposta il raggio a un valore massimo come segnaposto.
-     */
-    public Point(double x, double y) {
-        this.x = x;
-        this.y = y;
-        this.radius = Double.MAX_VALUE; // Valore di placeholder, potenzialmente pericoloso se usato in calcolo fitness/overlap.
-    }
-
-    /**
-     * Costruttore totale: Usato per creare i geni completi utilizzati nell'algoritmo genetico.
-     * * @param x Coordinata X.
-     * @param y Coordinata Y.
-     * @param radius Raggio dell'oggetto.
+     * Primary constructor: Creates a full Gene.
+     *
+     * @param x      The X coordinate.
+     * @param y      The Y coordinate.
+     * @param radius The physical radius of the object.
      */
     public Point(double x, double y, double radius) {
         this.x = x;
@@ -46,21 +46,29 @@ public class Point {
         this.radius = radius;
     }
 
-    // ------------------- GETTER PUBBLICI -------------------
-
-    /** Ritorna la coordinata X. */
+    /**
+     * Retrieves the X coordinate.
+     * @return The value on the horizontal axis.
+     */
     public double getX() { return x; }
 
-    /** Ritorna la coordinata Y. */
+    /**
+     * Retrieves the Y coordinate.
+     * @return The value on the vertical axis.
+     */
     public double getY() { return y; }
 
-    /** Ritorna il raggio dell'oggetto. */
+    /**
+     * Retrieves the radius.
+     * @return The size of the object.
+     */
     public double getRadius() { return radius; }
 
-    // ------------------- UTILITY -------------------
-
     /**
-     * Ritorna una rappresentazione testuale formattata del punto.
+     * Returns a formatted string representation of the point coordinates.
+     * <p>Format: {@code (x.xxxx, y.yyyy)}</p>
+     *
+     * @return The string representation suitable for logging or export.
      */
     @Override
     public String toString() {

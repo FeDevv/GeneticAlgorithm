@@ -1,6 +1,6 @@
-package org.agroplanner.overseer.views;
+package org.agroplanner.optimizer.views;
 
-public interface AppViewContract {
+public interface OptimizerViewContract {
     void showWelcomeMessage();
     void showNewSessionMessage();
     void showExitMessage();

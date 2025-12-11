@@ -8,31 +8,41 @@ import org.agroplanner.domainsystem.model.Domain;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
 
-// RAT -> Right Angled Triangle
 /**
- * Implementa l'interfaccia Domain definendo un'area di vincolo di forma triangolare rettangola.
- * * Il triangolo è posizionato nel primo quadrante con l'angolo retto all'origine (0, 0).
+ * <p><strong>Concrete Domain Implementation: Right-Angled Triangle.</strong></p>
+ *
+ * <p>Represents a triangular domain positioned in the first quadrant.
+ * The right angle is located at the origin {@code (0, 0)}. The legs of the triangle extend along
+ * the positive X-axis (Base) and the positive Y-axis (Height).</p>
  */
 public class RATDomain implements Domain {
 
-    // ------------------- ATTRIBUTI -------------------
+    // ------------------- FIELDS -------------------
 
-    private final double base;   // Lunghezza del cateto sull'asse X (base)
-    private final double height; // Lunghezza del cateto sull'asse Y (altezza)
-
-    // La Bounding Box: il rettangolo che contiene il triangolo.
-    private final Rectangle2D boundingBox;
-
-    // ------------------- COSTRUTTORE -------------------
+    private final double base;   // Leg along the X-axis
+    private final double height; // Leg along the Y-axis
 
     /**
-     * Crea un dominio triangolare rettangolo con le dimensioni specificate.
-     * @param base La base (cateto X).
-     * @param height L'altezza (cateto Y).
-     * @throws IllegalArgumentException Se base o altezza non sono positivi.
+     * Optimization: Pre-calculated slope of the hypotenuse (height / base).
+     * Used to avoid repeated division operations during point validation.
+     */
+    private final double slope;
+
+    /** The bounding box enclosing the triangle [0, 0, base, height]. */
+    private final Rectangle2D boundingBox;
+
+    // ------------------- CONSTRUCTOR -------------------
+
+    /**
+     * Constructs a Right-Angled Triangle domain.
+     *
+     * @param base   The length of the leg on the X-axis.
+     * @param height The length of the leg on the Y-axis.
+     * @throws DomainConstraintException If dimensions are not strictly positive.
      */
     public RATDomain(double base, double height) {
 
+        // Deep Protection: Integrity check
         if (base <= 0) {
             throw new DomainConstraintException("base", "Must be strictly positive.");
         }
@@ -44,42 +54,46 @@ public class RATDomain implements Domain {
         this.base = base;
         this.height = height;
 
-        // La Bounding Box va da [0, 0] a [base, height].
+        // Pre-calculate the slope ratio.
+        this.slope = height / base;
+
+        // Bounding Box: Anchored at (0,0) extending to (base, height).
         this.boundingBox = new Rectangle2D.Double(0, 0, base, height);
     }
 
-    // ------------------- IMPLEMENTAZIONE INTERFACCIA DOMAIN -------------------
+    // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Verifica se un punto con coordinate (x, y) si trova al di fuori del dominio triangolare.
-     * Complessità: O(1).
+     * Checks if a coordinate {@code (x, y)} lies outside the triangle.
+     *
+     * <p><strong>Geometric Logic:</strong>
+     * The point is outside if:
+     * <ul>
+     * <li>It is to the left of the Y-axis (x < 0).</li>
+     * <li>It is below the X-axis (y < 0).</li>
+     * <li>It is above the hypotenuse line (y > H - (H/B) * x).</li>
+     * </ul>
+     * </p>
+     *
+     * @param x The X coordinate.
+     * @param y The Y coordinate.
+     * @return {@code true} if the point is strictly outside the triangular area.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
 
-        // 1. Condizione di Base 1: deve essere a destra o sul bordo dell'asse Y (x >= 0)
-        // 2. Condizione di Base 2: deve essere sopra o sul bordo dell'asse X (y >= 0)
+        // Axes Constraint: Must be in the first quadrant
         boolean outsideAxes = (x < 0) || (y < 0);
         if (outsideAxes) return true;
 
-        // 3. Condizione dell'Ipotenusa: Il punto deve essere sopra la retta che collega (B, 0) a (0, H).
-        // L'equazione della retta è y = H - (H/B) * x.
-        // La condizione d'inclusione è: y > H - (H/B) * x
-
-        // Il punto è fuori se non soddisfa la condizione dell'ipotenusa.
-        // NOTA: Poiché l'intero dominio è nel primo quadrante, usiamo
-        // la Bounding Box per la prima parte del controllo.
-
-        // il punto è fuori se:
-        // si trova in valori di x negativi (x < 0)
-        // si trova in valori di y negativi (y < 0)
-        // si trova sopra l'ipotenusa (y > H - (H/B)x)
-        // le prime due condizioni sono gia controllate, manca la terza
-        return (y > this.height - (this.height / this.base) * x);
+        // Hypotenuse Constraint
+        // The line equation is y = H - slope * x.
+        // If y is greater than that value, the point is "above" the triangle.
+        return y > (height - (slope * x));
     }
 
     /**
-     * Verifica se un intero individuo rispetta il vincolo di confine.
+     * Validates an entire individual against the triangular boundary.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
@@ -91,7 +105,7 @@ public class RATDomain implements Domain {
     }
 
     /**
-     * Ritorna la Bounding Box del dominio.
+     * Retrieves the Bounding Box [0, 0, base, height].
      */
     @Override
     public Rectangle2D getBoundingBox() {
@@ -100,6 +114,6 @@ public class RATDomain implements Domain {
 
     @Override
     public String toString() {
-        return "Right Angled Triangle { base = " + base + ", height = " + height + " }";
+        return String.format("Right Angled Triangle { base = %.2f, height = %.2f }", base, height);
     }
 }

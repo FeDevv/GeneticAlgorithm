@@ -1,12 +1,12 @@
-package org.agroplanner.overseer.views;
+package org.agroplanner.optimizer.views;
 
 import java.util.Scanner;
 
-public class ConsoleAppView implements AppViewContract {
+public class ConsoleOptimizerView implements OptimizerViewContract {
     private final Scanner scanner;
     private static final String SEPARATOR = "=========================================";
 
-    public ConsoleAppView(Scanner scanner) {
+    public ConsoleOptimizerView(Scanner scanner) {
         this.scanner = scanner;
     }
 

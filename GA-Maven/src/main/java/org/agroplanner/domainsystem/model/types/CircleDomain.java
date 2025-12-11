@@ -8,63 +8,72 @@ import org.agroplanner.domainsystem.model.Domain;
 import java.awt.geom.Rectangle2D;
 import java.util.List;
 
+/**
+ * <p><strong>Concrete Domain Implementation: Circle.</strong></p>
+ *
+ * <p>Represents a 2D circular area centered at the origin {@code (0, 0)}.
+ * This class guarantees immutability and state consistency upon creation.</p>
+ */
 public class CircleDomain implements Domain {
 
-    // ------------------- ATTRIBUTI -------------------
+    // ------------------- FIELDS -------------------
 
-    // Raggio del cerchio che definisce il dominio.
+    /** The radius defining the boundary of the domain. */
     private final double radius;
 
-    // La Bounding Box: il quadrato che contiene perfettamente il cerchio, centrato su (0, 0).
+    /**
+     * The smallest square containing the circle.
+     * Calculated once during initialization for performance.
+     */
     private final Rectangle2D boundingBox;
 
-    // ------------------- COSTRUTTORE -------------------
+    // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Crea un dominio circolare con il raggio specificato, centrato su (0, 0).
-     * @param radius Il raggio del cerchio (deve essere positivo).
-     * @throws IllegalArgumentException Se il raggio non è positivo.
-     * * Scelta Implementativa: Il controllo all'inizio garantisce che l'oggetto sia sempre valido.
+     * Constructs a circular domain centered at {@code (0, 0)}.
+     *
+     * @param radius The radius of the circle.
+     * @throws DomainConstraintException If the radius is not strictly positive.
      */
     public CircleDomain(double radius) {
 
-        // Validazione di Integrità (Deep Defense):
-        // Nonostante i controlli "fail-fast" nel Factory/Controller,
-        // il costruttore garantisce che l'oggetto non sia mai creato in uno stato illegale.
+        // Deep Protection / Defensive Programming:
+        // Even if the Factory validates inputs, the Model itself must ensure it never exists in an invalid state.
         if (radius <= 0) {
             throw new DomainConstraintException("radius", "Must be strictly positive.");
         }
-        // L'uso di 'final' garantisce l'immutabilità del dominio.
+
         this.radius = radius;
 
-        // La Bounding Box va da [-radius, -radius] a [radius, radius],
-        // con larghezza (radius * 2) e altezza (radius * 2).
-        // Scelta Implementativa: Utilizzo di Rectangle2D per definire i limiti di inizializzazione e mutazione.
+        // Implementation Choice: Pre-calculate the bounding box.
+        // The box spans from [-r, -r] to [r, r]. width = 2r, height = 2r.
         this.boundingBox = new Rectangle2D.Double(-radius, -radius, radius*2, radius*2);
     }
 
-    // ------------------- IMPLEMENTAZIONE INTERFACCIA DOMAIN -------------------
+    // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Verifica se un punto con coordinate (x, y) è all'interno del dominio circolare.
-     * @param x Coordinata X del punto.
-     * @param y Coordinata Y del punto.
-     * @return True se il punto è all'interno o sul bordo del cerchio.
-     * * Scelta Implementativa: Utilizzo dell'equazione del cerchio (distanza euclidea al quadrato).
-     * Non calcolare la radice quadrata (Math.hypot o Math.sqrt) rende il controllo più veloce.
+     * Checks if a coordinate {@code (x, y)} lies outside the circle.
+     *
+     * <p><strong>Optimization:</strong> Uses squared Euclidean distance {@code (x² + y² > r²)}
+     * to avoid the computationally expensive {@link Math#sqrt(double)} operation.</p>
+     *
+     * @param x The X coordinate.
+     * @param y The Y coordinate.
+     * @return {@code true} if the point is strictly outside the radius; {@code false} otherwise.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
-        // Equazione: x² + y² <= r²
-        // sto facendo !(isPointInside)
+        // Inequality: x² + y² > r²
         return (x * x + y * y) > (radius * radius);
     }
 
     /**
-     * Verifica se un intero individuo (tutti i suoi punti) rispetta il vincolo di confine.
-     * Complessità: O(N), dove N è il numero di punti nell'individuo.
-     * @param individual L'individuo da validare.
-     * @return True se tutti i punti sono all'interno del cerchio.
+     * Validates an entire individual against the circular boundary.
+     * <p>Complexity: O(N), where N is the number of points (genes).</p>
+     *
+     * @param individual The solution to validate.
+     * @return {@code true} if every point is within the circle.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
@@ -76,10 +85,9 @@ public class CircleDomain implements Domain {
     }
 
     /**
-     * Ritorna la Bounding Box del dominio.
-     * @return L'oggetto Rectangle2D che incapsula il cerchio.
-     * * Ruolo nell'AG: Fornisce i limiti di coordinate per l'inizializzazione casuale dei Punti
-     * e per l'applicazione del soft-clamping nella classe Mutation.
+     * Retrieves the Bounding Box used for random point generation.
+     *
+     * @return A {@link Rectangle2D} centered at (0,0) with side length {@code 2*radius}.
      */
     @Override
     public Rectangle2D getBoundingBox() {
@@ -88,6 +96,6 @@ public class CircleDomain implements Domain {
 
     @Override
     public String toString() {
-        return "Circle { radius = " + radius + " }";
+        return String.format("Circle { radius = %.2f }", radius);
     }
 }

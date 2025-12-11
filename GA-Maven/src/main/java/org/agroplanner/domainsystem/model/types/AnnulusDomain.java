@@ -9,40 +9,50 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * Implementa l'interfaccia Domain definendo un'area non convessa a forma di corona circolare (Annulus).
- * * Il dominio è l'area tra due cerchi concentrici, entrambi centrati all'origine (0, 0).
+ * <p><strong>Concrete Domain Implementation: Annulus (Ring).</strong></p>
+ *
+ * <p>Represents a non-convex domain defined by the area between two concentric circles centered at {@code (0, 0)}.
+ * Valid points must lie <em>inside</em> the outer circle but <em>outside</em> the inner circle (the hole).</p>
  */
 public class AnnulusDomain implements Domain {
 
-    // ------------------- ATTRIBUTI -------------------
+    // ------------------- FIELDS -------------------
 
     private final double innerRadius;
     private final double outerRadius;
 
-    // La Bounding Box è definita dal cerchio esterno.
+    /**
+     * Optimization: Squared radii are pre-calculated to avoid repetitive multiplication
+     * during the {@link #isPointOutside(double, double)} check.
+     */
+    private final double innerRadiusSq;
+    private final double outerRadiusSq;
+
+    /** The bounding box is defined solely by the outer circle. */
     private final Rectangle2D boundingBox;
 
-    // ------------------- COSTRUTTORE -------------------
+    // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Crea un dominio Annulus.
-     * @param innerRadius Raggio del buco centrale.
-     * @param outerRadius Raggio del confine esterno.
-     * @throws IllegalArgumentException Se i raggi non sono positivi o se innerRadius >= outerRadius.
+     * Constructs an Annulus domain.
+     *
+     * @param innerRadius The radius of the central hole.
+     * @param outerRadius The radius of the outer boundary.
+     * @throws DomainConstraintException If radii are non-positive or if {@code innerRadius >= outerRadius}.
      */
     public AnnulusDomain(double innerRadius, double outerRadius) {
 
-        // 1. Controllo validità intrinseca dei singoli valori
+        // Deep Protection: Intrinsic validity of single values
         if (innerRadius <= 0) {
             throw new DomainConstraintException("innerRadius", "must be strictly positive (> 0).");
         }
         if (outerRadius <= 0) {
             throw new DomainConstraintException("outerRadius", "must be strictly positive (> 0).");
         }
-        // Condizione essenziale: il buco interno deve essere strettamente più piccolo del confine esterno.
+        // Deep Protection: Topology Consistency
+        // Essential condition: The inner hole must be strictly smaller than the outer boundary
+        // to form a valid ring area.
         if (innerRadius >= outerRadius) {
-            // Qui l'errore non è solo di un numero, ma della relazione tra i due.
-            // Possiamo essere molto specifici nel messaggio per aiutare l'utente.
             throw new DomainConstraintException(
                     String.format("Invalid Topology: Inner radius (%.2f) must be strictly smaller than Outer radius (%.2f).",
                             innerRadius, outerRadius)
@@ -52,7 +62,11 @@ public class AnnulusDomain implements Domain {
         this.innerRadius = innerRadius;
         this.outerRadius = outerRadius;
 
-        // La Bounding Box è il quadrato che contiene il cerchio esterno.
+        // Pre-calculate squares
+        this.innerRadiusSq = innerRadius * innerRadius;
+        this.outerRadiusSq = outerRadius * outerRadius;
+
+        // The bounding box encloses the outer circle: [-R_out, -R_out] to [R_out, R_out].
         this.boundingBox = new Rectangle2D.Double(
                 -outerRadius,
                 -outerRadius,
@@ -61,39 +75,41 @@ public class AnnulusDomain implements Domain {
         );
     }
 
-    // ------------------- IMPLEMENTAZIONE INTERFACCIA DOMAIN -------------------
+    // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Verifica se un punto con coordinate (x, y) si trova al di fuori del dominio Annulus.
-     * Il punto è fuori se: (È fuori dal cerchio esterno) OR (È dentro il cerchio interno/buco).
-     * Complessità: O(1).
+     * Checks if a coordinate {@code (x, y)} lies outside the annulus area.
+     * <p>
+     * Logic: A point is invalid (outside) if:
+     * <ul>
+     * <li>It is outside the outer container (Distance > OuterRadius).</li>
+     * <li>OR</li>
+     * <li>It is inside the inner hole (Distance < InnerRadius).</li>
+     * </ul>
+     * </p>
+     *
+     * @param x The X coordinate.
+     * @param y The Y coordinate.
+     * @return {@code true} if the point is invalid.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
 
-        // Distanza del punto dall'origine (centro del cerchio)
-        double distanceSquared = x * x + y * y;
+        // Squared Euclidean distance from origin
+        double distSq = x * x + y * y;
 
-        // Quadrati dei raggi (per evitare la radice quadrata)
-        double innerRadiusSq = innerRadius * innerRadius;
-        double outerRadiusSq = outerRadius * outerRadius;
+        // 1. Outer Boundary Check: Must be inside the outer circle.
+        boolean isOutsideOuter = distSq > outerRadiusSq;
 
-        // --- Logica d'inclusione/esclusione ---
+        // 2. Inner Hole Check: Must be outside the inner circle.
+        boolean isInsideHole = distSq < innerRadiusSq;
 
-        // 1. Controllo Contenitore Esterno: Il punto deve essere DENTRO il cerchio esterno.
-        // Se distanceSquared > outerRadiusSq, è fuori dal contenitore.
-        boolean isOutsideOuter = distanceSquared > outerRadiusSq;
-
-        // 2. Controllo Buco Interno: Il punto deve essere FUORI dal cerchio interno.
-        // Se distanceSquared < innerRadiusSq, è dentro il buco (quindi è fuori dal dominio Annulus).
-        boolean isInsideHole = distanceSquared < innerRadiusSq;
-
-        // Il punto è fuori dal dominio se è: (Fuori dal contenitore esterno) OR (Dentro il buco interno).
+        // Invalid if it breaks either boundary condition
         return isOutsideOuter || isInsideHole;
     }
 
     /**
-     * Verifica se un intero individuo rispetta il vincolo di confine.
+     * Validates an entire individual against the annulus constraints.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
@@ -105,7 +121,8 @@ public class AnnulusDomain implements Domain {
     }
 
     /**
-     * Ritorna la Bounding Box del dominio (il quadrato contenitore del cerchio esterno).
+     * Retrieves the Bounding Box of the outer boundary.
+     * Used for initial random generation (points generated in the hole will be discarded by validation).
      */
     @Override
     public Rectangle2D getBoundingBox() {
@@ -114,6 +131,6 @@ public class AnnulusDomain implements Domain {
 
     @Override
     public String toString() {
-        return "Annulus { inner radius = " + innerRadius + ", outer radius = " + outerRadius + " }";
+        return String.format("Annulus { inner radius = %.2f, outer radius = %.2f }", innerRadius, outerRadius);
     }
 }

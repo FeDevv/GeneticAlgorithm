@@ -4,10 +4,31 @@ import org.agroplanner.domainsystem.model.DomainType;
 
 import java.util.*;
 
+/**
+ * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
+ *
+ * <p>This class implements the {@link DomainViewContract} using standard system I/O.
+ * It is responsible for:</p>
+ * <ul>
+ * <li>Rendering menus and messages to {@code System.out}.</li>
+ * <li>Capturing and cleaning user input via {@link Scanner}.</li>
+ * <li>Performing <strong>Syntactic Validation</strong> (ensuring inputs are numbers).</li>
+ * <li>Performing <strong>Basic Validation</strong> (ensuring inputs are non-negative).</li>
+ * </ul>
+ */
 public class ConsoleDomainView implements DomainViewContract {
 
     private final Scanner scanner;
 
+    /**
+     * Constructs the view sharing an existing Scanner instance.
+     * <p>
+     * Dependency Injection of the Scanner is crucial to avoid closing the underlying
+     * {@code System.in} stream when switching between different views/controllers.
+     * </p>
+     *
+     * @param scanner The shared scanner instance.
+     */
     public ConsoleDomainView(Scanner scanner) {
         this.scanner = scanner;
     }
@@ -15,32 +36,33 @@ public class ConsoleDomainView implements DomainViewContract {
     @Override
     public Optional<DomainType> askForDomainType(List<DomainType> types) {
 
-        // --- CICLO DI VALIDAZIONE INTERNO ALLA VIEW ---
+        // --- VIEW-LEVEL VALIDATION LOOP ---
+        // The View keeps the user here until a syntactically valid choice is made.
         while (true) {
-            // 1. Stampa il menu
+            // Render Dynamic Menu
             System.out.println("\n--- Select domain type ---");
             for (DomainType type : types) {
                 System.out.println(type.getMenuId() + ") " + type.getDisplayName());
             }
             System.out.println("0) Quit");
 
-            // 2. Leggi input (già validato come intero >= 0)
+            // Capture Input (Guaranteed to be an integer >= 0)
             int choice = readMenuChoice();
 
-            // CASO A: Uscita esplicita
+            // CASE A: Explicit Exit
             if (choice == 0) {
                 return Optional.empty();
             }
 
-            // CASO B: Verifica se l'ID mappa a qualcosa
+            // CASE B: Map Input to DomainType
             Optional<DomainType> result = DomainType.fromMenuId(choice);
 
             if (result.isPresent()) {
-                return result; // ID Trovato e valido -> Ritorna al controller
+                return result; // Valid ID found -> Return control to Controller
             }
 
-            // CASO C: ID non mappato (es. 8)
-            // Non ritorniamo nulla, stampiamo errore e il while ricomincia
+            // CASE C: Unmapped ID (e.g., user entered 99)
+            // Feedback is given, and the loop restarts.
             System.out.println("\n❌ Invalid selection ID. Please try again.");
         }
     }
@@ -50,6 +72,8 @@ public class ConsoleDomainView implements DomainViewContract {
         Map<String, Double> params = new HashMap<>();
         System.out.println("\n--- Parameter Entry for " + type.getDisplayName() + " ---");
 
+        // Dynamic Form Generation:
+        // Iterate over the requirements defined in the Enum and ask for each one.
         for (String key : type.getRequiredParameters()) {
             double value = readPositiveDouble(key);
             params.put(key, value);
@@ -67,8 +91,10 @@ public class ConsoleDomainView implements DomainViewContract {
         System.err.println("\n❌ Creation error: " + message);
     }
 
-    // --- Metodi privati di supporto (Helper per Scanner) ---
-
+    /**
+     * Reads an integer from the console with robust error handling.
+     * Ensures the result is non-negative.
+     */
     private int readMenuChoice() {
         int choice;
         do {
@@ -84,6 +110,12 @@ public class ConsoleDomainView implements DomainViewContract {
         return choice;
     }
 
+    /**
+     * Reads a double from the console for a specific parameter.
+     * Enforces strictly positive values (> 0) as physical dimensions cannot be zero or negative.
+     *
+     * @param paramName The name of the parameter being requested (for prompt context).
+     */
     private double readPositiveDouble(String paramName) {
         double value;
         while (true) {

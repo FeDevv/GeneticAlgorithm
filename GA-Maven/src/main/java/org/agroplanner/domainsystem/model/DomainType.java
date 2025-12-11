@@ -5,56 +5,72 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Rappresenta i tipi di domini geometrici disponibili nel sistema.
- * <p>
- * Questo enum funge da <b>repository di metadati</b> (Domain Metadata),
- * fornendo tutte le informazioni necessarie alla DomainFactory e alla View
- * (menu ID, nome visualizzato e parametri richiesti) per la creazione
- * e la gestione del dominio.
- * <p>
- * Aderisce al Single Responsibility Principle (SRP) mantenendo la logica di
- * creazione separata nella DomainFactory.
+ * <p><strong>Catalog of Supported Geometric Domains.</strong></p>
+ *
+ * <p>This enum acts as a centralized <strong>Metadata Repository</strong> for the domain subsystem.
+ * It provides essential configuration data to other components without containing business logic:</p>
+ * <ul>
+ * <li><strong>For the View:</strong> It provides the {@code menuId} for selection and the {@code displayName} for output.</li>
+ * <li><strong>For the Controller/View:</strong> It dictates which parameters (keys) must be collected from the user via {@code requiredParameters}.</li>
+ * <li><strong>For the Factory:</strong> It acts as the key to dispatch the correct object instantiation.</li>
+ * </ul>
  */
 public enum DomainType {
 
-    // Le costanti dell'enum, ognuna configurata con il suo nome visualizzato
-    // e la lista dei nomi dei parametri obbligatori per la sua creazione.
+    // ------------------- ENUM CONSTANTS -------------------
 
-    // Dominio Circolare, richiede solo il raggio.
+    /** Represents a circular domain defined by a radius. */
     CIRCLE(1,"CIRCLE", List.of("radius")),
-    // Dominio Rettangolare, richiede larghezza e altezza.
+
+    /** Represents a rectangular domain defined by width and height. */
     RECTANGLE(2,"RECTANGLE", List.of("width", "height")),
-    // Dominio quadrato, richiede solo il lato
+
+    /** Represents a square domain defined by side length. */
     SQUARE (3, "SQUARE", List.of("side")),
-    //Dominio ellittico, richiede i due semiassi (la width è sull'asse x, la height sull'asse y)
+
+    /** Represents an elliptical domain defined by semi-width (x-axis) and semi-height (y-axis). */
     ELLIPSE(4, "ELLIPSE", List.of("semi-width", "semi-height")),
-    //Dominio di triangolo rettangolo, richiede i due cateti, o base (sull'asse x a partire da (0,0)) e altezza (sull'asse y a partire da (0,0))
-    RIGHT_ANGLED_TRIANGLE(5, "RIGHT ANGLED TRIANGLE", List.of("base", "height")),
-    //Dominio a "frame", o cornice, richiede le dimensioni per i due rettangoli
-    FRAME(6, "FRAME", List.of("innerWidth", "innerHeight","outerWidth", "outherHeight")),
-    //Dominio a corona circolare, o annulus, richiede i raggi della circonferenza esterna e di quella interna
-    ANNULUS(7, "ANNULUS", List.of("innerRadius", "outerRadius"));
-
-    // ------------------- ATTRIBUTI -------------------
-
-    // L'identificativo numerico univoco utilizzato per la selezione nel menu a riga di comando (CLI).
-    private final int menuId;
-
-    // Il nome "amichevole" del dominio, usato per la visualizzazione nelle interfacce utente e nei log.
-    private final String displayName;
-
-    // La lista dei nomi delle chiavi (String) che devono essere fornite nella Map<String, Double> dei parametri
-    // alla DomainFactory per creare correttamente questo specifico tipo di dominio.
-    private final List<String> requiredParameters;
-
-    // ------------------- COSTRUTTORE -------------------
 
     /**
-     * Costruttore privato (implicito per gli enum).
-     * Inizializza le costanti dell'enum associando i metadati (ID, nome e requisiti) a ogni tipo.
-     * @param menuId L'ID numerico per la selezione nel menu.
-     * @param displayName Il nome del dominio da mostrare all'utente.
-     * @param requiredParameters La lista dei nomi delle chiavi dei parametri attesi.
+     * Represents a right-angled triangle.
+     * Defined by base (along x-axis) and height (along y-axis) starting from origin (0,0).
+     */
+    RIGHT_ANGLED_TRIANGLE(5, "RIGHT ANGLED TRIANGLE", List.of("base", "height")),
+
+    /**
+     * Represents a rectangular frame (picture frame).
+     * Defined by inner and outer dimensions.
+     */
+    FRAME(6, "FRAME", List.of("innerWidth", "innerHeight","outerWidth", "outerHeight")),
+
+    /**
+     * Represents an annulus (ring).
+     * Defined by an inner and an outer radius.
+     */
+    ANNULUS(7, "ANNULUS", List.of("innerRadius", "outerRadius"));
+
+    // ------------------- FIELDS -------------------
+
+    /** Unique numeric identifier used for CLI menu selection. */
+    private final int menuId;
+
+    /** User-friendly name used for display in UI logs and prompts. */
+    private final String displayName;
+
+    /**
+     * The list of parameter keys (strings) that must be present in the configuration map
+     * to successfully instantiate this domain via the Factory.
+     */
+    private final List<String> requiredParameters;
+
+    // ------------------- CONSTRUCTOR -------------------
+
+    /**
+     * Initializes the domain type metadata.
+     *
+     * @param menuId             The unique ID for menu selection.
+     * @param displayName        The name to display.
+     * @param requiredParameters The immutable list of required parameter keys.
      */
     DomainType(int menuId, String displayName, List<String> requiredParameters) {
         this.menuId = menuId;
@@ -62,41 +78,45 @@ public enum DomainType {
         this.requiredParameters = requiredParameters;
     }
 
-    // ------------------- GETTER PUBBLICI -------------------
+    // ------------------- PUBLIC GETTERS -------------------
 
     /**
-     * Restituisce l'ID numerico del dominio, utilizzato per la selezione da menu.
-     * @return L'ID intero univoco.
+     * Retrieves the numeric ID for menu selection.
+     * @return The unique integer ID.
      */
     public int getMenuId() { return menuId; }
 
     /**
-     * Ritorna la lista dei nomi dei parametri richiesti per questo tipo di dominio.
+     * Retrieves the list of parameter keys required to instantiate this domain.
      * <p>
-     * Questo è cruciale per la {@code DomainFactory} (per la validazione) e per il {@code Controller} (per la raccolta dell'input).
-     * @return Una lista immutabile di stringhe (i nomi delle chiavi).
-     * @implNote Scelta Implementativa: {@code List.of()} crea una lista immutabile, garantendo che i requisiti
-     * non possano essere modificati esternamente.
+     * This list is the <strong>Contract</strong> that the View must fulfill when collecting input
+     * and that the Factory validates against.
+     * </p>
+     *
+     * @return An immutable list of strings representing parameter names.
      */
     public List<String> getRequiredParameters() {
         return this.requiredParameters;
     }
 
     /**
-     * Ritorna il nome "amichevole" del dominio per la visualizzazione.
-     * @return Il nome da mostrare (es. "Cerchio").
+     * Retrieves the user-friendly name of the domain.
+     * @return The display name string.
      */
     public String getDisplayName() {
         return this.displayName;
     }
 
-    // ------------------- METODI DI UTILITÀ -------------------
+    // ------------------- UTILITY METHODS -------------------
 
     /**
-     * Cerca e restituisce un {@code DomainType} basato sull'ID del menu fornito.
-     * Utile per mappare l'input numerico dell'utente alla costante enum corretta.
-     * * @param id L'ID numerico selezionato dall'utente.
-     * @return Un {@code Optional} contenente il {@code DomainType} corrispondente, se trovato.
+     * Resolves a {@link DomainType} from a numeric menu ID.
+     * <p>
+     * Used by the View/Controller to map raw user input (int) to a specific domain enum.
+     * </p>
+     *
+     * @param id The numeric ID entered by the user.
+     * @return An {@link Optional} containing the matching {@code DomainType}, or empty if not found.
      */
     public static Optional<DomainType> fromMenuId(int id) {
         return Arrays.stream(DomainType.values())
@@ -104,11 +124,9 @@ public enum DomainType {
                 .findFirst();
     }
 
-    // ------------------- OVERRIDE -------------------
-
     /**
-     * Metodo standard di Java, sovrascritto per mostrare
-     * il nome corretto nelle interfacce utente o nei log, utilizzando il nome amichevole.
+     * Returns the user-friendly display name.
+     * Useful for printing the object directly in logs or UI messages.
      */
     @Override
     public String toString() {

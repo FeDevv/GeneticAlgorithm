@@ -1,5 +1,12 @@
 package org.agroplanner.gasystem.views;
 
+/**
+ * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
+ *
+ * <p>This class implements the feedback mechanism using standard system output.
+ * It utilizes ANSI-friendly icons (emojis) to improve the <strong>"Glanceability"</strong> of the logs,
+ * allowing the user to quickly distinguish between success, warnings, and processing states.</p>
+ */
 public class ConsoleEvolutionView implements EvolutionViewContract {
 
     @Override

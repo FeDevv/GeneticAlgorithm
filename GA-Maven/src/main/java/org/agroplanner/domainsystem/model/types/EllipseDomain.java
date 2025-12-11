@@ -9,33 +9,45 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * Implementa l'interfaccia Domain definendo un'area di vincolo di forma ellittica.
- * * Il dominio è centrato sulle coordinate (0, 0).
- * L'ellisse è definita dai suoi due semiassi: semi-larghezza (a) e semi-altezza (b).
+ * <p><strong>Concrete Domain Implementation: Ellipse.</strong></p>
+ *
+ * <p>Represents an elliptical domain centered at the origin {@code (0, 0)}.
+ * The shape is defined by its two semi-axes: semi-width (along X) and semi-height (along Y).</p>
  */
 public class EllipseDomain implements Domain {
 
-// ------------------- ATTRIBUTI  -------------------
+    // ------------------- FIELDS -------------------
 
-    // Semi-larghezza (raggio sull'asse X). Corrisponde al semiasse 'a'.
+    /** Semi-axis along X (often denoted as 'a'). */
     private final double semiWidth;
 
-    // Semi-altezza (raggio sull'asse Y). Corrisponde al semiasse 'b'.
+    /** Semi-axis along Y (often denoted as 'b'). */
     private final double semiHeight;
 
-    // La Bounding Box: il rettangolo che contiene perfettamente l'ellisse.
+    /**
+     * Optimization: Pre-calculated inverse squares of the semi-axes.
+     * Used to replace division with multiplication in the inequality check.
+     * invSemiWidthSq = 1 / (a^2)
+     * invSemiHeightSq = 1 / (b^2)
+     */
+    private final double invSemiWidthSq;
+    private final double invSemiHeightSq;
+
+    /** The bounding box is a rectangle fully enclosing the ellipse. */
     private final Rectangle2D boundingBox;
 
-    // ------------------- COSTRUTTORE -------------------
+    // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Crea un dominio ellittico centrato su (0, 0) con i due semiassi specificati.
-     * @param semiWidth La semi-larghezza (a) dell'ellisse.
-     * @param semiHeight La semi-altezza (b) dell'ellisse.
-     * @throws IllegalArgumentException Se uno dei due semiassi non è positivo.
+     * Constructs an Elliptical domain.
+     *
+     * @param semiWidth  The semi-axis length along the X-axis (radius on X).
+     * @param semiHeight The semi-axis length along the Y-axis (radius on Y).
+     * @throws DomainConstraintException If either semi-axis is not strictly positive.
      */
     public EllipseDomain(double semiWidth, double semiHeight) {
-        // Validazione di Integrità (Deep Defense): Entrambi i semiassi devono essere strettamente positivi.
+
+        // Deep Protection: Integrity check
         if (semiWidth <= 0) {
             throw new DomainConstraintException("semi width", "must be strictly positive (> 0).");
         }
@@ -46,7 +58,12 @@ public class EllipseDomain implements Domain {
         this.semiWidth = semiWidth;
         this.semiHeight = semiHeight;
 
-        // La Bounding Box è un rettangolo di larghezza 2*a e altezza 2*b, centrato su (0, 0).
+        // Pre-calculate the inverse squares.
+        // Formula transformation: (x^2 / a^2) -> (x^2 * (1/a^2))
+        this.invSemiWidthSq = 1.0 / (semiWidth * semiWidth);
+        this.invSemiHeightSq = 1.0 / (semiHeight * semiHeight);
+
+        // Bounding Box: Centered at (0,0), total width=2a, total height=2b.
         this.boundingBox = new Rectangle2D.Double(
                 -semiWidth,
                 -semiHeight,
@@ -55,27 +72,31 @@ public class EllipseDomain implements Domain {
         );
     }
 
-    // ------------------- IMPLEMENTAZIONE INTERFACCIA DOMAIN -------------------
+    // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Verifica se un punto con coordinate (x, y) si trova al di fuori del dominio ellittico.
-     * Complessità: O(1).
-     * @param x Coordinata X del punto.
-     * @param y Coordinata Y del punto.
-     * @return True se il punto è fuori dall'ellisse.
+     * Checks if a coordinate {@code (x, y)} lies outside the ellipse.
+     *
+     * <p><strong>Mathematical Logic:</strong>
+     * Uses the standard ellipse inequality: {@code (x²/a²) + (y²/b²) <= 1}.
+     * To optimize performance, divisions are replaced by multiplications with pre-calculated inverses.
+     * </p>
+     *
+     * @param x The X coordinate.
+     * @param y The Y coordinate.
+     * @return {@code true} if the point is strictly outside the ellipse boundary.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
-        // Equazione dell'ellisse: (x/a)² + (y/b)² <= 1
-        // Per velocizzare il calcolo, usiamo i quadrati (similmente al CircleDomain).
-        double result = (x * x / (semiWidth * semiWidth)) + (y * y / (semiHeight * semiHeight));
+        // Optimized Equation: (x^2 * invA^2) + (y^2 * invB^2) > 1
+        double termX = (x * x) * invSemiWidthSq;
+        double termY = (y * y) * invSemiHeightSq;
 
-        return (result > 1.0);
+        return (termX + termY) > 1.0;
     }
 
     /**
-     * Verifica se un intero individuo rispetta il vincolo di confine.
-     * Complessità: O(N), dove N è il numero di punti.
+     * Validates an entire individual against the elliptical boundary.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
@@ -87,7 +108,7 @@ public class EllipseDomain implements Domain {
     }
 
     /**
-     * Ritorna la Bounding Box del dominio.
+     * Retrieves the Bounding Box enclosing the ellipse.
      */
     @Override
     public Rectangle2D getBoundingBox() {
@@ -96,7 +117,7 @@ public class EllipseDomain implements Domain {
 
     @Override
     public String toString() {
-        return "Ellipse { semi-width = " + semiWidth + ", semi-height = " + semiHeight + " }";
+        return String.format("Ellipse { semi-width = %.2f, semi-height = %.2f }", semiWidth, semiHeight);
     }
 
 }

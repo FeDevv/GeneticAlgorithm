@@ -1,26 +1,33 @@
 package org.agroplanner.gasystem.services.strategies;
 
 import org.agroplanner.gasystem.model.Point;
+import org.agroplanner.gasystem.services.helpers.PenaltyHelper;
 import org.agroplanner.shared.utils.DistanceCalculator;
 
 import java.util.List;
 
 /**
- * Strategia di calcolo dell'overlap con complessità quadratica O(N^2).
- * * Questa strategia è la più semplice da implementare ed è preferita
- * quando il numero di punti (N) è basso (sotto la soglia di commutazione),
- * perché evita l'overhead di costruzione delle strutture dati spaziali O(N).
+ * <p><strong>Collision Strategy: Brute Force (Quadratic).</strong></p>
+ *
+ * <p>This implementation checks every point against every other point to find overlaps.
+ * While it has a complexity of <strong>O(N²)</strong>, it is the preferred strategy for small populations (N < Threshold)
+ * because:</p>
+ * <ul>
+ * <li>It has <strong>zero setup overhead</strong> (no need to build grids or trees).</li>
+ * <li>It benefits from high <strong>CPU Cache Locality</strong> (sequential access to the list).</li>
+ * </ul>
  */
 public class OverlapQuadratic implements OverlapStrategy{
 
     /**
-     * Calcola la penalità totale derivante dalla sovrapposizione tra tutti i punti.
-     * * Il metodo confronta ogni punto con tutti gli altri in un doppio ciclo annidato.
-     * Complessità Totale: O(N^2).
-     * * @param chromosomes La lista dei punti (cromosomi) da valutare.
-     * @param overlapWeight Il peso da applicare alla penalità (costante).
-     * @param distanceCalculator L'utility per calcolare la distanza euclidea.
-     * @return La penalità totale di overlap.
+     * Computes the total overlap penalty using a nested loop approach.
+     *
+     * <p><strong>Algorithmic Complexity:</strong> O(N * (N-1) / 2) ≈ O(N²).</p>
+     *
+     * @param chromosomes        The list of points to evaluate.
+     * @param overlapWeight      The penalty weight.
+     * @param distanceCalculator The Euclidean distance utility.
+     * @return The accumulated penalty score.
      */
     @Override
     public double calculateOverlap(
@@ -31,18 +38,19 @@ public class OverlapQuadratic implements OverlapStrategy{
         double penalty = 0.0;
         int n = chromosomes.size();
 
-        // Ciclo esterno: Seleziona il punto di riferimento p_i. Complessità O(N).
+        // Outer Loop: Select the reference point P_i.
         for (int i = 0; i < n; i++) {
             Point referencePoint = chromosomes.get(i);
 
-            // Ciclo interno: Confronta p_i con tutti i punti successivi p_j. Complessità O(N).
-            // L'indice j = i + 1 è cruciale per due motivi:
-            // 1. Evita l'auto-confronto (i vs i).
-            // 2. Garantisce che ogni coppia (i, j) sia contata ESATTAMENTE una volta,
-            //    impedendo il doppio conteggio della penalità (i vs j e j vs i).
+            // Inner Loop: Compare P_i against all subsequent points P_j.
+            // Starting at j = i + 1 is a critical optimization:
+            // 1. Prevents Self-Comparison (checking P_i vs P_i).
+            // 2. Prevents Double Counting (checking P_i vs P_j AND P_j vs P_i).
+            // This effectively halves the number of checks required.
             for (int j = i + 1; j < n; j++) {
                 Point neighborPoint = chromosomes.get(j);
 
+                // Delegate the math to the helper (Separation of Concerns).
                 penalty += PenaltyHelper.calculatePairPenalty(referencePoint, neighborPoint, overlapWeight, distanceCalculator);
 
             }

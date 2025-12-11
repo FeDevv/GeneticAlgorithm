@@ -4,79 +4,122 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * <p><strong>The Chromosome (Candidate Solution).</strong></p>
+ *
+ * <p>This class represents a single individual in the population. It encapsulates:</p>
+ * <ul>
+ * <li><strong>Genotype:</strong> A sequence of Genes ({@link Point} objects).</li>
+ * <li><strong>Phenotype/Quality:</strong> The fitness score representing how well it solves the problem.</li>
+ * </ul>
+ *
+ * <p><strong>Architectural Note on Memory Management:</strong><br>
+ * While the internal list of chromosomes is mutable (to allow specific mutations),
+ * the class strictly enforces <strong>Genetic Isolation</strong> via defensive copying in constructors
+ * and unmodifiable views in getters. This ensures that operators like Crossover do not
+ * inadvertently modify the parents when creating children.</p>
+ */
 public class Individual {
-    // I cromosomi, ovvero la sequenza di geni (Punti).
-    // È una lista mutabile INTERNA, ma il suo riferimento (final List) non cambia.
-    private final List<Point> chromosomes;
-
-    // Il valore di fitness (qualità) calcolato da FitnessCalculator.
-    // È mutabile, poiché viene aggiornato dopo ogni ciclo di valutazione.
-    private double fitness;
-
-    // ------------------- COSTRUTTORI -------------------
+    // ------------------- STATE -------------------
 
     /**
-     * Costruttore principale: crea un nuovo individuo partendo da una lista di cromosomi.
-     * * @param chromosomes La lista di Point (geni) che definiscono la soluzione.
-     * * Scelta Implementativa: Uso di new ArrayList<>(chromosomes).
-     * Questa è una **copia superficiale** della lista. Poiché la classe Point è immutabile (i suoi campi sono final),
-     * questa copia garantisce l'**isolamento genetico**: due individui non condividono la stessa lista di cromosomi,
-     * prevenendo corruzioni se uno dei due viene modificato (ad esempio, durante la mutazione).
+     * The sequence of genes.
+     * <p>
+     * <strong>Implementation Note:</strong> This is a mutable {@link ArrayList} internally
+     * (to allow {@link #setChromosome(int, Point)}), but its reference is final.
+     * External access is restricted to read-only views.
+     * </p>
+     */
+    private final List<Point> chromosomes;
+
+    /**
+     * The fitness score calculated by the evaluation function.
+     * A higher value indicates a better solution.
+     * Initialized to {@link Double#NEGATIVE_INFINITY} to represent an unevaluated state.
+     */
+    private double fitness;
+
+    // ------------------- CONSTRUCTORS -------------------
+
+    /**
+     * Primary Constructor: Creates a new individual from a list of genes.
+     *
+     * @param chromosomes The list of Points defining the solution.
      */
     public Individual(List<Point> chromosomes) {
-        // Copia superficiale per isolamento genetico
+        // GENETIC ISOLATION (Defensive Copy):
+        // It is created a NEW ArrayList containing the same elements.
+        // Since Point is immutable, a shallow copy of the list is sufficient to ensure deep safety.
+        // Even if the source list is modified later, this individual remains unaffected.
         this.chromosomes = new ArrayList<>(chromosomes);
-        this.fitness = Double.NEGATIVE_INFINITY; // Inizializza la fitness a un valore pessimo
+
+        // Default state: Worst possible fitness until evaluated.
+        this.fitness = Double.NEGATIVE_INFINITY;
     }
 
     /**
-     * Costruttore completo, usato spesso per operazioni di copia o inizializzazione post-calcolo.
+     * Full Constructor: Used for cloning or restoring state.
+     *
+     * @param chromosomes The list of genes.
+     * @param fitness     The pre-calculated fitness value.
      */
     public Individual(List<Point> chromosomes, double fitness) {
-        // Uso diretto per semplicità, assumendo che i costruttori chiamanti passino già una copia sicura.
+        // Consistency: Always perform the defensive copy.
         this.chromosomes = new ArrayList<>(chromosomes);
         this.fitness = fitness;
     }
 
-    // ------------------- GETTER & SETTER -------------------
+    // ------------------- ACCESSORS (Getters & Setters) -------------------
 
     /**
-     * Ritorna una vista immutabile della lista dei cromosomi.
-     * @return Una lista non modificabile.
-     * * Scelta Implementativa: Uso di Collections.unmodifiableList().
-     * **Sicurezza:** Questo impedisce che codice esterno (come Crossover o EvolutionEngine)
-     * possa accidentalmente o intenzionalmente modificare la lista interna (aggiungendo o rimuovendo elementi),
-     * preservando l'integrità della dimensione dell'individuo.
+     * Retrieves a <strong>Read-Only view</strong> of the chromosomes.
+     *
+     * <p><strong>Security:</strong> Using {@link Collections#unmodifiableList} prevents external actors
+     * (like buggy crossover operators) from structurally modifying the chromosome list
+     * (adding/removing genes), preserving the fixed dimension of the individual.</p>
+     *
+     * @return An unmodifiable list of Points.
      */
     public List<Point> getChromosomes() {
         return Collections.unmodifiableList(this.chromosomes);
     }
 
     /**
-     * Permette la mutazione di un singolo gene (Punto).
-     * @param index L'indice del cromosoma da sostituire.
-     * @param point Il nuovo oggetto Point mutato.
-     * * Scelta Implementativa: Setter mirato.
-     * È il metodo **unico** che permette agli operatori genetici (come Mutation) di alterare lo stato genetico.
-     * Permette di bypassare la vista immutabile del getter (necessario per Mutation.set(i, newPoint)).
+     * Performs a targeted mutation on a single gene.
+     *
+     * <p><strong>Design Choice: Controlled Mutability.</strong><br>
+     * This is the <em>only</em> way to modify the genotype. It allows the Mutation operator
+     * to swap a specific gene without exposing the entire list to modification risks.</p>
+     *
+     * @param index The index of the gene to replace.
+     * @param point The new gene (Point).
      */
     public void setChromosome(int index, Point point) {
         this.chromosomes.set(index, point);
     }
 
     /**
-     * Setter necessario per aggiornare il valore di qualità dopo il calcolo della fitness.
+     * Updates the fitness score.
+     * Called by the {@code FitnessCalculator} after evaluation.
+     *
+     * @param fitness The new quality score.
      */
     public void setFitness(double fitness) {
         this.fitness = fitness;
     }
 
-    /** Ritorna il valore di fitness. */
+    /**
+     * Retrieves the current fitness score.
+     * @return The fitness value.
+     */
     public double getFitness() {
         return this.fitness;
     }
 
-    /** Ritorna il numero di geni (Punti) nell'individuo. */
+    /**
+     * Returns the dimension of the problem (number of genes).
+     * @return The size of the chromosome list.
+     */
     public int getDimension() {
         return chromosomes.size();
     }
@@ -84,16 +127,22 @@ public class Individual {
     // ------------------- UTILITY -------------------
 
     /**
-     * Crea una copia profonda dell'individuo (necessario per restituire il risultato finale
-     * o per clonazioni esplicite se richieste).
-     * @return Una nuova istanza di Individual con una nuova lista di cromosomi.
+     * Creates a deep copy of this individual.
+     * <p>
+     * Used mainly for <strong>Elitism</strong> (preserving the best individual across generations).
+     * Since {@code Point} is immutable, we only need to duplicate the list structure and the fitness.
+     * </p>
+     *
+     * @return A new independent {@code Individual} instance identical to this one.
      */
-    // Ottimizzazione (Safe perché il costruttore copia comunque)
     public Individual copy() {
+        // Optimization: We pass the list directly.
+        // The logic of "new ArrayList<>(list)" is handled inside the target constructor.
         return new Individual(this.chromosomes, this.fitness);
     }
+
     /**
-     * Rappresentazione testuale dell'individuo e dei suoi geni.
+     * Returns a string representation of the individual (genes and structure).
      */
     @Override
     public String toString() {

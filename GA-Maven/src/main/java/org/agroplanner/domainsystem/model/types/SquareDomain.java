@@ -9,65 +9,82 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * Implementa l'interfaccia Domain definendo un'area di vincolo di forma quadrata.
- * * Il dominio è centrato sulle coordinate (0, 0) per semplicità geometrica.
- * Questo dominio è immutabile e funge da vincolo spaziale per l'Algoritmo Genetico.
+ * <p><strong>Concrete Domain Implementation: Square.</strong></p>
+ *
+ * <p>Represents a square domain centered at the origin {@code (0, 0)}.
+ * The domain spans from {@code [-side/2, -side/2]} to {@code [side/2, side/2]}.
+ * This class guarantees immutability and acts as a strict spatial constraint for the Genetic Algorithm.</p>
  */
 public class SquareDomain implements Domain {
 
-    // ------------------- ATTRIBUTI -------------------
+    // ------------------- FIELDS -------------------
 
-    // Lato (larghezza = altezza) del dominio quadrato.
+    /** The length of the side of the square. */
     private final double side;
 
-    // La Bounding Box è il quadrato stesso, immutabile e centrale.
-    private final Rectangle2D boundingBox;
-
-    // ------------------- COSTRUTTORE -------------------
+    /**
+     * Optimization: Pre-calculated half-side length.
+     * Used to leverage symmetry checks (Math.abs) instead of range checks logic.
+     */
+    private final double halfSide;
 
     /**
-     * Crea un dominio quadrato centrato su (0, 0) con il lato specificato.
-     * @param side La lunghezza del lato del quadrato (deve essere > 0).
+     * For a square domain, the bounding box coincides exactly with the domain boundaries.
+     */
+    private final Rectangle2D boundingBox;
+
+    // ------------------- CONSTRUCTOR -------------------
+
+    /**
+     * Constructs a Square domain centered at {@code (0, 0)}.
+     *
+     * @param side The length of the side.
+     * @throws DomainConstraintException If the side is not strictly positive.
      */
     public SquareDomain(double side) {
 
-        // Validazione di Integrità (Deep Defense):
-        // Nonostante i controlli "fail-fast" nel Factory/Controller,
-        // il costruttore garantisce che l'oggetto non sia mai creato in uno stato illegale.
-
+        // Deep Protection: Integrity check
+        // Even if the Factory filters inputs, the Model ensures it cannot exist in an invalid state.
         if (side <= 0) {
             throw new DomainConstraintException("side", "Must be strictly positive.");
         }
 
         this.side = side;
 
-        // La Bounding Box definisce l'area:
-        // Inizia a [-side/2, -side/2] (angolo superiore sinistro) con larghezza=side e altezza=side.
+        // Pre-calculate the boundary limit relative to the origin.
+        this.halfSide = side / 2.0;
+
+        // Bounding Box: Top-Left starts at (-s/2, -s/2).
         this.boundingBox = new Rectangle2D.Double(-side/2 , -side/2 , side, side);
     }
 
     // ------------------- IMPLEMENTAZIONE INTERFACCIA DOMAIN -------------------
 
+    // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
+
     /**
-     * Verifica se un punto con coordinate (x, y) è al di fuori dei confini del dominio.
-     * Complessità: O(1).
-     * @param x Coordinata X del punto.
-     * @param y Coordinata Y del punto.
-     * @return True se il punto è fuori dal quadrato.
+     * Checks if a coordinate {@code (x, y)} lies outside the square.
+     *
+     * <p><strong>Optimization:</strong>
+     * Since the square is centered at (0,0), a point is outside if its absolute distance
+     * from the center along either axis exceeds half the side length.
+     * Formula: {@code |x| > side/2 || |y| > side/2}
+     * </p>
+     *
+     * @param x The X coordinate.
+     * @param y The Y coordinate.
+     * @return {@code true} if the point is strictly outside the boundaries.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
-        // La condizione controlla se il punto è all'interno della metà positiva e negativa
-        // del lato su entrambi gli assi (x e y).
-        // !((isPointInside))
-        return !((x >= -side/2) && (x <= side/2) && (y >= -side/2) && (y <= side/2));
+        // Optimized check using symmetry:
+        // Instead of checking ranges (min <= x <= max), we check absolute distance from center.
+        return Math.abs(x) > halfSide || Math.abs(y) > halfSide;
     }
 
     /**
-     * Verifica se un intero individuo (tutti i suoi punti) rispetta il vincolo di confine.
-     * Complessità: O(N), dove N è il numero di punti nell'individuo.
-     * @param individual L'individuo da validare.
-     * @return True se tutti i punti sono all'interno del quadrato.
+     * Validates an entire individual against the square boundary.
+     * <p>Complexity: O(N), where N is the number of points.</p>
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
@@ -80,9 +97,8 @@ public class SquareDomain implements Domain {
     }
 
     /**
-     * Restituisce la Bounding Box del dominio.
-     * * Questo metodo è fondamentale per l'inizializzazione casuale dei Punti
-     * e per il soft-clamping della Mutazione, fornendo i limiti geometrici.
+     * Retrieves the Bounding Box.
+     * For a square, this is identical to the domain geometry itself.
      */
     @Override
     public Rectangle2D getBoundingBox() {
@@ -91,6 +107,6 @@ public class SquareDomain implements Domain {
 
     @Override
     public String toString() {
-        return "Square { side = " + side + " }";
+        return String.format("Square { side = %.2f }", side);
     }
 }

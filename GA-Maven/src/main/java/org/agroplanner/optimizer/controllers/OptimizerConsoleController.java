@@ -1,8 +1,9 @@
-package org.agroplanner.overseer.controllers;
+package org.agroplanner.optimizer.controllers;
 
 import org.agroplanner.domainsystem.controllers.DomainConsoleController;
 import org.agroplanner.domainsystem.controllers.DomainService;
 import org.agroplanner.domainsystem.views.ConsoleDomainView;
+import org.agroplanner.shared.exceptions.EvolutionTimeoutException;
 import org.agroplanner.shared.exceptions.InvalidInputException;
 import org.agroplanner.shared.exceptions.MaxAttemptsExceededException;
 import org.agroplanner.exportsystem.controllers.ExportConsoleController;
@@ -13,26 +14,26 @@ import org.agroplanner.gasystem.controllers.EvolutionService;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.views.ConsoleEvolutionView;
-import org.agroplanner.overseer.views.AppViewContract;
-import org.agroplanner.overseer.views.ConsoleAppView;
+import org.agroplanner.optimizer.views.OptimizerViewContract;
+import org.agroplanner.optimizer.views.ConsoleOptimizerView;
 
 import java.util.Optional;
 import java.util.Scanner;
 
-public class ConsoleAppController {
+public class OptimizerConsoleController {
 
     private final Scanner scanner;
-    private final AppViewContract appView;
+    private final OptimizerViewContract appView;
 
     // Servizi Logici "Stateless" (Factory wrapper)
     private final DomainService domainService;
     private final ExportService exportService;
 
-    public ConsoleAppController() {
+    public OptimizerConsoleController() {
         // Inizializzazione risorse condivise
         this.scanner = new Scanner(System.in);
         // Colleghiamo la View Concreta
-        this.appView = new ConsoleAppView(scanner);
+        this.appView = new ConsoleOptimizerView(scanner);
 
         // Inizializzazione Servizi Logici Generali
         this.domainService = new DomainService();
@@ -124,6 +125,9 @@ public class ConsoleAppController {
                 // Caso 2: Errore di Configurazione (Deep Protection ha bloccato parametri assurdi)
                 appView.showSessionAborted("Configuration Error: " + e.getMessage());
                 // Il ciclo while ricomincia -> Nuova sessione
+
+            } catch (EvolutionTimeoutException e) { // <--- NUOVO CATCH
+                appView.showSessionAborted("⏱️ TIME LIMIT REACHED: " + e.getMessage());
 
             } catch (Exception e) {
                 // Caso 3: Errore Critico Imprevisto (es. OutOfMemory, NullPointer)
