@@ -4,6 +4,7 @@ import org.agroplanner.domainsystem.model.DomainType;
 
 import java.util.*;
 
+
 /**
  * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
  *
@@ -16,6 +17,8 @@ import java.util.*;
  * <li>Performing <strong>Basic Validation</strong> (ensuring inputs are non-negative).</li>
  * </ul>
  */
+
+@SuppressWarnings("java:S106")
 public class ConsoleDomainView implements DomainViewContract {
 
     private final Scanner scanner;

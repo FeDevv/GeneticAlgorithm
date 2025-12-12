@@ -18,4 +18,5 @@ public class Main {
 * 1. RISCRIVERE I COMMENTI -- [domainsystem completed] [gasystem completed] TODO [exportsystem] [optimizer] [shared]
 * 2. CONTROLLARE CODE SMELLS
 * 3. SE inserisci durante l'esport lo stesso nome e la stessa estensione, sovrascrive il vecchio file [magari aggiungere un controllo sui file gia inseriti in cartella]
+* 4. fare un clear della console quando si cambia view/controller
 * */

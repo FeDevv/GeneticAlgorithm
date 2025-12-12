@@ -46,6 +46,7 @@ public class OptimizerConsoleController {
         while (true) {
             // GLOBAL SAFETY NET: Il try avvolge TUTTA la logica della sessione
             try {
+
                 appView.showNewSessionMessage();
 
                 // ====================================================

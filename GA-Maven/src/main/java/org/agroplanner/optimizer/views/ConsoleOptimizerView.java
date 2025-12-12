@@ -2,7 +2,9 @@ package org.agroplanner.optimizer.views;
 
 import java.util.Scanner;
 
+@SuppressWarnings("java:S106")
 public class ConsoleOptimizerView implements OptimizerViewContract {
+
     private final Scanner scanner;
     private static final String SEPARATOR = "=========================================";
 
@@ -107,7 +109,7 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         System.out.println("\n🔄 Restarting session from domain selection...");
         System.out.println("-".repeat(50));
 
-        try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
+        try { Thread.sleep(2000); } catch (InterruptedException _) { Thread.currentThread().interrupt(); }
     }
 
     @Override

@@ -1,5 +1,6 @@
 package org.agroplanner.gasystem.views;
 
+
 /**
  * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
  *
@@ -7,6 +8,7 @@ package org.agroplanner.gasystem.views;
  * It utilizes ANSI-friendly icons (emojis) to improve the <strong>"Glanceability"</strong> of the logs,
  * allowing the user to quickly distinguish between success, warnings, and processing states.</p>
  */
+@SuppressWarnings("java:S106")
 public class ConsoleEvolutionView implements EvolutionViewContract {
 
     @Override

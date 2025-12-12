@@ -5,7 +5,7 @@ import org.agroplanner.exportsystem.model.ExportType;
 import java.util.List;
 import java.util.Optional;
 import java.util.Scanner;
-
+@SuppressWarnings("java:S106")
 public class ConsoleExportView implements ExportViewContract {
 
     private final Scanner scanner;
@@ -17,7 +17,7 @@ public class ConsoleExportView implements ExportViewContract {
     @Override
     public Optional<ExportType> askForExportType(List<ExportType> availableTypes) {
 
-        // Aggiungiamo il while(true) per intrappolare l'utente finché non sceglie bene
+        // Aggiungiamo il while-true per intrappolare l'utente finché non sceglie bene
         while (true) {
             System.out.println("\n--- Select Export Format ---");
             for (ExportType type : availableTypes) {
