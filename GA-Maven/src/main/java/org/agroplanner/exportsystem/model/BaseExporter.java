@@ -8,42 +8,87 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * <p><strong>Abstract Strategy for Data Export.</strong></p>
+ *
+ * <p>This class acts as the skeleton for all export algorithms, implementing the <strong>Template Method Pattern</strong>.
+ * It centralizes common infrastructure logic (directory management, file extension handling, path resolution)
+ * while delegating the specific format writing to concrete subclasses.</p>
+ */
 public abstract class BaseExporter {
 
+    /**
+     * The default root directory for all generated files.
+     */
     private static final String EXPORT_FOLDER = "exports";
 
     /**
-     * Metodo Template.
-     * NON stampa nulla. Esegue il lavoro e restituisce il percorso del file creato.
-     * Se fallisce, lancia un'eccezione che verrà catturata dal Controller.
+     * Orchestrates the export process.
+     * <p>
+     * This method is {@code final} to prevent subclasses from altering the structural logic of the export flow.
+     * It ensures that:
+     * <ol>
+     * <li>The filename has the correct extension.</li>
+     * <li>The target directory exists (creating it if necessary).</li>
+     * <li>The actual writing is delegated to the specific implementation.</li>
+     * </ol>
+     * </p>
      *
-     * @return Il percorso assoluto del file salvato come String.
-     * @throws IOException Se c'è un errore di scrittura o creazione cartelle.
+     * @param individual The solution data to export.
+     * @param domain     The problem domain context.
+     * @param radius     The radius of the points (needed for visualization/reporting).
+     * @param filename   The user-specified filename (with or without extension).
+     * @return The absolute path of the generated file as a String (useful for UI feedback).
+     * @throws IOException If filesystem operations (creation, writing) fail.
      */
     public final String export(Individual individual, Domain domain, double radius, String filename) throws IOException {
 
-        // 1. Gestione Estensione
+        // Extension Normalization
+        // Ensure the filename ends with the correct suffix defined by the subclass.
         String extension = getExtension();
         if (!filename.toLowerCase().endsWith(extension)) {
             filename += extension;
         }
 
-        // 2. Costruzione Path
+        // Path Resolution
+        // Combines the export folder and the filename into a Path object.
         Path path = Paths.get(EXPORT_FOLDER, filename);
 
-        // 3. Creazione Cartella (Silenziosa)
+        // Directory Management (Lazy Creation)
+        // If the 'exports' folder doesn't exist, create it.
         if (Files.notExists(path.getParent())) {
             Files.createDirectories(path.getParent());
         }
 
-        // 4. Delega scrittura
+        // Delegation (Hook Method)
+        // Execute the format-specific writing logic.
         performExport(individual, domain, radius, path);
 
-        // 5. Ritorna il path assoluto per informare il chiamante (Controller)
+        // Result Propagation
+        // Return the absolute path so the Controller can display exactly where the file ended up.
         return path.toAbsolutePath().toString();
     }
 
-    // --- METODI ASTRATTI ---
+    // ------------------- ABSTRACT HOOKS -------------------
+
+    /**
+     * Defines the file extension associated with the specific format.
+     * @return The extension string including the dot (e.g., ".csv", ".xlsx").
+     */
     protected abstract String getExtension();
+
+    /**
+     * Executes the actual writing of data to the file.
+     * <p>
+     * Concrete implementations (CSV, Excel, etc.) must implement this method to translate
+     * the domain objects into bytes/characters.
+     * </p>
+     *
+     * @param individual The data source.
+     * @param domain     The context.
+     * @param radius     The point dimension.
+     * @param path       The fully resolved target path (guaranteed to have a valid parent directory).
+     * @throws IOException If the low-level writing operation fails.
+     */
     protected abstract void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException;
 }

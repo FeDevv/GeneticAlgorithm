@@ -9,26 +9,45 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+/**
+ * <p><strong>Utility Class for Stochastic Operations.</strong></p>
+ *
+ * <p>This class centralizes all random number generation logic used by the Genetic Algorithm.
+ * It is designed for high-performance concurrent environments.</p>
+ *
+ * <p><strong>Architectural Choice: ThreadLocalRandom</strong><br>
+ * Since the Evolution Engine uses {@code parallelStream()}, standard {@code java.util.Random} would cause
+ * thread contention (waiting for locks). {@code ThreadLocalRandom} avoids this by keeping an isolated
+ * seed for each thread, ensuring linear scalability.</p>
+ */
 public class RandomUtils {
 
+    // ------------------- CONSTRUCTOR -------------------
+
+    /**
+     * Private constructor to prevent instantiation.
+     * This is a static utility class.
+     */
     private RandomUtils() {
         throw new IllegalStateException("Utility class");
     }
 
-    // ------------------- METODI DI UTILITÀ -------------------
+    // ------------------- CORE METHODS -------------------
 
     /**
-     * Genera un elenco di 'n' indici univoci compresi tra 0 (incluso) e 'maxExclusive' (escluso).
+     * Generates a list of distinct integers within a range.
+     * <p>Used primarily for <strong>Tournament Selection</strong> to pick N distinct candidates from the population.</p>
      *
-     * @param n Il numero di indici univoci da generare (tournament size).
-     * @param maxExclusive Il limite superiore del range (es. la dimensione della popolazione).
-     * @return Una List<Integer> di indici univoci.
+     * @param n            The number of unique indices required.
+     * @param maxExclusive The upper bound of the range (0 to maxExclusive-1).
+     * @return A list of unique integers.
      */
     public static List<Integer> uniqueIndices(int n, int maxExclusive) {
+        // Use a Set to automatically handle uniqueness efficiently.
         Set<Integer> uniqueIndices = new HashSet<>();
-        // Usa ThreadLocalRandom per eliminare la contesa tra thread
         ThreadLocalRandom currentRandom = ThreadLocalRandom.current();
 
+        // Warning: If n > maxExclusive, this loop will be infinite.
         while (uniqueIndices.size() < n) {
             uniqueIndices.add(currentRandom.nextInt(maxExclusive));
         }
@@ -37,9 +56,10 @@ public class RandomUtils {
     }
 
     /**
-     * Simula un lancio di moneta.
-     * @return 0 o 1.
-     * Usato per decisioni binarie (es. Uniform Crossover).
+     * Simulates a binary decision (Coin Flip).
+     * <p>Used for <strong>Uniform Crossover</strong> to decide inheritance (Mom vs Dad).</p>
+     *
+     * @return 0 or 1.
      */
     public static int coinToss() {
         // Usa ThreadLocalRandom
@@ -47,32 +67,32 @@ public class RandomUtils {
     }
 
     /**
-     * Genera un numero double casuale tra [0.0 (incluso) e 1.0 (escluso)).
-     * Usato principalmente per controllare le probabilità (es. Probabilità di Crossover o Mutazione).
+     * Generates a normalized random probability.
+     * <p>Used for rate checks (e.g., "Is random() < mutationProbability?").</p>
+     *
+     * @return A double value between 0.0 (inclusive) and 1.0 (exclusive).
      */
     public static double randDouble() {
-        // Usa ThreadLocalRandom
         return ThreadLocalRandom.current().nextDouble();
     }
 
     /**
-     * Genera un nuovo oggetto Point posizionato casualmente all'interno del Bounding Box del dominio.
-     * Questo metodo è cruciale per l'inizializzazione della prima generazione.
-     * @param boundingBox Il rettangolo che definisce i limiti massimi (es. Rectangle2D).
-     * @param radius Il raggio dell'oggetto Point da creare.
-     * @return Un nuovo oggetto Point posizionato casualmente.
-     * * Scelta Implementativa: Uso di ThreadLocalRandom.
-     * Questa è una scelta **eccellente** per la thread safety e le prestazioni in ambienti concorrenti
-     * (anche se l'AG non è parallelo, è una buona pratica per le utility statiche).
+     * Generates a random Point strictly within the given Bounding Box.
+     * <p>Used for the initialization of the <strong>First Generation</strong>.</p>
+     *
+     * @param boundingBox The geometric limits (minX, minY, width, height).
+     * @param radius      The fixed radius of the new point.
+     * @return A new Point instance with randomized coordinates.
      */
     public static Point insideBoxGenerator(Rectangle2D boundingBox, double radius) {
-        // Genera due fattori casuali per X e Y tra [0.0 e 1.0).
+
+        // Generate normalized factors [0.0, 1.0)
         double randomXfactor = ThreadLocalRandom.current().nextDouble();
         double randomYfactor = ThreadLocalRandom.current().nextDouble();
 
-        // Mappatura lineare per ottenere la coordinata X all'interno del range [MinX, MaxX]
+        // Linear Mapping (Lerp)
+        // Map [0,1] to [MinX, MaxX]
         double x = boundingBox.getMinX() + (randomXfactor * boundingBox.getWidth());
-        // Mappatura lineare per ottenere la coordinata Y all'interno del range [MinY, MaxY]
         double y = boundingBox.getMinY() + (randomYfactor * boundingBox.getHeight());
 
         return new Point(x,y,radius);

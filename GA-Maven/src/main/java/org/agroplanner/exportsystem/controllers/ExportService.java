@@ -12,48 +12,79 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * <p><strong>Business Logic for the Export Subsystem.</strong></p>
+ *
+ * <p>This service orchestrates the saving of results to disk. It acts as a middleware between the UI Controller
+ * and the specific export implementations, ensuring:</p>
+ * <ul>
+ * <li><strong>Input Sanitation:</strong> Validating filenames against system constraints.</li>
+ * <li><strong>Strategy Dispatch:</strong> Selecting the correct format via the Factory.</li>
+ * <li><strong>Error Handling:</strong> Translating low-level I/O errors into domain-specific exceptions.</li>
+ * </ul>
+ */
 public class ExportService {
 
     private final ExporterFactory factory;
 
+    /**
+     * Initializes the service by retrieving the Factory instance.
+     */
     public ExportService() {
         this.factory = ExporterFactory.getInstance();
     }
 
+    /**
+     * Retrieves the list of supported export formats.
+     * @return A list of all available {@link ExportType}s.
+     */
     public List<ExportType> getAvailableTypes() {
         return Arrays.asList(ExportType.values());
     }
 
     /**
-     * Esegue l'export gestendo deep validation e wrapping delle eccezioni I/O.
+     * Executes the export process with robust validation and error handling.
+     *
+     * @param solution The data to save.
+     * @param domain   The context.
+     * @param radius   The point dimension.
+     * @param type     The selected format (CSV, Excel, etc.).
+     * @param filename The target filename (user input).
+     * @return The absolute path of the saved file.
+     * @throws InvalidInputException If the filename is invalid or malicious.
+     * @throws ExportException       If the writing process fails (e.g., disk full, permission denied).
      */
     public String performExport(Individual solution, Domain domain, double radius, ExportType type, String filename) {
 
-        // --- 1. DEEP PROTECTION: Validazione Input ---
-        // Anche se la View ha controllato, noi ricontrolliamo qui.
+        // --- DEEP PROTECTION: Input Sanitation ---
+        // Even if the View performs checks, the Service layer must defend itself.
         if (filename == null || filename.isBlank()) {
             throw new InvalidInputException("Filename cannot be empty or null.");
         }
 
-        // Controllo caratteri illegali (opzionale, ma buona pratica deep)
+        // Security Check: Prevent directory traversal or illegal characters.
+        // Regex matches strictly forbidden characters on Windows/Linux (< > : " / \ | ? *).
         if (filename.matches(".*[<>:\"/\\\\|?*].*")) {
             throw new InvalidInputException("Filename contains illegal characters (< > : \" / \\ | ? *).");
         }
 
-        // --- 2. ESECUZIONE E GESTIONE ERRORI I/O ---
+        // --- EXECUTION & ERROR WRAPPING ---
         try {
+            // Get the specific strategy from the factory
             BaseExporter exporter = factory.createExporter(type);
 
-            // Se export() lancia IOException, noi la catturiamo qui
+            // Execute the template method.
+            // If export() throws IOException, we catch it here.
             return exporter.export(solution, domain, radius, filename);
 
         } catch (IOException e) {
-            // --- 3. EXCEPTION TRANSLATION ---
-            // Trasformiamo l'errore tecnico (IOException) in errore di dominio (ExportException)
+            // --- EXCEPTION TRANSLATION ---
+            // Pattern: Wrap the low-level technical exception (IOException) into a high-level
+            // domain exception (ExportException). This decouples the caller from java.io details.
             throw new ExportException("Failed to save file to disk. Check permissions or disk space.", e);
 
         } catch (Exception e) {
-            // Catch-all per errori imprevisti dentro i singoli exporter
+            // Safety Net: Catch unexpected bugs inside specific exporters.
             throw new ExportException("Unexpected error during export process: " + e.getMessage(), e);
         }
     }

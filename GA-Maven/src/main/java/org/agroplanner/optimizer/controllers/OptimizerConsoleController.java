@@ -20,37 +20,74 @@ import org.agroplanner.optimizer.views.ConsoleOptimizerView;
 import java.util.Optional;
 import java.util.Scanner;
 
+/**
+ * <p><strong>The Main UC Orchestrator.</strong></p>
+ *
+ * <p>This controller manages the high-level lifecycle of the UC.
+ * It acts as a <strong>Mediator</strong> between the three main subsystems:</p>
+ * <ol>
+ * <li><strong>Domain Subsystem:</strong> Definition of the geometric problem.</li>
+ * <li><strong>Genetic Subsystem:</strong> Search for the optimal solution.</li>
+ * <li><strong>Export Subsystem:</strong> Persistence of results.</li>
+ * </ol>
+ *
+ * <p><strong>Resiliency Pattern:</strong> It implements a "Global Safety Net" (try-catch loop)
+ * ensuring that exceptions in one session do not crash the entire JVM, allowing the user
+ * to restart immediately.</p>
+ */
 public class OptimizerConsoleController {
+
+    // ------------------- SHARED RESOURCES -------------------
 
     private final Scanner scanner;
     private final OptimizerViewContract appView;
 
-    // Servizi Logici "Stateless" (Factory wrapper)
+    // ------------------- STATELESS SERVICES -------------------
+
     private final DomainService domainService;
     private final ExportService exportService;
 
+    // ------------------- CONSTRUCTOR -------------------
+
+    /**
+     * Initializes the main controller and shared infrastructure.
+     */
     public OptimizerConsoleController() {
-        // Inizializzazione risorse condivise
+        // Shared Input Source (System.in)
+        // We open it once here and pass it down to all sub-controllers.
         this.scanner = new Scanner(System.in);
-        // Colleghiamo la View Concreta
+
+        // Main View
         this.appView = new ConsoleOptimizerView(scanner);
 
-        // Inizializzazione Servizi Logici Generali
+        // Service Initialization
+        // These are stateless factories/calculators, so we instantiate them once.
         this.domainService = new DomainService();
         this.exportService = new ExportService();
     }
 
+    // ------------------- MAIN LOOP -------------------
+
+    /**
+     * Starts the UC loop.
+     */
     public void run() {
         appView.showWelcomeMessage();
 
+        // --- SESSION LOOP ---
+        // Keeps the UC alive across multiple problem-solving sessions.
         while (true) {
-            // GLOBAL SAFETY NET: Il try avvolge TUTTA la logica della sessione
+
+            // GLOBAL SAFETY NET:
+            // Wraps the entire logic of a single session. If anything goes wrong inside
+            // (Domain creation, Evolution, Export), the exception bubbles up here,
+            // is logged, and the loop restarts cleanly.
             try {
 
                 appView.showNewSessionMessage();
 
                 // ====================================================
-                // FASE 1: Creazione Dominio (Sottosistema 1)
+                // PHASE 1: DOMAIN DEFINITION (Subsystem A)
                 // ====================================================
 
                 DomainConsoleController domainController = new DomainConsoleController(
@@ -58,32 +95,36 @@ public class OptimizerConsoleController {
                         domainService
                 );
 
+                // Run the Domain Wizard
                 Optional<Domain> domainOpt = domainController.runDomainCreationWizard();
 
+                // Handle Exit Request
                 if (domainOpt.isEmpty()) {
                     appView.showExitMessage();
-                    break; // USCITA DALL'APP (Esce dal while, e quindi anche dal try)
+                    break; // Breaks the while loop -> Application Shutdown
                 }
 
                 Domain problemDomain = domainOpt.get();
 
 
                 // ====================================================
-                // FASE 2: Configurazione Parametri
+                // PHASE 2: PARAMETER CONFIGURATION
                 // ====================================================
 
+                // Logic: Calculate strict constraints based on the chosen domain.
                 double maxRadius = domainService.calculateMaxValidRadius(problemDomain);
 
+                // UI: Collect user inputs
                 int individualSize = appView.askForIndividualSize();
                 double pointRadius = appView.askForPointRadius(maxRadius);
 
                 // ====================================================
-                // FASE 3: Evoluzione (Sottosistema 2)
+                // PHASE 3: EVOLUTION (Subsystem B)
                 // ====================================================
 
-                // ⚠️ PUNTO CRITICO: Qui scatta la Deep Protection.
-                // Se i parametri sono incoerenti, il costruttore lancia InvalidInputException/DomainConstraintException.
-                // Grazie al try globale, ora le catturiamo!
+                // ⚠️ DEEP PROTECTION CHECKPOINT:
+                // Instantiating the EvolutionService triggers strict validation logic.
+                // If parameters (size, radius) are incoherent, an InvalidInputException is thrown here.
                 EvolutionService evolutionService = new EvolutionService(
                         problemDomain,
                         individualSize,
@@ -91,21 +132,22 @@ public class OptimizerConsoleController {
                 );
 
                 EvolutionConsoleController evolutionController = new EvolutionConsoleController(
-                        new ConsoleEvolutionView(),
+                        new ConsoleEvolutionView(), // View is stateless/simple here
                         evolutionService
                 );
 
-                // Avvio il flusso evolutivo (può lanciare MaxAttemptsExceededException)
+                // Run the Evolution Engine (Blocking call)
+                // Can throw MaxAttemptsExceededException or EvolutionTimeoutException
                 Individual bestSolution = evolutionController.runEvolution();
 
-                // Mostro i risultati finali
+                // Show Results
                 appView.showSolutionValue(bestSolution.getFitness());
                 if (appView.askIfPrintChromosome()) {
                     appView.printSolutionDetails(bestSolution.toString());
                 }
 
                 // ====================================================
-                // FASE 4: Export (Sottosistema 3)
+                // PHASE 4: EXPORT (Subsystem C)
                 // ====================================================
 
                 ExportConsoleController exportController = new ExportConsoleController(
@@ -115,30 +157,35 @@ public class OptimizerConsoleController {
 
                 exportController.runExportWizard(bestSolution, problemDomain, pointRadius);
 
-                // --- GESTIONE ERRORI DELLA SESSIONE ---
+                // ====================================================
+                // ERROR HANDLING (Session Recovery)
+                // ====================================================
 
             } catch (MaxAttemptsExceededException e) {
-                // Caso 1: L'evoluzione non ha trovato soluzioni valide
+                // Scenario: Algorithm failed to converge after N retries.
                 appView.showSessionAborted(e.getMessage());
-                // Il ciclo while ricomincia -> Nuova sessione
+                // Loop continues -> New Session
 
             } catch (InvalidInputException e) {
-                // Caso 2: Errore di Configurazione (Deep Protection ha bloccato parametri assurdi)
+                // Scenario: User entered valid numbers, but invalid logic (e.g. radius > domain size).
+                // Caught here thanks to Deep Protection in Service constructors.
                 appView.showSessionAborted("Configuration Error: " + e.getMessage());
-                // Il ciclo while ricomincia -> Nuova sessione
+                // Loop continues -> New Session
 
-            } catch (EvolutionTimeoutException e) { // <--- NUOVO CATCH
+            } catch (EvolutionTimeoutException e) {
+                // Scenario: The calculation took too long.
                 appView.showSessionAborted("⏱️ TIME LIMIT REACHED: " + e.getMessage());
+                // Loop continues -> New Session
 
             } catch (Exception e) {
-                // Caso 3: Errore Critico Imprevisto (es. OutOfMemory, NullPointer)
-                // Impedisce al programma di chiudersi bruscamente
-                appView.showSessionAborted("Critical System Error: " + e.toString());
-                e.printStackTrace(); // Utile per capire cosa è successo dai log
-                // Il ciclo while ricomincia -> Nuova sessione
+                // Scenario: Unexpected Crash (NPE, OOM, etc.)
+                appView.showSessionAborted("Critical System Error: " + e);
+                //e.printStackTrace(); // Helpful for debugging
+                // Loop continues -> New Session
             }
         }
 
+        // Cleanup
         scanner.close();
     }
 }

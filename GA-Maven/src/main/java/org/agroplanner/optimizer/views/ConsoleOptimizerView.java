@@ -2,15 +2,28 @@ package org.agroplanner.optimizer.views;
 
 import java.util.Scanner;
 
+/**
+ * <p><strong>Concrete View Implementation for the Main UC Flow.</strong></p>
+ *
+ * <p>This class implements the global interaction layer using the System Console.
+ * It focuses on clear, formatted output (using separators and emojis) to guide the user through
+ * the configuration of the evolutionary algorithm parameters.</p>
+ */
 @SuppressWarnings("java:S106")
 public class ConsoleOptimizerView implements OptimizerViewContract {
 
     private final Scanner scanner;
     private static final String SEPARATOR = "=========================================";
 
+    /**
+     * Initializes the view with a shared Scanner.
+     * @param scanner The system input source.
+     */
     public ConsoleOptimizerView(Scanner scanner) {
         this.scanner = scanner;
     }
+
+    // ------------------- LIFECYCLE MESSAGES -------------------
 
     @Override
     public void showWelcomeMessage() {
@@ -33,9 +46,12 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         System.out.println(SEPARATOR);
     }
 
+    // ------------------- CONFIGURATION INPUTS -------------------
+
     @Override
     public int askForIndividualSize() {
         int size = 0;
+        // Validation Loop: Force positive integer
         while (size <= 0) {
             System.out.print("\nEnter genome length (number of points, > 0): ");
             if (scanner.hasNextInt()) {
@@ -43,7 +59,7 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
                 if (size <= 0) System.out.print("\n❌ Error: The genome length must be a positive integer (> 0). Retry.");
             } else {
                 System.out.print("\n❌ Invalid Input. Please enter a positive integer. Retry.");
-                scanner.next();
+                scanner.next(); // Flush invalid token
             }
         }
         return size;
@@ -56,6 +72,7 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         System.out.println("\n--- Configuration: Point Radius ---");
         System.out.printf("ℹ️  Based on the domain, max valid radius is: %.2f%n", maxLimit);
 
+        // Validation Loop: Force range (0, maxLimit]
         while (radius <= 0 || radius > maxLimit) {
             System.out.printf("Enter the RADIUS (r) of the points (> 0 and <= %.2f): ", maxLimit);
 
@@ -69,12 +86,14 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
                 }
             } else {
                 System.out.println("\n❌ Invalid Input. You must enter a number.");
-                scanner.next(); // Pulisce il buffer
+                scanner.next(); // Flush buffer
             }
         }
         System.out.printf("%n✅ Valid radius entered: %.2f%n", radius);
         return radius;
     }
+
+    // ------------------- RESULTS & FEEDBACK -------------------
 
     @Override
     public void showSolutionValue(double fitness) {
@@ -109,6 +128,7 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         System.out.println("\n🔄 Restarting session from domain selection...");
         System.out.println("-".repeat(50));
 
+        // UX: Small pause to let the user read the error before the new menu clears the screen (conceptually).
         try { Thread.sleep(2000); } catch (InterruptedException _) { Thread.currentThread().interrupt(); }
     }
 

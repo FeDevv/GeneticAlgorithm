@@ -11,6 +11,14 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * <p><strong>Concrete Exporter: JSON (JavaScript Object Notation).</strong></p>
+ *
+ * <p>This strategy exports the solution in a structured, hierarchical format ideal for machine processing,
+ * web integration, or storage in NoSQL databases.</p>
+ *
+ * <p><strong>Technology Stack:</strong> Uses the <strong>Jackson</strong> library for high-performance POJO serialization.</p>
+ */
 public class JsonExporter extends BaseExporter {
 
     @Override
@@ -18,38 +26,64 @@ public class JsonExporter extends BaseExporter {
         return ".json";
     }
 
+    /**
+     * Serializes the solution data into a JSON file.
+     *
+     * <p><strong>Output Structure:</strong>
+     * <pre>
+     * {
+     * "metadata": { "domain_description": "...", "target_distance": ... },
+     * "solution": {
+     * "fitness": ...,
+     * "points": [ { "x": 1.0, "y": 2.0, "radius": ... }, ... ]
+     * }
+     * }
+     * </pre>
+     * </p>
+     *
+     * @param individual The solution to serialize.
+     * @param domain     The context metadata.
+     * @param radius     The point dimension.
+     * @param path       The target file path.
+     * @throws IOException If serialization or writing fails.
+     */
     @Override
     protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
 
-        // 1. Configurazione Jackson
+        // Jackson Configuration
         ObjectMapper mapper = new ObjectMapper();
-        // Attiva la formattazione "Pretty Print" (indentazione e a capo) per renderlo leggibile
+
+        // UX Choice: Enable "Pretty Print".
+        // Increases file size slightly but makes it readable for humans (indentation + newlines).
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-        // 2. Costruzione della struttura dati (Root Object)
-        // Usiamo LinkedHashMap per mantenere l'ordine di inserimento nel JSON
+        // Data Structure Construction (Root Object)
+        // Implementation Choice: Use LinkedHashMap.
+        // Unlike HashMap (which has undefined order), LinkedHashMap preserves the insertion order.
+        // This ensures the JSON fields always appear in a predictable sequence (Metadata first, then Solution).
         Map<String, Object> rootNode = new LinkedHashMap<>();
 
-        // Sezione Metadata
+        // --- Metadata Section ---
         Map<String, Object> metadata = new LinkedHashMap<>();
-        // Mettiamo il toString del dominio come descrizione.
-        // Se volessimo l'oggetto completo, dovremmo assicurarci che Domain abbia tutti i getter.
         metadata.put("domain_description", domain.toString());
         metadata.put("target_distance", radius);
 
-        // Sezione Result
+        // --- Result Section ---
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("fitness", individual.getFitness());
         result.put("total_points", individual.getDimension());
-        // Jackson sa come serializzare automaticamente List<Point> se Point ha i getter (getX, getY)
+
+        // Serialization Note:
+        // Jackson automatically serializes the List<Point> by calling the public getters
+        // (getX, getY, getRadius) on the Point objects. No manual loop is required.
         result.put("points", individual.getChromosomes());
 
-        // Assembliamo il tutto
+        // Assembly
         rootNode.put("metadata", metadata);
         rootNode.put("solution", result);
 
-        // 3. Scrittura su file
-        // writeValue fa tutto: apre stream, scrive, chiude.
+        // File Output
+        // 'writeValue' handles the entire stream lifecycle (Open -> Write -> Close).
         mapper.writeValue(path.toFile(), rootNode);
     }
 }

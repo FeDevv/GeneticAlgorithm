@@ -19,6 +19,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 
+/**
+ * <p><strong>Concrete Exporter: PDF (Portable Document Format).</strong></p>
+ *
+ * <p>This strategy generates a read-only, printable report of the solution.
+ * It utilizes the <strong>iText</strong> library to construct a high-quality document containing
+ * formatted text and tabular data.</p>
+ *
+ * <p><strong>Use Case:</strong> Ideal for final presentation, archiving, or sharing results with non-technical stakeholders.</p>
+ */
 public class PdfExporter extends BaseExporter {
 
     @Override
@@ -26,20 +35,38 @@ public class PdfExporter extends BaseExporter {
         return ".pdf";
     }
 
+    /**
+     * Generates the PDF document.
+     *
+     * <p><strong>Architecture (iText):</strong>
+     * <ol>
+     * <li>{@code PdfWriter}: Low-level component that writes bytes to the file stream.</li>
+     * <li>{@code PdfDocument}: Manages the PDF internal structure (pages, objects).</li>
+     * <li>{@code Document}: High-level layout engine that handles paragraphs, tables, and flow.</li>
+     * </ol>
+     * </p>
+     *
+     * @param individual The solution data.
+     * @param domain     The domain context.
+     * @param radius     The point dimension.
+     * @param path       The destination path.
+     * @throws IOException If file creation fails.
+     */
     @Override
     protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
 
-        // 1. Inizializzazione PDF (Writer -> PdfDocument -> Document)
-        // PdfWriter scrive fisicamente sul file
+        // PDF Infrastructure Initialization
+        // PdfWriter opens the file stream at the specified path.
         PdfWriter writer = new PdfWriter(path.toString());
 
-        // PdfDocument gestisce la struttura interna del PDF
+        // PdfDocument initializes the PDF standard structure.
         PdfDocument pdf = new PdfDocument(writer);
 
-        // Document è l'interfaccia di alto livello per aggiungere paragrafi, tabelle, ecc.
+        // Document is the high-level canvas.
+        // The try-with-resources ensures 'document.close()' is called, which finalizes the PDF and flushes the file.
         try (Document document = new Document(pdf)) {
 
-            // --- TITOLO ---
+            // --- REPORT HEADER ---
             document.add(new Paragraph("Terrain Report")
                     .setFontSize(18)
                     .setBold()
@@ -49,40 +76,45 @@ public class PdfExporter extends BaseExporter {
                     .setFontSize(10)
                     .setItalic()
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(20)); // Spazio dopo il titolo
+                    .setMarginBottom(20)); // Visual spacer
 
-            // --- SEZIONE METADATI ---
+            // --- METADATA SECTION ---
             document.add(new Paragraph("Details")
                     .setFontSize(14)
                     .setBold());
 
             document.add(new Paragraph("Domain: " + domain.toString()));
+            // Locale.US ensures "10.50" instead of "10,50" for consistency.
             document.add(new Paragraph(String.format(Locale.US, "Target Distance: %.2f", radius)));
             document.add(new Paragraph("Total Points: " + individual.getChromosomes().size()));
 
-            // Fitness in grassetto e più grande
+            // Highlight the Fitness Score
             document.add(new Paragraph(String.format(Locale.US, "Best Fitness: %.6f", individual.getFitness()))
                     .setBold()
                     .setFontSize(12)
                     .setMarginBottom(15));
 
-            // --- TABELLA DATI ---
+            // --- DATA TABLE SECTION ---
             document.add(new Paragraph("Chromosomes Coordinates")
                     .setFontSize(14)
                     .setBold()
                     .setMarginBottom(5));
 
-            // Creiamo una tabella con 3 colonne (ID, X, Y) che occupa il 100% della larghezza
-            float[] columnWidths = {1, 2, 2}; // Proporzioni colonne
+            // Table Configuration:
+            // 3 Columns with relative widths 1:2:2 (ID is narrower than coords).
+            // UnitValue.createPercentArray automatically calculates the internal ratios.
+            float[] columnWidths = {1, 2, 2};
             Table table = new Table(UnitValue.createPercentArray(columnWidths));
+
+            // Force the table to span the full page width (margins excluded).
             table.setWidth(UnitValue.createPercentValue(100));
 
-            // Header Tabella
+            // Table Header
             table.addHeaderCell(new Cell().add(new Paragraph("ID").setBold()));
             table.addHeaderCell(new Cell().add(new Paragraph("X").setBold()));
             table.addHeaderCell(new Cell().add(new Paragraph("Y").setBold()));
 
-            // Riempimento Dati
+            // Data Population
             int index = 0;
             for (Point p : individual.getChromosomes()) {
                 table.addCell(String.valueOf(index++));
@@ -90,10 +122,8 @@ public class PdfExporter extends BaseExporter {
                 table.addCell(String.format(Locale.US, "%.4f", p.getY()));
             }
 
-            // Aggiungiamo la tabella al documento
+            // Render the table into the document flow
             document.add(table);
-
-            // Il try-with-resources chiuderà automaticamente 'document', salvando il file.
         }
     }
 }
