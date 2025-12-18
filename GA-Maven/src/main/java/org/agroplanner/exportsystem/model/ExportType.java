@@ -18,19 +18,19 @@ public enum ExportType {
     // ------------------- ENUM CONSTANTS -------------------
 
     /** Comma Separated Values */
-    CSV(1, "CSV (Comma Separated Values)"),
+    CSV(1, "Raw Data", ".csv"),
 
     /** Microsoft Excel (.xlsx) */
-    EXCEL(2, "Excel (Excel file)"),
+    EXCEL(2, "Spreadsheet + Charts", ".xlsx"),
 
     /** Plain Text (.txt) */
-    TXT(3, "TXT (Plain text report)"),
+    TXT(3, "Simple Text Report", ".txt"),
 
     /** JavaScript Object Notation */
-    JSON(4, "Json (JavaScript Object Notation)"),
+    JSON(4, "Web/System Integration", ".json"),
 
     /** Portable Document Format */
-    PDF(5, "PDF (Portable Document Format)");
+    PDF(5, "Printable Report", ".pdf");
 
     // ------------------- FIELDS -------------------
 
@@ -38,19 +38,21 @@ public enum ExportType {
     private final int menuId;
 
     /** User-friendly name used for display in UI logs and prompts. */
-    private final String displayName;
+    private final String info;
 
+    private final String extension;
     // ------------------- CONSTRUCTOR -------------------
 
     /**
      * Initializes the export type metadata.
      *
      * @param menuId      The unique selection ID.
-     * @param displayName The label shown to the user.
+     * @param info infos.
      */
-    ExportType(int menuId, String displayName) {
+    ExportType(int menuId, String info, String extension) {
         this.menuId = menuId;
-        this.displayName = displayName;
+        this.info = info;
+        this.extension = extension;
     }
 
     /**
@@ -65,8 +67,16 @@ public enum ExportType {
      * Retrieves the user-friendly name of the format.
      * @return The display string.
      */
-    public String getDisplayName() {
-        return displayName;
+    public String getExportInfo() {
+        return info;
+    }
+
+    /**
+     * Retrieves the file extension associated with this format.
+     * @return The extension string (e.g., ".xlsx").
+     */
+    public String getExtension() {
+        return extension;
     }
 
     /**
@@ -86,6 +96,6 @@ public enum ExportType {
 
     @Override
     public String toString() {
-        return this.displayName;
+        return this.info;
     }
 }

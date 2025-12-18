@@ -16,6 +16,9 @@ import java.util.Optional;
  */
 public interface DomainViewContract {
 
+    // 1. Mostra solo la tabella/menu
+    void showAvailableDomains(List<DomainType> types);
+
     /**
      * Prompts the user to select a geometric domain type from a provided list.
      *

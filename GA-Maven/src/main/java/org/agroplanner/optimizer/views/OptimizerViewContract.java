@@ -24,22 +24,6 @@ public interface OptimizerViewContract {
     /** Displays the shutdown message. */
     void showExitMessage();
 
-    // ------------------- CONFIGURATION INPUTS -------------------
-
-    /**
-     * Prompts the user to define the complexity of the problem (N).
-     * @return The number of points (genes) to place in the domain.
-     */
-    int askForIndividualSize();
-
-    /**
-     * Prompts the user to define the size of the points.
-     *
-     * @param maxLimit The maximum mathematically valid radius for the current domain.
-     * The UI should display this to guide the user.
-     * @return The chosen radius.
-     */
-    double askForPointRadius(double maxLimit);
 
     // ------------------- RESULTS & FEEDBACK -------------------
 
@@ -68,4 +52,10 @@ public interface OptimizerViewContract {
      * @param reason The cause of the abortion (Exception message).
      */
     void showSessionAborted(String reason);
+
+    /**
+     * Chiede all'utente se vuole avviare una nuova ottimizzazione o uscire.
+     * @return true per riavviare, false per chiudere.
+     */
+    boolean askForNewSession();
 }

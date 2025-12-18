@@ -1,6 +1,7 @@
 package org.agroplanner.gasystem.services.operators;
 
 import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.shared.utils.RandomUtils;
@@ -98,6 +99,7 @@ public class Mutation {
 
                 Point oldPoint = individual.getChromosomes().get(i);
                 double radius = oldPoint.getRadius(); // Radius remains invariant during mutation.
+                PlantType type = oldPoint.getType(); // Preserviamo il tipo!
 
                 // --- PERTURBATION LOGIC ---
                 // Apply a random displacement in the range [-adaptiveStrength, +adaptiveStrength].
@@ -116,7 +118,7 @@ public class Mutation {
                 double finalY = Math.clamp(newY, minY, maxY);
 
                 // Create a NEW Point object (because Point is immutable).
-                Point newPoint = new Point(finalX, finalY, radius);
+                Point newPoint = new Point(finalX, finalY, radius, type);
 
                 // Update the gene in the individual's chromosome list.
                 individual.setChromosome(i, newPoint);

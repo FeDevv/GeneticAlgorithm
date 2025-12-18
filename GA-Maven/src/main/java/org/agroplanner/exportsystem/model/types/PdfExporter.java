@@ -9,7 +9,10 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
+import org.agroplanner.exportsystem.model.ExportType;
 import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.inventory.model.InventoryEntry;
+import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
@@ -32,7 +35,7 @@ public class PdfExporter extends BaseExporter {
 
     @Override
     protected String getExtension() {
-        return ".pdf";
+        return ExportType.PDF.getExtension();
     }
 
     /**
@@ -48,82 +51,106 @@ public class PdfExporter extends BaseExporter {
      *
      * @param individual The solution data.
      * @param domain     The domain context.
-     * @param radius     The point dimension.
      * @param path       The destination path.
      * @throws IOException If file creation fails.
      */
     @Override
-    protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
+    protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // PDF Infrastructure Initialization
-        // PdfWriter opens the file stream at the specified path.
+        // PDF Infrastructure
         PdfWriter writer = new PdfWriter(path.toString());
-
-        // PdfDocument initializes the PDF standard structure.
         PdfDocument pdf = new PdfDocument(writer);
 
-        // Document is the high-level canvas.
-        // The try-with-resources ensures 'document.close()' is called, which finalizes the PDF and flushes the file.
         try (Document document = new Document(pdf)) {
 
             // --- REPORT HEADER ---
-            document.add(new Paragraph("Terrain Report")
+            document.add(new Paragraph("Optimization Report")
                     .setFontSize(18)
                     .setBold()
                     .setTextAlignment(TextAlignment.CENTER));
 
-            document.add(new Paragraph("Generated with AGROPLANNER")
+            document.add(new Paragraph("AgroPlanner v2.0 - Multi-Culture Engine")
                     .setFontSize(10)
                     .setItalic()
                     .setTextAlignment(TextAlignment.CENTER)
-                    .setMarginBottom(20)); // Visual spacer
+                    .setMarginBottom(20));
 
-            // --- METADATA SECTION ---
-            document.add(new Paragraph("Details")
+            // --- CONTEXT & METADATA ---
+            document.add(new Paragraph("Configuration Details")
                     .setFontSize(14)
                     .setBold());
 
-            document.add(new Paragraph("Domain: " + domain.toString()));
-            // Locale.US ensures "10.50" instead of "10,50" for consistency.
-            document.add(new Paragraph(String.format(Locale.US, "Target Distance: %.2f", radius)));
-            document.add(new Paragraph("Total Points: " + individual.getChromosomes().size()));
+            document.add(new Paragraph("Domain: " + domain.toString()).setFontSize(11));
 
-            // Highlight the Fitness Score
-            document.add(new Paragraph(String.format(Locale.US, "Best Fitness: %.6f", individual.getFitness()))
+            // Inventory Manifest Section
+            document.add(new Paragraph("Requested Inventory:").setBold().setFontSize(11).setMarginTop(5));
+
+            for (InventoryEntry item : inventory.getEntries()) {
+
+                // E.g.: " - 🍅 TOMATO: 50 units (r=1.50)"
+                String line = String.format(Locale.US, " - %s %s: %d units (r=%.2f)",
+                        item.getType().getLabel(), // Emoji (recuperato da getType)
+                        item.getType().name(),     // Nome (recuperato da getType)
+                        item.getQuantity(),        // Quantità diretta dell'entry
+                        item.getRadius());         // Raggio specifico dell'entry
+
+                document.add(new Paragraph(line).setFontSize(10).setMarginLeft(10));
+            }
+
+            document.add(new Paragraph(String.format(Locale.US, "Total Plants Placed: %d", individual.getDimension()))
+                    .setMarginTop(5));
+
+            // Fitness Score Highlight
+            document.add(new Paragraph(String.format(Locale.US, "Final Fitness Score: %.6f", individual.getFitness()))
                     .setBold()
                     .setFontSize(12)
+                    .setFontColor(com.itextpdf.kernel.colors.ColorConstants.BLUE) // Visual pop
                     .setMarginBottom(15));
 
             // --- DATA TABLE SECTION ---
-            document.add(new Paragraph("Chromosomes Coordinates")
+            document.add(new Paragraph("Solution Coordinates")
                     .setFontSize(14)
                     .setBold()
                     .setMarginBottom(5));
 
-            // Table Configuration:
-            // 3 Columns with relative widths 1:2:2 (ID is narrower than coords).
-            // UnitValue.createPercentArray automatically calculates the internal ratios.
-            float[] columnWidths = {1, 2, 2};
+            // Table Configuration: 5 Columns
+            // ID (1), Type (3), X (2), Y (2), Radius (2) -> Width Ratios
+            float[] columnWidths = {1, 3, 2, 2, 2};
             Table table = new Table(UnitValue.createPercentArray(columnWidths));
-
-            // Force the table to span the full page width (margins excluded).
             table.setWidth(UnitValue.createPercentValue(100));
 
-            // Table Header
-            table.addHeaderCell(new Cell().add(new Paragraph("ID").setBold()));
-            table.addHeaderCell(new Cell().add(new Paragraph("X").setBold()));
-            table.addHeaderCell(new Cell().add(new Paragraph("Y").setBold()));
+            // Headers
+            addHeaderCell(table, "ID");
+            addHeaderCell(table, "Type");
+            addHeaderCell(table, "X");
+            addHeaderCell(table, "Y");
+            addHeaderCell(table, "Radius");
 
             // Data Population
             int index = 0;
             for (Point p : individual.getChromosomes()) {
-                table.addCell(String.valueOf(index++));
-                table.addCell(String.format(Locale.US, "%.4f", p.getX()));
-                table.addCell(String.format(Locale.US, "%.4f", p.getY()));
+                table.addCell(createCell(String.valueOf(index++)));
+
+                // Concatenate Emoji + Name: "🍅 TOMATO"
+                String typeStr = p.getType().getLabel() + " " + p.getType().name();
+                table.addCell(createCell(typeStr));
+
+                table.addCell(createCell(String.format(Locale.US, "%.4f", p.getX())));
+                table.addCell(createCell(String.format(Locale.US, "%.4f", p.getY())));
+                table.addCell(createCell(String.format(Locale.US, "%.2f", p.getRadius())));
             }
 
-            // Render the table into the document flow
             document.add(table);
         }
+    }
+
+    // Helper to keep code clean
+    private void addHeaderCell(Table table, String text) {
+        table.addHeaderCell(new Cell().add(new Paragraph(text).setBold().setTextAlignment(TextAlignment.CENTER)));
+    }
+
+    // Helper for centering data cells
+    private Cell createCell(String text) {
+        return new Cell().add(new Paragraph(text).setTextAlignment(TextAlignment.RIGHT).setFontSize(9));
     }
 }

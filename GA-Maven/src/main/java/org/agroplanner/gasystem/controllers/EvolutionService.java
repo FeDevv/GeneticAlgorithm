@@ -1,6 +1,7 @@
 package org.agroplanner.gasystem.controllers;
 
 import org.agroplanner.gasystem.model.GeneticConfig;
+import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.gasystem.services.helpers.EvolutionUtils;
 import org.agroplanner.gasystem.services.helpers.PopulationFactory;
 import org.agroplanner.shared.exceptions.DomainConstraintException;
@@ -36,8 +37,11 @@ public class EvolutionService {
     // ------------------- CONTEXT STATE -------------------
 
     private final Domain domain;
-    private final int individualSize;
-    private final double pointRadius;
+
+    /** * The comprehensive plan containing types, quantities, and radii.
+     * Replaces the old scalar 'individualSize' and 'pointRadius'.
+     */
+    private final PlantInventory inventory;
 
     // ------------------- OPERATORS & HELPERS -------------------
 
@@ -62,37 +66,34 @@ public class EvolutionService {
      * Initializes the Evolutionary Engine.
      *
      * @param domain         The geometric problem domain.
-     * @param individualSize The number of genes (points) per individual.
-     * @param pointRadius    The radius of each point.
      * @throws InvalidInputException     If inputs are negative or zero.
      * @throws DomainConstraintException If the requested point size is physically too large for the domain.
      */
-    public EvolutionService(Domain domain, int individualSize, double pointRadius) {
+    public EvolutionService(Domain domain, PlantInventory inventory) {
 
         // 1. DEEP PROTECTION: Basic Input Validation
-        if (individualSize <= 0) {
-            throw new InvalidInputException("Individual size must be strictly positive.");
+        if (inventory.getTotalPopulationSize() <= 0) {
+            throw new InvalidInputException("Inventory cannot be empty. Please select at least one plant.");
         }
-        if (pointRadius <= 0) {
-            throw new InvalidInputException("Point radius must be strictly positive.");
-        }
+
+        double maxRadius = inventory.getMaxRadius();
+        double minDomainDim = Math.min(domain.getBoundingBox().getWidth(), domain.getBoundingBox().getHeight());
 
         // 2. DEEP PROTECTION: Cross-Field Logic Check
         // Ensure the requested point isn't larger than the domain itself.
         // We check against half the smallest dimension of the bounding box.
-        double minDomainDim = Math.min(domain.getBoundingBox().getWidth(), domain.getBoundingBox().getHeight());
-        if (pointRadius > minDomainDim / 2.0) {
-            throw new DomainConstraintException("pointRadius", "Point is too big for this domain.");
+        if (maxRadius > minDomainDim / 2.0) {
+            throw new DomainConstraintException("maxRadius",
+                    String.format("The largest plant in inventory (r=%.2f) is too big for this domain.", maxRadius));
         }
 
         this.domain = domain;
-        this.individualSize = individualSize;
-        this.pointRadius = pointRadius;
+        this.inventory = inventory;
 
         // COMPONENT WIRING
         // Instantiate the specialized operators required for the lifecycle.
-        this.populationFactory = new PopulationFactory(domain, individualSize, pointRadius);
-        this.fitnessCalculator = new FitnessCalculator(domain, pointRadius);
+        this.populationFactory = new PopulationFactory(domain, inventory);
+        this.fitnessCalculator = new FitnessCalculator(domain, maxRadius);
 
         // Operators are configured with global constants from GeneticConfig
         this.gammaRays = new Mutation(GeneticConfig.MUTATION_PROB, GeneticConfig.INITIAL_MUTATION_STRENGTH, domain, GeneticConfig.GENERATIONS);
@@ -126,7 +127,7 @@ public class EvolutionService {
     public Individual executeEvolutionCycle() {
 
         // 1. Setup Time Budget (Safety Mechanism against infinite loops or excessive lag)
-        long maxDurationMs = EvolutionUtils.calculateTimeBudget(individualSize);
+        long maxDurationMs = EvolutionUtils.calculateTimeBudget(inventory.getTotalPopulationSize());
         Instant startTime = Instant.now();
 
         // 2. Genesis (Phase 1)

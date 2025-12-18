@@ -2,6 +2,7 @@ package org.agroplanner.exportsystem.model;
 
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.domainsystem.model.Domain;
+import org.agroplanner.inventory.model.PlantInventory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -20,7 +21,7 @@ public abstract class BaseExporter {
     /**
      * The default root directory for all generated files.
      */
-    private static final String EXPORT_FOLDER = "exports";
+    public static final String EXPORT_FOLDER = "exports";
 
     /**
      * Orchestrates the export process.
@@ -36,12 +37,12 @@ public abstract class BaseExporter {
      *
      * @param individual The solution data to export.
      * @param domain     The problem domain context.
-     * @param radius     The radius of the points (needed for visualization/reporting).
      * @param filename   The user-specified filename (with or without extension).
      * @return The absolute path of the generated file as a String (useful for UI feedback).
      * @throws IOException If filesystem operations (creation, writing) fail.
      */
-    public final String export(Individual individual, Domain domain, double radius, String filename) throws IOException {
+    /*
+    public final String export(Individual individual, Domain domain, PlantInventory inventory, String filename) throws IOException {
 
         // Extension Normalization
         // Ensure the filename ends with the correct suffix defined by the subclass.
@@ -62,11 +63,43 @@ public abstract class BaseExporter {
 
         // Delegation (Hook Method)
         // Execute the format-specific writing logic.
-        performExport(individual, domain, radius, path);
+        performExport(individual, domain, inventory, path);
 
         // Result Propagation
         // Return the absolute path so the Controller can display exactly where the file ended up.
         return path.toAbsolutePath().toString();
+    }
+    */
+
+    /**
+     * MODIFICATO: Il metodo export ora usa resolveFilePath per coerenza.
+     */
+    public final String export(Individual individual, Domain domain, PlantInventory inventory, String filename) throws IOException {
+        // 1. Risolviamo il path usando la logica centralizzata
+        Path path = resolveFilePath(filename);
+
+        // 2. Creazione cartelle (rimane uguale)
+        if (Files.notExists(path.getParent())) {
+            Files.createDirectories(path.getParent());
+        }
+
+        // 3. Scrittura
+        performExport(individual, domain, inventory, path);
+        return path.toAbsolutePath().toString();
+    }
+
+    /**
+     * NUOVO METODO: Calcola il percorso finale senza scrivere il file.
+     * Utile per i controlli di esistenza pre-export.
+     */
+    public Path resolveFilePath(String filename) {
+        String extension = getExtension();
+        // Normalizzazione estensione
+        if (!filename.toLowerCase().endsWith(extension)) {
+            filename += extension;
+        }
+        // Risoluzione path
+        return Paths.get(EXPORT_FOLDER, filename);
     }
 
     // ------------------- ABSTRACT HOOKS -------------------
@@ -86,9 +119,8 @@ public abstract class BaseExporter {
      *
      * @param individual The data source.
      * @param domain     The context.
-     * @param radius     The point dimension.
      * @param path       The fully resolved target path (guaranteed to have a valid parent directory).
      * @throws IOException If the low-level writing operation fails.
      */
-    protected abstract void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException;
+    protected abstract void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException;
 }

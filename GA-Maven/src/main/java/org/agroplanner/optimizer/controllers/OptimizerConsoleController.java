@@ -3,6 +3,9 @@ package org.agroplanner.optimizer.controllers;
 import org.agroplanner.domainsystem.controllers.DomainConsoleController;
 import org.agroplanner.domainsystem.controllers.DomainService;
 import org.agroplanner.domainsystem.views.ConsoleDomainView;
+import org.agroplanner.inventory.view.ConsoleInventoryView;
+import org.agroplanner.inventory.controller.InventoryConsoleController;
+import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.shared.exceptions.EvolutionTimeoutException;
 import org.agroplanner.shared.exceptions.InvalidInputException;
 import org.agroplanner.shared.exceptions.MaxAttemptsExceededException;
@@ -40,7 +43,7 @@ public class OptimizerConsoleController {
     // ------------------- SHARED RESOURCES -------------------
 
     private final Scanner scanner;
-    private final OptimizerViewContract appView;
+    private final OptimizerViewContract optView;
 
     // ------------------- STATELESS SERVICES -------------------
 
@@ -58,7 +61,7 @@ public class OptimizerConsoleController {
         this.scanner = new Scanner(System.in);
 
         // Main View
-        this.appView = new ConsoleOptimizerView(scanner);
+        this.optView = new ConsoleOptimizerView(scanner);
 
         // Service Initialization
         // These are stateless factories/calculators, so we instantiate them once.
@@ -72,7 +75,7 @@ public class OptimizerConsoleController {
      * Starts the UC loop.
      */
     public void run() {
-        appView.showWelcomeMessage();
+        optView.showWelcomeMessage();
 
         // --- SESSION LOOP ---
         // Keeps the UC alive across multiple problem-solving sessions.
@@ -84,7 +87,7 @@ public class OptimizerConsoleController {
             // is logged, and the loop restarts cleanly.
             try {
 
-                appView.showNewSessionMessage();
+                optView.showNewSessionMessage();
 
                 // ====================================================
                 // PHASE 1: DOMAIN DEFINITION (Subsystem A)
@@ -100,7 +103,7 @@ public class OptimizerConsoleController {
 
                 // Handle Exit Request
                 if (domainOpt.isEmpty()) {
-                    appView.showExitMessage();
+                    optView.showExitMessage();
                     break; // Breaks the while loop -> Application Shutdown
                 }
 
@@ -112,11 +115,16 @@ public class OptimizerConsoleController {
                 // ====================================================
 
                 // Logic: Calculate strict constraints based on the chosen domain.
-                double maxRadius = domainService.calculateMaxValidRadius(problemDomain);
+                double maxPhysRadius = domainService.calculateMaxValidRadius(problemDomain);
 
-                // UI: Collect user inputs
-                int individualSize = appView.askForIndividualSize();
-                double pointRadius = appView.askForPointRadius(maxRadius);
+                // 2. Istanziamo il Sottosistema Inventory (Controller + View)
+                // Nota: Passiamo lo stesso 'scanner' per non chiudere lo stream System.in
+                InventoryConsoleController inventoryController = new InventoryConsoleController(
+                        new ConsoleInventoryView(scanner)
+                );
+
+                // 3. Deleghiamo il lavoro e riceviamo il Bean pronto
+                PlantInventory inventory = inventoryController.runInventoryWizard(maxPhysRadius);
 
                 // ====================================================
                 // PHASE 3: EVOLUTION (Subsystem B)
@@ -127,8 +135,7 @@ public class OptimizerConsoleController {
                 // If parameters (size, radius) are incoherent, an InvalidInputException is thrown here.
                 EvolutionService evolutionService = new EvolutionService(
                         problemDomain,
-                        individualSize,
-                        pointRadius
+                        inventory
                 );
 
                 EvolutionConsoleController evolutionController = new EvolutionConsoleController(
@@ -141,9 +148,9 @@ public class OptimizerConsoleController {
                 Individual bestSolution = evolutionController.runEvolution();
 
                 // Show Results
-                appView.showSolutionValue(bestSolution.getFitness());
-                if (appView.askIfPrintChromosome()) {
-                    appView.printSolutionDetails(bestSolution.toString());
+                optView.showSolutionValue(bestSolution.getFitness());
+                if (optView.askIfPrintChromosome()) {
+                    optView.printSolutionDetails(bestSolution.toString());
                 }
 
                 // ====================================================
@@ -155,7 +162,18 @@ public class OptimizerConsoleController {
                         exportService
                 );
 
-                exportController.runExportWizard(bestSolution, problemDomain, pointRadius);
+                exportController.runExportWizard(bestSolution, problemDomain, inventory);
+
+                // --- 5. EXIT CHECK  ---
+                // Chiediamo se vuole ricominciare.
+                boolean restart = optView.askForNewSession();
+
+                if (!restart) {
+                    // Se dice NO, mostriamo i saluti e rompiamo il ciclo infinito.
+                    optView.showExitMessage();
+                    break;
+                }
+                // Se dice SÌ, il loop ricomincia da capo (showNewSessionMessage...)
 
                 // ====================================================
                 // ERROR HANDLING (Session Recovery)
@@ -163,23 +181,23 @@ public class OptimizerConsoleController {
 
             } catch (MaxAttemptsExceededException e) {
                 // Scenario: Algorithm failed to converge after N retries.
-                appView.showSessionAborted(e.getMessage());
+                optView.showSessionAborted(e.getMessage());
                 // Loop continues -> New Session
 
             } catch (InvalidInputException e) {
                 // Scenario: User entered valid numbers, but invalid logic (e.g. radius > domain size).
                 // Caught here thanks to Deep Protection in Service constructors.
-                appView.showSessionAborted("Configuration Error: " + e.getMessage());
+                optView.showSessionAborted("Configuration Error: " + e.getMessage());
                 // Loop continues -> New Session
 
             } catch (EvolutionTimeoutException e) {
                 // Scenario: The calculation took too long.
-                appView.showSessionAborted("⏱️ TIME LIMIT REACHED: " + e.getMessage());
+                optView.showSessionAborted("⏱️ TIME LIMIT REACHED: " + e.getMessage());
                 // Loop continues -> New Session
 
             } catch (Exception e) {
                 // Scenario: Unexpected Crash (NPE, OOM, etc.)
-                appView.showSessionAborted("Critical System Error: " + e);
+                optView.showSessionAborted("Critical System Error: " + e);
                 //e.printStackTrace(); // Helpful for debugging
                 // Loop continues -> New Session
             }

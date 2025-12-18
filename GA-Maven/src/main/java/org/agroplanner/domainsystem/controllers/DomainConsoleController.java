@@ -55,6 +55,7 @@ public class DomainConsoleController {
             // ==================================================================================
             // Delegate the menu display and choice collection to the View.
             // The service provides the list of available types to keep the UI agnostic.
+            view.showAvailableDomains(service.getAvailableDomainTypes());
             Optional<DomainType> selectedType = view.askForDomainType(service.getAvailableDomainTypes());
 
             // EXIT CONDITION: The user chose option "0" (Quit).

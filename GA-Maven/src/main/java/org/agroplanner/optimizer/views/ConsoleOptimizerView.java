@@ -1,19 +1,18 @@
 package org.agroplanner.optimizer.views;
 
+import java.util.Locale;
 import java.util.Scanner;
 
 /**
  * <p><strong>Concrete View Implementation for the Main UC Flow.</strong></p>
  *
- * <p>This class implements the global interaction layer using the System Console.
- * It focuses on clear, formatted output (using separators and emojis) to guide the user through
- * the configuration of the evolutionary algorithm parameters.</p>
+ * <p>Implements the global interaction layer using the System Console.
+ * Refactored for professional aesthetic, English localization, and strict architectural alignment.</p>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleOptimizerView implements OptimizerViewContract {
 
     private final Scanner scanner;
-    private static final String SEPARATOR = "=========================================";
 
     /**
      * Initializes the view with a shared Scanner.
@@ -23,119 +22,102 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         this.scanner = scanner;
     }
 
+    // ------------------- HELPER METHODS -------------------
+
+    private void printDoubleSeparator() {
+        System.out.println("══════════════════════════════════════════════════════════");
+    }
+
+    private void printSingleSeparator() {
+        System.out.println("──────────────────────────────────────────────────────────");
+    }
+
     // ------------------- LIFECYCLE MESSAGES -------------------
 
     @Override
     public void showWelcomeMessage() {
-        System.out.println(SEPARATOR);
-        System.out.println("   \t\t🧬 TERRAIN OPTIMIZER 🧬   ");
-        System.out.println(SEPARATOR);
+        System.out.println("\n\n");
+        printDoubleSeparator();
+        System.out.println("      🌿  A G R O   P L A N N E R   v 2 . 0  🌿");
+        System.out.println("    Advanced Genetic Optimization System for Terrain");
+        printDoubleSeparator();
+        System.out.println();
     }
 
     @Override
     public void showNewSessionMessage() {
-        System.out.println("\n-----------------------------------------");
-        System.out.println("   \t\t\t🔄 NEW SESSION");
-        System.out.println("-----------------------------------------");
+        System.out.println("\n🚀 STARTING NEW OPTIMIZATION SESSION...");
+        printSingleSeparator();
     }
 
     @Override
     public void showExitMessage() {
-        System.out.println("\n" + SEPARATOR);
-        System.out.println("   \t👋 Session Terminated. See you!   ");
-        System.out.println(SEPARATOR);
-    }
-
-    // ------------------- CONFIGURATION INPUTS -------------------
-
-    @Override
-    public int askForIndividualSize() {
-        int size = 0;
-        // Validation Loop: Force positive integer
-        while (size <= 0) {
-            System.out.print("\nEnter genome length (number of points, > 0): ");
-            if (scanner.hasNextInt()) {
-                size = scanner.nextInt();
-                if (size <= 0) System.out.print("\n❌ Error: The genome length must be a positive integer (> 0). Retry.");
-            } else {
-                System.out.print("\n❌ Invalid Input. Please enter a positive integer. Retry.");
-                scanner.next(); // Flush invalid token
-            }
-        }
-        return size;
+        System.out.println("\n");
+        printDoubleSeparator();
+        System.out.println("   👋 SESSION TERMINATED. GOODBYE!");
+        printDoubleSeparator();
     }
 
     @Override
-    public double askForPointRadius(double maxLimit) {
-        double radius = 0.0;
+    public void showSessionAborted(String reason) {
+        System.out.println("\n⛔ SESSION ABORTED.");
+        System.out.println("   Reason: " + reason);
+        System.out.println("   System is restarting...\n");
 
-        System.out.println("\n--- Configuration: Point Radius ---");
-        System.out.printf("ℹ️  Based on the domain, max valid radius is: %.2f%n", maxLimit);
-
-        // Validation Loop: Force range (0, maxLimit]
-        while (radius <= 0 || radius > maxLimit) {
-            System.out.printf("Enter the RADIUS (r) of the points (> 0 and <= %.2f): ", maxLimit);
-
-            if (scanner.hasNextDouble()) {
-                radius = scanner.nextDouble();
-
-                if (radius <= 0) {
-                    System.out.println("\n❌ Error: The radius has to be strictly greater than 0.");
-                } else if (radius > maxLimit) {
-                    System.out.printf("%n❌ Error: The radius (%.2f) cannot exceed the maximum limit (%.2f).%n", radius, maxLimit);
-                }
-            } else {
-                System.out.println("\n❌ Invalid Input. You must enter a number.");
-                scanner.next(); // Flush buffer
-            }
-        }
-        System.out.printf("%n✅ Valid radius entered: %.2f%n", radius);
-        return radius;
+        // UX: Small pause to let the user read the error
+        try { Thread.sleep(1500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     }
 
     // ------------------- RESULTS & FEEDBACK -------------------
 
     @Override
     public void showSolutionValue(double fitness) {
-        System.out.printf("Best solution's Fitness: %.6f%n%n", fitness);
+        System.out.println("\n🏆 OPTIMIZATION COMPLETE!");
+        System.out.println("┌────────────────────────────────────────────────────────┐");
+        // Using Locale.US to ensure dot separator (e.g., 0.9855)
+        System.out.printf(Locale.US, "│  FINAL FITNESS SCORE:      %-27.6f │%n", fitness);
+        System.out.println("└────────────────────────────────────────────────────────┘");
+        System.out.println("   (Target: 1.000000 = No overlaps detected)");
     }
 
     @Override
     public boolean askIfPrintChromosome() {
-        String input = "";
         while (true) {
-            System.out.print("Do you wish to print chromosomes? [y/n]: ");
-            if (scanner.hasNext()) {
-                input = scanner.next().trim();
-            }
+            System.out.print("\n👁️ View detailed chromosome data? [y/n]: ");
+            String input = scanner.next().trim();
 
-            if (input.equalsIgnoreCase("y")) {
-                return true;
-            } else if (input.equalsIgnoreCase("n")) {
-                return false;
-            } else {
-                System.out.println("\n❌ Invalid input. Please enter 'y' or 'n'.");
-            }
+            if (input.equalsIgnoreCase("y")) return true;
+            if (input.equalsIgnoreCase("n")) return false;
+
+            System.out.println("❌ Invalid input. Please type 'y' for Yes or 'n' for No.");
         }
     }
 
     @Override
-    public void showSessionAborted(String reason) {
-        System.out.println("\n" + "=".repeat(50));
-        System.out.println("🛑 SESSION ABORTED");
-        System.out.println("=".repeat(50));
-        System.out.println("Reason: " + reason);
-        System.out.println("\n🔄 Restarting session from domain selection...");
-        System.out.println("-".repeat(50));
-
-        // UX: Small pause to let the user read the error before the new menu clears the screen (conceptually).
-        try { Thread.sleep(2000); } catch (InterruptedException _) { Thread.currentThread().interrupt(); }
+    public void printSolutionDetails(String details) {
+        printSingleSeparator();
+        System.out.println("🧬 SOLUTION DETAILS:");
+        System.out.println(details);
+        printSingleSeparator();
     }
 
     @Override
-    public void printSolutionDetails(String details) {
-        System.out.println("\n------- 🧬 Solution Details --------");
-        System.out.println(details);
-        System.out.println("------------------------------------");
+    public boolean askForNewSession() {
+        System.out.println(); // Spazio per respirare
+        printSingleSeparator(); // Linea sottile
+
+        while (true) {
+            System.out.print("\n> Start a new optimization session? [y/n]: ");
+            String input = scanner.next().trim();
+
+            if (input.equalsIgnoreCase("y")) {
+                return true;
+            }
+            if (input.equalsIgnoreCase("n")) {
+                return false;
+            }
+
+            System.out.println("❌ Invalid input. Please type 'y' (Yes) or 'n' (No).");
+        }
     }
 }

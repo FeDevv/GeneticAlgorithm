@@ -13,6 +13,8 @@ import java.util.Optional;
  */
 public interface ExportViewContract {
 
+    void showAvailableExports(List<ExportType> types);
+
     /**
      * Prompts the user to select an export format from a list of available options.
      *
@@ -50,4 +52,6 @@ public interface ExportViewContract {
      * @param message The error details to display.
      */
     void showErrorMessage(String message);
+
+    boolean askOverwriteOrRename(String filename);
 }

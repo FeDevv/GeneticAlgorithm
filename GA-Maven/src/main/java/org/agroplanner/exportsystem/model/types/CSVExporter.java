@@ -1,5 +1,8 @@
 package org.agroplanner.exportsystem.model.types;
 
+import org.agroplanner.exportsystem.model.ExportType;
+import org.agroplanner.inventory.model.InventoryEntry;
+import org.agroplanner.inventory.model.PlantInventory;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.agroplanner.gasystem.model.Individual;
@@ -30,11 +33,11 @@ import java.util.Locale;
 public class CSVExporter extends BaseExporter {
 
     /** Standard column headers for the data section. */
-    private static final String[] HEADERS = {"ID", "X", "Y"};
+    private static final String[] HEADERS = {"ID", "TYPE", "LABEL", "X", "Y", "RADIUS"};
 
     @Override
     protected String getExtension() {
-        return ".csv";
+        return ExportType.CSV.getExtension();
     }
 
     /**
@@ -42,12 +45,11 @@ public class CSVExporter extends BaseExporter {
      *
      * @param individual The solution to export.
      * @param domain     The domain context.
-     * @param radius     The point radius.
      * @param path       The target file path.
      * @throws IOException If writing fails.
      */
     @Override
-    protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
+    protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
         // Configure the CSV Format (Standard comma separation, defined headers).
         CSVFormat format = CSVFormat.DEFAULT.builder()
@@ -66,12 +68,27 @@ public class CSVExporter extends BaseExporter {
             writer.write("# Domain Info: " + domain.toString());
             writer.newLine();
 
-            // Used Locale.US to ensure decimal points (10.5) are used instead of commas (10,5).
-            // Using commas for decimals breaks the CSV format structure.
-            writer.write(String.format(Locale.US, "# Target Distance : %.2f", radius));
+            // Write the "Shopping List" (What was requested)
+            writer.write("# Inventory Configuration:");
             writer.newLine();
 
-            writer.write("# Total Points: " + individual.getDimension());
+            for (InventoryEntry entry : inventory.getEntries()) {
+                try {
+                    // Esempio output: # - TOMATO (🍅): 50 units, r=1.50
+                    writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2f",
+                            entry.getType().name(),      // Nome (ex key)
+                            entry.getType().getLabel(),  // Emoji (ex key)
+                            entry.getQuantity(),         // Quantità
+                            entry.getRadius()));         // Raggio specificato per questa riga
+
+                    writer.newLine();
+
+                } catch (IOException e) {
+                    throw new RuntimeException("Error writing header", e);
+                }
+            }
+
+            writer.write("# Total Plants: " + individual.getDimension());
             writer.newLine();
 
             writer.write(String.format(Locale.US, "# Fitness: %.6f", individual.getFitness()));
@@ -88,8 +105,14 @@ public class CSVExporter extends BaseExporter {
                 int index = 0;
 
                 for (Point point : points) {
-                    // The library handles escaping, separators, and line breaks automatically.
-                    printer.printRecord(index, point.getX(), point.getY());
+                    printer.printRecord(
+                            index,
+                            point.getType().name(),    // Per parsing (TOMATO)
+                            point.getType().getLabel(), // Per umani (🍅)
+                            point.getX(),
+                            point.getY(),
+                            point.getRadius()
+                    );
                     index++;
                 }
             }

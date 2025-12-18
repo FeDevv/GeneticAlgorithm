@@ -1,6 +1,9 @@
 package org.agroplanner.exportsystem.model.types;
 
+import org.agroplanner.exportsystem.model.ExportType;
 import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.inventory.model.InventoryEntry;
+import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
@@ -22,7 +25,7 @@ public class TxtExporter extends BaseExporter {
 
     @Override
     protected String getExtension() {
-        return ".txt";
+        return ExportType.TXT.getExtension();
     }
 
     /**
@@ -30,20 +33,20 @@ public class TxtExporter extends BaseExporter {
      *
      * @param individual The solution data.
      * @param domain     The domain context.
-     * @param radius     The point dimension.
      * @param path       The destination path.
      * @throws IOException If writing fails.
      */
     @Override
-    protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
+    protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // Use BufferedWriter for efficient character writing.
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
 
             // --- REPORT HEADER ---
             writer.write("========================================");
             writer.newLine();
-            writer.write("            TERRAIN REPORT");
+            writer.write("            AGROPLANNER REPORT");
+            writer.newLine();
+            writer.write("         Multi-Culture Solution");
             writer.newLine();
             writer.write("========================================");
             writer.newLine();
@@ -55,28 +58,57 @@ public class TxtExporter extends BaseExporter {
             writer.write("Domain: " + domain.toString());
             writer.newLine();
 
-            // Format: "Target Distance: 10.50" (Using US Locale for dot separator)
-            writer.write(String.format(Locale.US, "Target Distance: %.2f", radius));
+            writer.write("Requested Inventory:");
             writer.newLine();
+
+            // Print the manifest
+            // Iteriamo sulla lista degli inserimenti
+            for (InventoryEntry entry : inventory.getEntries()) {
+                try {
+                    // e.g. " - 🍅 TOMATO: 50 units (r=1.50)"
+                    String line = String.format(Locale.US, " - %s %s: %d units (r=%.2f)",
+                            entry.getType().getLabel(),  // Emoji
+                            entry.getType().name(),      // Nome
+                            entry.getQuantity(),         // Quantità
+                            entry.getRadius());          // Raggio
+
+                    writer.write(line);
+                    writer.newLine();
+
+                } catch (IOException e) {
+                    throw new RuntimeException("Error writing to file", e);
+                }
+            }
+
             writer.newLine();
 
             // --- RESULTS SECTION ---
             writer.write("--- Results ---");
             writer.newLine();
-            writer.write(String.format(Locale.US, "Fitness: %.6f", individual.getFitness()));
+            writer.write("Total Plants: " + inventory.getTotalPopulationSize());
             writer.newLine();
-            writer.write("Total Points: " + individual.getDimension());
+            writer.write(String.format(Locale.US, "Final Fitness: %.6f", individual.getFitness()));
             writer.newLine();
             writer.newLine();
 
             // --- DATA LIST SECTION ---
-            writer.write("--- Chromosomes (Points) ---");
+            writer.write("--- Chromosomes (Coordinates) ---");
+            writer.newLine();
+            writer.write("Format: [ID] TYPE | X | Y | Radius");
             writer.newLine();
 
             int index = 0;
             for (Point p : individual.getChromosomes()) {
-                // Row Format: [0] X: 10.5000 | Y: 5.2300
-                writer.write(String.format(Locale.US, "[%d] X: %.4f | Y: %.4f", index++, p.getX(), p.getY()));
+                // Row Format: [0] 🍅 TOMATO | X: 10.5000 | Y: 5.2300 | R: 1.50
+                String line = String.format(Locale.US, "[%d] %s %s | X: %.4f | Y: %.4f | R: %.2f",
+                        index++,
+                        p.getType().getLabel(), // Emoji
+                        p.getType().name(),     // Name
+                        p.getX(),
+                        p.getY(),
+                        p.getRadius());
+
+                writer.write(line);
                 writer.newLine();
             }
 

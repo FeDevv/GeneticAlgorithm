@@ -35,7 +35,7 @@ public enum DomainType {
      * Represents a right-angled triangle.
      * Defined by base (along x-axis) and height (along y-axis) starting from origin (0,0).
      */
-    RIGHT_ANGLED_TRIANGLE(5, "RIGHT ANGLED TRIANGLE", List.of("base", "height")),
+    RIGHT_ANGLED_TRIANGLE(5, "RIGHT TRIANGLE", List.of("base", "height")),
 
     /**
      * Represents a rectangular frame (picture frame).

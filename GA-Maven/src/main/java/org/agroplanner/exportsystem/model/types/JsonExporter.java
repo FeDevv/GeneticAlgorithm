@@ -2,13 +2,18 @@ package org.agroplanner.exportsystem.model.types;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import org.agroplanner.exportsystem.model.ExportType;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
+import org.agroplanner.inventory.model.InventoryEntry;
+import org.agroplanner.inventory.model.PlantInventory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -23,7 +28,7 @@ public class JsonExporter extends BaseExporter {
 
     @Override
     protected String getExtension() {
-        return ".json";
+        return ExportType.JSON.getExtension();
     }
 
     /**
@@ -43,47 +48,56 @@ public class JsonExporter extends BaseExporter {
      *
      * @param individual The solution to serialize.
      * @param domain     The context metadata.
-     * @param radius     The point dimension.
      * @param path       The target file path.
      * @throws IOException If serialization or writing fails.
      */
     @Override
-    protected void performExport(Individual individual, Domain domain, double radius, Path path) throws IOException {
+    protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
         // Jackson Configuration
         ObjectMapper mapper = new ObjectMapper();
-
-        // UX Choice: Enable "Pretty Print".
-        // Increases file size slightly but makes it readable for humans (indentation + newlines).
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-        // Data Structure Construction (Root Object)
-        // Implementation Choice: Use LinkedHashMap.
-        // Unlike HashMap (which has undefined order), LinkedHashMap preserves the insertion order.
-        // This ensures the JSON fields always appear in a predictable sequence (Metadata first, then Solution).
+        // Root Object (LinkedHashMap to preserve order: Metadata -> Solution)
         Map<String, Object> rootNode = new LinkedHashMap<>();
 
-        // --- Metadata Section ---
+        // --- 1. METADATA SECTION ---
         Map<String, Object> metadata = new LinkedHashMap<>();
-        metadata.put("domain_description", domain.toString());
-        metadata.put("target_distance", radius);
+        metadata.put("domain_info", domain.toString());
 
-        // --- Result Section ---
+        // Convert Inventory Map to a clean List of Objects for JSON
+        List<Map<String, Object>> inventoryList = new ArrayList<>();
+
+        // Iteriamo sulla lista degli inserimenti (InventoryEntry)
+        for (InventoryEntry entry : inventory.getEntries()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+
+            // Recuperiamo i dati dall'oggetto 'entry' invece che dalla coppia key-value
+            item.put("plant_type", entry.getType().name());       // "TOMATO"
+            item.put("visual_label", entry.getType().getLabel()); // "🍅"
+            item.put("requested_qty", entry.getQuantity());
+            item.put("radius_constraint", entry.getRadius());
+
+            inventoryList.add(item);
+        }
+
+        metadata.put("inventory_request", inventoryList);
+
+        // --- 2. SOLUTION SECTION ---
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("fitness", individual.getFitness());
-        result.put("total_points", individual.getDimension());
+        result.put("total_plants", individual.getDimension());
 
-        // Serialization Note:
-        // Jackson automatically serializes the List<Point> by calling the public getters
-        // (getX, getY, getRadius) on the Point objects. No manual loop is required.
-        result.put("points", individual.getChromosomes());
+        // Automatic Serialization:
+        // Jackson calls .getX(), .getY(), .getType(), .getRadius() on each Point.
+        // Since we updated the Point class, the 'type' and 'radius' fields appear automatically here.
+        result.put("plants", individual.getChromosomes());
 
         // Assembly
         rootNode.put("metadata", metadata);
         rootNode.put("solution", result);
 
         // File Output
-        // 'writeValue' handles the entire stream lifecycle (Open -> Write -> Close).
         mapper.writeValue(path.toFile(), rootNode);
     }
 }

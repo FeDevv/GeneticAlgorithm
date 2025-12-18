@@ -1,5 +1,8 @@
 package org.agroplanner.gasystem.model;
 
+import org.agroplanner.inventory.model.PlantType;
+import org.agroplanner.shared.exceptions.InvalidInputException;
+
 /**
  * <p><strong>The Fundamental Unit of the Genetic Algorithm (The Gene).</strong></p>
  *
@@ -25,6 +28,9 @@ public class Point {
     /** The Y coordinate of the center. */
     private final double y;
 
+    /** The identity tag. */
+    private final PlantType type;
+
     /**
      * The radius (size) of the object.
      * Defines the spatial footprint for overlap calculations.
@@ -39,11 +45,29 @@ public class Point {
      * @param x      The X coordinate.
      * @param y      The Y coordinate.
      * @param radius The physical radius of the object.
+     * @param type   The plant identifier.
      */
-    public Point(double x, double y, double radius) {
+    public Point(double x, double y, double radius, PlantType type) {
+        // Validation: Coordinates
+        // Accettiamo coordinate negative? Dipende dal dominio, ma di solito i NaN sono il nemico.
+        if (Double.isNaN(x) || Double.isNaN(y)) {
+            throw new InvalidInputException("Coordinates cannot be NaN.");
+        }
+
+        // Validation: Radius
+        if (radius <= 0) {
+            throw new InvalidInputException("Point radius must be positive. Got: " + radius);
+        }
+
+        // Validation: Type (CRITICO PER L'EXPORT)
+        if (type == null) {
+            throw new InvalidInputException("PlantType cannot be null. Every point must have a species identity.");
+        }
+
         this.x = x;
         this.y = y;
         this.radius = radius;
+        this.type = type;
     }
 
     /**
@@ -64,14 +88,18 @@ public class Point {
      */
     public double getRadius() { return radius; }
 
+    public PlantType getType() { return type; }
+
     /**
      * Returns a formatted string representation of the point coordinates.
      * <p>Format: {@code (x.xxxx, y.yyyy)}</p>
      *
      * @return The string representation suitable for logging or export.
      */
+
     @Override
     public String toString() {
-        return String.format("(%.4f, %.4f)", this.x, this.y);
+        // Esempio output: Pomodoro[r=1.50]@(10.00, 20.00)
+        return String.format("%s[r=%.2f]@(%.4f, %.4f)", type.name(), radius, x, y);
     }
 }

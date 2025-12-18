@@ -1,5 +1,6 @@
 package org.agroplanner.exportsystem.controllers;
 
+import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.shared.exceptions.ExportException;
 import org.agroplanner.shared.exceptions.InvalidInputException;
 import org.agroplanner.gasystem.model.Individual;
@@ -47,15 +48,15 @@ public class ExportConsoleController {
      *
      * @param solution The solution data to export.
      * @param domain   The context data.
-     * @param radius   The dimension data.
      */
-    public void runExportWizard(Individual solution, Domain domain, double radius) {
+    public void runExportWizard(Individual solution, Domain domain, PlantInventory inventory) {
 
         // --- RETRY LOOP (Wizard Style) ---
         // Keeps the user inside the export flow until success or explicit cancellation.
         while (true) {
 
             // STEP 1: Select Format
+            view.showAvailableExports(service.getAvailableTypes());
             Optional<ExportType> selectedType = view.askForExportType(service.getAvailableTypes());
 
             // If user cancels (returns Empty), exit the wizard.
@@ -64,10 +65,29 @@ public class ExportConsoleController {
             // STEP 2: Input Filename
             String filename = view.askForFilename();
 
+            // --- NEW STEP: OVERWRITE CHECK ---
+            // Prima di provare a salvare, chiediamo al Service se il file c'è già.
+            // Nota: checkFileExists userà l'exporter corretto per capire l'estensione (.csv, .xlsx)
+            boolean fileExists = service.checkFileExists(selectedType.get(), filename);
+
+            if (fileExists) {
+                // Se esiste, la View chiede cosa fare
+                boolean overwrite = view.askOverwriteOrRename(filename);
+
+                if (!overwrite) {
+                    // Se l'utente sceglie "Rename" (false), saltiamo il resto del loop.
+                    // Il while(true) ricomincerà da capo chiedendo il formato e il nome.
+                    continue;
+                }
+                // Se sceglie "Overwrite" (true), il codice prosegue verso STEP 3
+                // e il file verrà sovrascritto naturalmente.
+            }
+
             // STEP 3: Execution & Feedback
             try {
+                // We pass the full INVENTORY so the exporter can write metadata (e.g. "Requested: 50 Tomatoes").
                 // Delegate to Service (Deep Protection & IO Handling happen there)
-                String savedPath = service.performExport(solution, domain, radius, selectedType.get(), filename);
+                String savedPath = service.performExport(solution, domain, inventory, selectedType.get(), filename);
 
                 // Success Feedback
                 view.showSuccessMessage(savedPath);
@@ -75,7 +95,7 @@ public class ExportConsoleController {
 
             } catch (InvalidInputException e) {
                 // Recoverable User Error (e.g., bad characters in filename).
-                view.showErrorMessage("Invalid Filename: " + e.getMessage());
+                view.showErrorMessage("Input Error: " + e.getMessage());
                 // Loop continues -> User can try entering a new name.
 
             } catch (ExportException e) {

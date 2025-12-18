@@ -8,16 +8,9 @@ import java.util.*;
 /**
  * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
  *
- * <p>This class implements the {@link DomainViewContract} using standard system I/O.
- * It is responsible for:</p>
- * <ul>
- * <li>Rendering menus and messages to {@code System.out}.</li>
- * <li>Capturing and cleaning user input via {@link Scanner}.</li>
- * <li>Performing <strong>Syntactic Validation</strong> (ensuring inputs are numbers).</li>
- * <li>Performing <strong>Basic Validation</strong> (ensuring inputs are non-negative).</li>
- * </ul>
+ * <p>Handles user interaction for Domain definition.
+ * Refactored for visual consistency, ASCII tables, and robust English input handling.</p>
  */
-
 @SuppressWarnings("java:S106")
 public class ConsoleDomainView implements DomainViewContract {
 
@@ -25,59 +18,86 @@ public class ConsoleDomainView implements DomainViewContract {
 
     /**
      * Constructs the view sharing an existing Scanner instance.
-     * <p>
-     * Dependency Injection of the Scanner is crucial to avoid closing the underlying
-     * {@code System.in} stream when switching between different views/controllers.
-     * </p>
-     *
      * @param scanner The shared scanner instance.
      */
     public ConsoleDomainView(Scanner scanner) {
         this.scanner = scanner;
     }
 
+    // ------------------- HELPER METHODS -------------------
+
+    private void printDoubleSeparator() {
+        System.out.println("══════════════════════════════════════════════════════════");
+    }
+
+    private void printSingleSeparator() {
+        System.out.println("──────────────────────────────────────────────────────────");
+    }
+
+    // ------------------- INTERACTION LOGIC -------------------
+
+    @Override
+    public void showAvailableDomains(List<DomainType> types){
+        printDoubleSeparator();
+        System.out.println(" 📐  DOMAIN DEFINITION ");
+        System.out.println("     Define the geometry of the working area.");
+        printDoubleSeparator();
+
+        // Render Menu Table
+        System.out.println("\nAvailable Shapes:");
+        System.out.println("┌─────┬──────────────────────┐");
+        System.out.println("│ ID  │ SHAPE                │");
+        System.out.println("├─────┼──────────────────────┤");
+
+        for (DomainType type : types) {
+            // Assumes getMenuId returns int and getDisplayName returns String
+            System.out.printf("│ %-3d │ %-20s │%n", type.getMenuId(), type.getDisplayName().toUpperCase());
+        }
+        System.out.println("└─────┴──────────────────────┘");
+        System.out.println("      (Enter 0 to Return/Exit)");
+
+    };
+
+
     @Override
     public Optional<DomainType> askForDomainType(List<DomainType> types) {
-
-        // --- VIEW-LEVEL VALIDATION LOOP ---
-        // The View keeps the user here until a syntactically valid choice is made.
+        // Validation Loop
         while (true) {
-            // Render Dynamic Menu
-            System.out.println("\n--- Select domain type ---");
-            for (DomainType type : types) {
-                System.out.println(type.getMenuId() + ") " + type.getDisplayName());
-            }
-            System.out.println("0) Quit");
+            System.out.print("\n> Select ID: ");
 
-            // Capture Input (Guaranteed to be an integer >= 0)
-            int choice = readMenuChoice();
+            if (scanner.hasNextInt()) {
+                int choice = scanner.nextInt();
 
-            // CASE A: Explicit Exit
-            if (choice == 0) {
-                return Optional.empty();
-            }
+                // CASE A: Exit
+                if (choice == 0) return Optional.empty();
 
-            // CASE B: Map Input to DomainType
-            Optional<DomainType> result = DomainType.fromMenuId(choice);
-
-            if (result.isPresent()) {
-                return result; // Valid ID found -> Return control to Controller
+                // CASE B: Valid Selection
+                Optional<DomainType> selection = DomainType.fromMenuId(choice);
+                if (selection.isPresent() && types.contains(selection.get())) {
+                    System.out.println("   Selected: " + selection.get().getDisplayName());
+                    return selection;
+                }
+            } else {
+                scanner.next(); // Flush invalid token
             }
 
-            // CASE C: Unmapped ID (e.g., user entered 99)
-            // Feedback is given, and the loop restarts.
-            System.out.println("\n❌ Invalid selection ID. Please try again.");
+            // CASE C: Invalid Input
+            System.out.println("❌ Invalid selection. Please enter a valid ID from the table.");
         }
     }
 
     @Override
     public Map<String, Double> askForParameters(DomainType type) {
         Map<String, Double> params = new HashMap<>();
-        System.out.println("\n--- Parameter Entry for " + type.getDisplayName() + " ---");
 
-        // Dynamic Form Generation:
-        // Iterate over the requirements defined in the Enum and ask for each one.
+        System.out.println();
+        printSingleSeparator();
+        System.out.println(" ⚙️  PARAMETERS FOR: " + type.getDisplayName().toUpperCase());
+        printSingleSeparator();
+
+        // Dynamic Form Generation
         for (String key : type.getRequiredParameters()) {
+            // Helper method handles the specific input loop for each parameter
             double value = readPositiveDouble(key);
             params.put(key, value);
         }
@@ -86,50 +106,40 @@ public class ConsoleDomainView implements DomainViewContract {
 
     @Override
     public void showSuccessMessage() {
-        System.out.println("\n✅ Domain successfully created!");
+        System.out.println("\n✅ DOMAIN SUCCESSFULLY CONFIGURED.");
     }
 
     @Override
     public void showErrorMessage(String message) {
-        System.err.println("\n❌ Creation error: " + message);
+        System.out.println("\n⛔ CONFIGURATION ERROR:");
+        System.out.println("   " + message);
+        System.out.println("   Please try again.");
     }
 
-    /**
-     * Reads an integer from the console with robust error handling.
-     * Ensures the result is non-negative.
-     */
-    private int readMenuChoice() {
-        int choice;
-        do {
-            System.out.print("Enter your choice: ");
-            while (!scanner.hasNextInt()) {
-                System.out.println("\n❌ Non-numeric value. Please enter an integer.");
-                scanner.next();
-                System.out.print("Enter your choice: ");
-            }
-            choice = scanner.nextInt();
-            if (choice < 0) System.out.println("\n❌ Invalid choice. Please enter a non negative integer (>= 0).");
-        } while (choice < 0);
-        return choice;
-    }
+    // ------------------- INPUT HELPERS -------------------
 
     /**
      * Reads a double from the console for a specific parameter.
-     * Enforces strictly positive values (> 0) as physical dimensions cannot be zero or negative.
-     *
-     * @param paramName The name of the parameter being requested (for prompt context).
+     * Enforces strictly positive values (> 0).
      */
     private double readPositiveDouble(String paramName) {
-        double value;
+        // Format label nicely (e.g., "width" -> "WIDTH")
+        String label = paramName.toUpperCase();
+
         while (true) {
-            System.out.print("Enter value for '" + paramName + "' (> 0): ");
+            System.out.printf("%n> Enter %s (meters): ", label);
+
             if (scanner.hasNextDouble()) {
-                value = scanner.nextDouble();
-                if (value > 0) return value;
-                System.out.println("\n❌ Invalid value. The parameter '" + paramName + "' must be strictly positive (> 0). Retry.");
+                double value = scanner.nextDouble();
+
+                if (value > 0) {
+                    return value;
+                } else {
+                    System.out.println("⚠️  Value must be strictly positive (> 0).");
+                }
             } else {
-                System.out.println("\n❌ Non-numeric value. Retry.");
-                scanner.next();
+                String input = scanner.next();
+                System.out.printf("❌ '%s' is not a valid number. Retry.%n", input);
             }
         }
     }

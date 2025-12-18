@@ -7,11 +7,10 @@ import java.util.Optional;
 import java.util.Scanner;
 
 /**
- * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
+ * <p><strong>Concrete View Implementation for Data Export.</strong></p>
  *
- * <p>This class handles the user interaction for the Export Wizard.
- * It is responsible for displaying menus, capturing filenames, and providing visual feedback
- * (success/error messages) using standard system I/O.</p>
+ * <p>Handles the user interaction for saving results to disk.
+ * Features strict filename validation and a clear menu for format selection.</p>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleExportView implements ExportViewContract {
@@ -19,111 +18,148 @@ public class ConsoleExportView implements ExportViewContract {
     private final Scanner scanner;
 
     /**
-     * Constructs the view with a shared Scanner instance.
-     * @param scanner The system input scanner.
+     * Initializes the view with a shared Scanner.
+     * @param scanner The system input source.
      */
     public ConsoleExportView(Scanner scanner) {
         this.scanner = scanner;
     }
 
+    // ------------------- HELPER METHODS -------------------
+
+    private void printDoubleSeparator() {
+        System.out.println("══════════════════════════════════════════════════════════");
+    }
+
+    private void printSingleSeparator() {
+        System.out.println("──────────────────────────────────────────────────────────");
+    }
+
+    // ------------------- INTERACTION LOGIC -------------------
+
+    @Override
+    public void showAvailableExports(List<ExportType> availableTypes) {
+        System.out.println("\n");
+        printDoubleSeparator();
+        System.out.println(" 💾  EXPORT WIZARD ");
+        System.out.println("     Save your solution to a file.");
+        printDoubleSeparator();
+
+        System.out.println("\nAvailable Formats:");
+        System.out.println("┌─────┬──────────────┬──────────────────────────┐");
+        System.out.println("│ ID  │ FORMAT       │ DESCRIPTION              │");
+        System.out.println("├─────┼──────────────┼──────────────────────────┤");
+
+        for (int i = 0; i < availableTypes.size(); i++) {
+            ExportType type = availableTypes.get(i);
+            // We map the description here for display purposes
+            String desc = availableTypes.get(i).getExportInfo();
+
+            // Adjust index + 1 if you want menu to start at 1, or keep i for 0-based.
+            System.out.printf("│ %-3d │ %-12s │ %-24s │%n", availableTypes.get(i).getMenuId(), type.name(), desc);
+        }
+        System.out.println("└─────┴──────────────┴──────────────────────────┘");
+        System.out.println("      (Enter 0 to Cancel)");
+    }
+
     @Override
     public Optional<ExportType> askForExportType(List<ExportType> availableTypes) {
-
-        // --- VALIDATION LOOP ---
-        // Keeps the user trapped until a valid selection (or explicit exit) is made.
+        // Validation Loop
         while (true) {
-            System.out.println("\n--- Select Export Format ---");
-            for (ExportType type : availableTypes) {
-                System.out.println(type.getMenuId() + ") " + type.getDisplayName());
+            // Stile standardizzato con \n
+            System.out.print("\n> Select ID: ");
+
+            if (scanner.hasNextInt()) {
+                int inputId = scanner.nextInt();
+                scanner.nextLine();
+
+                // CASE A: Cancel
+                if (inputId == 0) return Optional.empty();
+
+                // CASE B: Lookup by ID (Usa il tuo metodo!)
+                Optional<ExportType> selection = ExportType.fromMenuId(inputId);
+
+                if (selection.isPresent() && availableTypes.contains(selection.get())) {
+                    return selection;
+                }
+            } else {
+                scanner.nextLine(); // Flush
             }
-            System.out.println("0) Skip Export");
 
-            // Robust integer reading
-            int choice = readMenuChoice();
-
-            // CASE 1: Explicit Exit (User chose 0)
-            if (choice == 0) {
-                return Optional.empty();
-            }
-
-            // CASE 2: ID Resolution
-            Optional<ExportType> typeOpt = ExportType.fromMenuId(choice);
-
-            if (typeOpt.isPresent()) {
-                return typeOpt; // Valid ID mapped to an ExportType
-            }
-
-            // CASE 3: Unmapped ID (e.g., User entered 99)
-            System.out.println("\n❌ Invalid selection ID. Please try again.");
-            // Loop restarts...
+            System.out.println("❌ Invalid ID. Please select a number from the table.");
         }
     }
 
     @Override
     public String askForFilename() {
-        // --- SCANNER BUFFER FLUSH ---
-        // When switching from token-based reading (nextInt) to line-based reading (nextLine),
-        // a dangling newline character often remains in the buffer. We consume it here to prevent
-        // the next input from being skipped automatically.
-        scanner.nextLine();
+        printSingleSeparator();
+        System.out.println("📝  FILE SETTINGS");
 
-        String filename;
-
-        // --- INPUT LOOP ---
         while (true) {
-            System.out.print("Enter file-name (without extension): ");
+            System.out.print("\n> Enter filename (without extension): ");
 
-            // Read the full line and trim leading/trailing whitespace
-            filename = scanner.nextLine().trim();
+            String name = scanner.nextLine().trim();
 
-            // Validation Rules:
-            if (filename.isEmpty()) {
-                System.out.println("\n❌Error: The file-name cannot be empty.");
-            } else if (filename.contains(" ")) {
-                // Design Choice: We forbid spaces to ensure filesystem compatibility and simpler parsing.
-                System.out.println("\n❌Error: The file-name can't contain empty spaces ' '. Retry.");
+            // Validation: Empty check
+            if (name.isEmpty()) {
+                System.out.println("⚠️ Filename cannot be empty.");
+                continue;
+            }
+
+            // 2. Validation: Spaces check (NUOVO)
+            if (name.contains(" ")) {
+                System.out.println("⚠️ Filename cannot contain spaces.");
+                System.out.println("   Please use underscores (_) or dashes (-) instead.");
+                continue;
+            }
+
+            // Validation: Illegal characters (Windows/Linux safe)
+            // Regex checks for: < > : " / \ | ? *
+            if (name.matches(".*[<>:\"/\\\\|?*].*")) {
+                System.out.println("❌ Invalid characters detected (<>:\"/\\|?*).");
+                System.out.println("   Please use only letters, numbers, underscores, or dashes.");
             } else {
-                // Input is valid
-                break;
+                return name;
             }
         }
-        return filename;
     }
 
     @Override
-    public void showSuccessMessage(String filePath) {
-        System.out.println("\n✅ Export successful! File saved to:");
-        System.out.println("   -> " + filePath);
+    public void showSuccessMessage(String path) {
+        System.out.println("\n✅ EXPORT SUCCESSFUL!");
+        System.out.println("   File saved at: " + path);
+        printSingleSeparator();
     }
 
     @Override
-    public void showErrorMessage(String message) {
-        System.err.println("\n❌ Export Failed: " + message);
+    public void showErrorMessage(String error) {
+        System.out.println("\n⛔ EXPORT FAILED:");
+        System.out.println("   " + error);
+        System.out.println("   Please try again with a different name or path.");
     }
 
-    // --- Helper ---
-    private int readMenuChoice() {
-        int choice = -1;
+    /**
+     * Asks the user how to handle a file conflict.
+     * @param filename The name of the file causing the conflict.
+     * @return true for Overwrite, false for Rename.
+     */
+    public boolean askOverwriteOrRename(String filename) {
+        System.out.println("⚠️ File '" + filename + "' already exists.");
+        System.out.print("\n> Do you want to [O]verwrite or [R]ename? (o/r): ");
 
-        do {
-            System.out.print("Enter your choice: ");
+        while (true) {
+            // nextLine() per sicurezza sul buffer
+            String input = scanner.nextLine().trim();
 
-            // Syntax Check: Is it an integer?
-            while (!scanner.hasNextInt()) {
-                System.out.println("\n❌ Non-numeric value. Please enter an integer.");
-                scanner.next(); // Discard invalid token
-                System.out.print("Enter your choice: ");
+            if (input.equalsIgnoreCase("o")) {
+                System.out.println("🔄 Overwriting...");
+                return true;
+            } else if (input.equalsIgnoreCase("r")) {
+                System.out.println("↩️ Returning to selection...");
+                return false;
+            } else {
+                System.out.print("❌ Invalid choice. Enter 'o' or 'r': ");
             }
-
-            choice = scanner.nextInt();
-
-            // Range Check: Is it non-negative?
-            if (choice < 0) {
-                System.out.println("\n❌ Invalid choice. Please enter a non-negative integer.");
-            }
-
-        } while (choice < 0);
-
-        return choice;
+        }
     }
 }
