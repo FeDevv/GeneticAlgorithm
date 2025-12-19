@@ -13,7 +13,7 @@ public class PlantInventory {
         this.entries = new ArrayList<>();
     }
 
-    public void addEntry(PlantType type, int quantity, double radius) {
+    public void addEntry(PlantType type, int quantity, double radius) throws InvalidInputException {
         // Validazione essenziale
         if (type == null) throw new InvalidInputException("PlantType cannot be null.");
         if (quantity <= 0) throw new InvalidInputException("Quantity must be positive.");

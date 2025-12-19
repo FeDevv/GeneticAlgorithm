@@ -64,7 +64,6 @@ public class OptimizerConsoleController {
         this.optView = new ConsoleOptimizerView(scanner);
 
         // Service Initialization
-        // These are stateless factories/calculators, so we instantiate them once.
         this.domainService = new DomainService();
         this.exportService = new ExportService();
     }
@@ -210,4 +209,23 @@ public class OptimizerConsoleController {
         // Cleanup
         scanner.close();
     }
+    // ==================================================================================
+    // ARCHITECTURAL NOTE: MANUAL DEPENDENCY INJECTION (WIRING)
+    // ==================================================================================
+    // Rationale for instantiating Views here and injecting them into Controllers:
+    //
+    // 1. DECOUPLING (Inversion of Control):
+    //    Controllers depend on 'View Interfaces' (e.g., DomainView), not concrete implementations.
+    //    This ensures the Business Logic is not hard-coded to the Console. We could swap
+    //    'ConsoleDomainView' with a 'JavaFXDomainView' without changing a single line of the Controller.
+    //
+    // 2. TESTABILITY:
+    //    By injecting the View from the outside, we can easily pass a "MockView" during Unit Tests.
+    //    This allows testing the Controller flow without blocking on real user input.
+    //
+    // 3. RESOURCE MANAGEMENT (The Scanner Issue):
+    //    We rely on a SINGLE shared 'Scanner' for System.in to prevent stream closure issues.
+    //    The MainController acts as the "Orchestrator" (Wiring), passing this shared resource
+    //    safely to the Views, keeping the Controllers clean of low-level I/O details.
+    // ==================================================================================
 }

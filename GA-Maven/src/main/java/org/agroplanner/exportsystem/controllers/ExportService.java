@@ -29,20 +29,16 @@ import java.util.List;
  */
 public class ExportService {
 
-    private final ExporterFactory factory;
-
     /**
      * Initializes the service by retrieving the Factory instance.
      */
-    public ExportService() {
-        this.factory = ExporterFactory.getInstance();
-    }
+    public ExportService() {  }
 
     /**
      * Retrieves the list of supported export formats.
      * @return A list of all available {@link ExportType}s.
      */
-    public List<ExportType> getAvailableTypes() {
+    public List<ExportType> getAvailableExportTypes() {
         return Arrays.asList(ExportType.values());
     }
 
@@ -86,7 +82,7 @@ public class ExportService {
         // --- EXECUTION & ERROR WRAPPING ---
         try {
             // Get the specific strategy from the factory
-            BaseExporter exporter = factory.createExporter(type);
+            BaseExporter exporter = ExporterFactory.getInstance().createExporter(type);
 
             // Execute the template method.
             // If export() throws IOException, we catch it here.

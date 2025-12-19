@@ -15,6 +15,4 @@ public class Main {
 /*
 * OBIETTIVI
 * 1. RISCRIVI I COMMENTI
-* 2. CONTROLLARE CODE SMELLS
-* 3. ricontrollare i flussi di exception
 */

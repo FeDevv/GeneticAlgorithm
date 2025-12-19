@@ -88,7 +88,7 @@ public class PdfExporter extends BaseExporter {
             for (InventoryEntry item : inventory.getEntries()) {
 
                 // E.g.: " - 🍅 TOMATO: 50 units (r=1.50)"
-                String line = String.format(Locale.US, " - %s %s: %d units (r=%.2f)",
+                String line = String.format(Locale.US, " - %s %s: %d units (r=%.2fm)",
                         item.getType().getLabel(), // Emoji (recuperato da getType)
                         item.getType().name(),     // Nome (recuperato da getType)
                         item.getQuantity(),        // Quantità diretta dell'entry
@@ -122,9 +122,9 @@ public class PdfExporter extends BaseExporter {
             // Headers
             addHeaderCell(table, "ID");
             addHeaderCell(table, "Type");
-            addHeaderCell(table, "X");
-            addHeaderCell(table, "Y");
-            addHeaderCell(table, "Radius");
+            addHeaderCell(table, "X(m)");
+            addHeaderCell(table, "Y(m)");
+            addHeaderCell(table, "Radius(m)");
 
             // Data Population
             int index = 0;

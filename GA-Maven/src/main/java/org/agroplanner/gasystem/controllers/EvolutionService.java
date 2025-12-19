@@ -124,7 +124,7 @@ public class EvolutionService {
      * @return The best {@link Individual} evolved during this cycle.
      * @throws EvolutionTimeoutException If the process exceeds the calculated time budget.
      */
-    public Individual executeEvolutionCycle() {
+    public Individual executeEvolutionCycle() throws EvolutionTimeoutException {
 
         // 1. Setup Time Budget (Safety Mechanism against infinite loops or excessive lag)
         long maxDurationMs = EvolutionUtils.calculateTimeBudget(inventory.getTotalPopulationSize());

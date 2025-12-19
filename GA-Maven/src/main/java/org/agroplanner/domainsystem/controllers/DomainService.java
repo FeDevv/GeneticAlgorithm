@@ -24,14 +24,10 @@ import java.util.Map;
  */
 public class DomainService {
 
-    private final DomainFactory factory;
-
     /**
      * Initializes the service and retrieves the singleton instance of the Factory.
      */
-    public DomainService() {
-        this.factory = DomainFactory.getInstance();
-    }
+    public DomainService() {  }
 
     /**
      * Retrieves the list of supported domain types.
@@ -62,7 +58,7 @@ public class DomainService {
      * @return A new, fully validated instance of {@link Domain}.
      */
     public Domain createDomain(DomainType type, Map<String, Double> params) {
-        return factory.createDomain(type, params);
+        return DomainFactory.getInstance().createDomain(type, params);
     }
 
     /**

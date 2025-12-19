@@ -65,7 +65,7 @@ public class TxtExporter extends BaseExporter {
             // Iteriamo sulla lista degli inserimenti
             for (InventoryEntry entry : inventory.getEntries()) {
                 // e.g. " - 🍅 TOMATO: 50 units (r=1.50)"
-                String line = String.format(Locale.US, " - %s %s: %d units (r=%.2f)",
+                String line = String.format(Locale.US, " - %s %s: %d units (r=%.2fm)",
                         entry.getType().getLabel(),  // Emoji
                         entry.getType().name(),      // Nome
                         entry.getQuantity(),         // Quantità
@@ -89,7 +89,7 @@ public class TxtExporter extends BaseExporter {
             // --- DATA LIST SECTION ---
             writer.write("--- Chromosomes (Coordinates) ---");
             writer.newLine();
-            writer.write("Format: [ID] TYPE | X | Y | Radius");
+            writer.write("Format: [ID] TYPE | X(m) | Y(m) | Radius(m)");
             writer.newLine();
 
             int index = 0;

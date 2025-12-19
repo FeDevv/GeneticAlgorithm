@@ -74,9 +74,9 @@ public class CSVExporter extends BaseExporter {
 
             for (InventoryEntry entry : inventory.getEntries()) {
                 // Esempio output: # - TOMATO (🍅): 50 units, r=1.50
-                writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2f",
-                        entry.getType().name(),      // Nome (ex key)
-                        entry.getType().getLabel(),  // Emoji (ex key)
+                writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2fm",
+                        entry.getType().name(),      // Nome
+                        entry.getType().getLabel(),  // Emoji
                         entry.getQuantity(),         // Quantità
                         entry.getRadius()));         // Raggio specificato per questa riga
 

@@ -56,8 +56,8 @@ public class ExportConsoleController {
         while (true) {
 
             // STEP 1: Select Format
-            view.showAvailableExports(service.getAvailableTypes());
-            Optional<ExportType> selectedType = view.askForExportType(service.getAvailableTypes());
+            view.showAvailableExports(service.getAvailableExportTypes());
+            Optional<ExportType> selectedType = view.askForExportType(service.getAvailableExportTypes());
 
             // If user cancels (returns Empty), exit the wizard.
             if (selectedType.isEmpty()) return;

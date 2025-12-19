@@ -85,6 +85,13 @@ public class EvolutionConsoleController {
             // EXECUTION: Delegate heavy lifting to the Service
             // This blocks until the cycle finishes or timeouts.
             lastSolution = service.executeEvolutionCycle();
+            // EXECUTION & TIMEOUT MANAGEMENT
+            // We purposefully do NOT catch EvolutionTimeoutException here.
+            // Logic:
+            // 1. If the Service enforces a timeout, it means the calculation is stuck.
+            // 2. We apply the "Fail Fast" principle: immediately bubble up the exception
+            //    to the MainController to abort the session and free resources.
+            // 3. Retrying locally (looping) after a timeout is usually futile and risks freezing the UI.
 
             Instant end = Instant.now();
             double durationMs = Duration.between(start, end).toMillis();
@@ -104,6 +111,21 @@ public class EvolutionConsoleController {
 
         } while (currentAttempt < MAX_RETRY_ATTEMPTS);
 
+
+        // ==================================================================================
+        // CRITICAL FAILURE HANDLING STRATEGY (Bubble-Up)
+        // ==================================================================================
+        // Why do we throw exceptions here instead of handling them?
+        //
+        // 1. EXHAUSTED RECOVERY: The 'do-while' loop above IS the local recovery mechanism.
+        //    If we exit the loop, it means the algorithm failed to converge even after
+        //    MAX_RETRY_ATTEMPTS. The controller has done all it can.
+        //
+        // 2. FLOW CONTROL: By throwing the exception to the MainController, we trigger
+        //    a clean "Session Abort" and reset. If we caught it here, we would have to
+        //    return null/Optional, forcing the MainController to perform null-checks.
+        //    Exceptions provide a cleaner control flow for fatal errors.
+        // ==================================================================================
 
         // CRITICAL FAILURE (Exhausted Attempts)
         // If we exit the loop, it means we failed N times.

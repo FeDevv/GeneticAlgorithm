@@ -20,7 +20,9 @@ public class ExporterFactory {
     // ------------------- SINGLETON PATTERN -------------------
 
     /** Private constructor to prevent direct instantiation. */
-    private ExporterFactory() {}
+    private ExporterFactory() {
+
+    }
 
     /**
      * Static Inner Class (Lazy Holder).
