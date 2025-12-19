@@ -111,6 +111,6 @@ public class RectangleDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Rectangle { width = %.2f, height = %.2f }", width, height);
+        return String.format("Rectangle { width = %.2fm, height = %.2fm }", width, height);
     }
 }

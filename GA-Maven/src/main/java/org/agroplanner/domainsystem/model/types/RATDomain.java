@@ -114,6 +114,6 @@ public class RATDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Right Angled Triangle { base = %.2f, height = %.2f }", base, height);
+        return String.format("Right Angled Triangle { base = %.2fm, height = %.2fm }", base, height);
     }
 }

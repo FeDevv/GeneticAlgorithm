@@ -77,9 +77,12 @@ public class OptimizerConsoleController {
     public void run() {
         optView.showWelcomeMessage();
 
+        // 1. Variabile di controllo del ciclo
+        boolean isRunning = true;
+
         // --- SESSION LOOP ---
         // Keeps the UC alive across multiple problem-solving sessions.
-        while (true) {
+        while (isRunning) {
 
             // GLOBAL SAFETY NET:
             // Wraps the entire logic of a single session. If anything goes wrong inside
@@ -104,7 +107,8 @@ public class OptimizerConsoleController {
                 // Handle Exit Request
                 if (domainOpt.isEmpty()) {
                     optView.showExitMessage();
-                    break; // Breaks the while loop -> Application Shutdown
+                    isRunning = false; // Breaks the while loop -> Application Shutdown
+                    continue;
                 }
 
                 Domain problemDomain = domainOpt.get();
@@ -171,7 +175,7 @@ public class OptimizerConsoleController {
                 if (!restart) {
                     // Se dice NO, mostriamo i saluti e rompiamo il ciclo infinito.
                     optView.showExitMessage();
-                    break;
+                    isRunning = false;
                 }
                 // Se dice SÌ, il loop ricomincia da capo (showNewSessionMessage...)
 

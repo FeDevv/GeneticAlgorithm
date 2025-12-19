@@ -19,8 +19,10 @@ public class FrameDomain implements Domain {
     // ------------------- FIELDS -------------------
 
     // Original dimensions (kept for toString and external info)
-    private final double innerWidth, innerHeight;
-    private final double outerWidth, outerHeight;
+    private final double innerWidth;
+    private final double innerHeight;
+    private final double outerWidth;
+    private final double outerHeight;
 
     /**
      * Optimization: Pre-calculated half-dimensions (boundaries).
@@ -143,7 +145,7 @@ public class FrameDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Frame { Inner width = %.2f, Inner height = %.2f, Outer width = %.2f, Outer height = %.2f }",
+        return String.format("Frame { Inner width = %.2fm, Inner height = %.2fm, Outer width = %.2fm, Outer height = %.2fm }",
                 innerWidth, innerHeight, outerWidth, outerHeight);
     }
 }

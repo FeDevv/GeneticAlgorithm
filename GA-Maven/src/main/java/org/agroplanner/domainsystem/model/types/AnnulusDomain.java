@@ -131,6 +131,6 @@ public class AnnulusDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Annulus { inner radius = %.2f, outer radius = %.2f }", innerRadius, outerRadius);
+        return String.format("Annulus { inner radius = %.2fm, outer radius = %.2fm }", innerRadius, outerRadius);
     }
 }

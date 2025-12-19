@@ -16,8 +16,6 @@ import org.apache.poi.xssf.usermodel.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -29,12 +27,10 @@ import java.util.stream.Collectors;
  */
 public class ExcelExporter extends BaseExporter {
 
-    private static final String[] HEADERS = {"ID", "TYPE", "LABEL", "X", "Y", "RADIUS"};
+    private static final String[] HEADERS = {"ID", "TYPE", "LABEL", "X(m)", "Y(m)", "RADIUS(m)"};
 
     // Costanti di Layout per garantire il rapporto 1:1 su Mac e Windows
     private static final float ROW_HEIGHT = 26.3f;
-    private static final int CHART_COL_WIDTH_UNITS = 3000;
-    private static final double CHART_ASPECT_RATIO = 2.7; //2.5 is better for Excel on windows, 2.7 looks better for Numbers on Mac
 
     @Override
     protected String getExtension() {
@@ -66,11 +62,14 @@ public class ExcelExporter extends BaseExporter {
             // 5. Setup Layout (Auto-size e Canvas quadrato per il grafico)
             // Calcoliamo le dimensioni del grafico basandoci sulla griglia creata
             int[] chartDimensions = setupLayoutAndCanvas(sheet);
-            int chartWidthCols = chartDimensions[0];
-            int chartHeightRows = chartDimensions[1];
+            int chartCols = chartDimensions[0];
+            int chartRows = chartDimensions[1];
 
             // 6. Generazione Grafico
-            createMultiSeriesChart(sheet, rangeMap, headerRowIndex, chartWidthCols, chartHeightRows);
+            createMultiSeriesChart(sheet, rangeMap, headerRowIndex, chartCols, chartRows);
+
+            int disclaimerRow = headerRowIndex + chartRows + 1;
+            writeChartDisclaimer(sheet, disclaimerRow, styles);
 
             // 7. Scrittura su disco
             try (OutputStream fileOut = Files.newOutputStream(path)) {
@@ -88,7 +87,7 @@ public class ExcelExporter extends BaseExporter {
         createMetadataRow(sheet, rowIndex++, "Inventory Configuration:", "", styles.header, styles.left);
 
         for (InventoryEntry entry : inventory.getEntries()) {
-            String summary = String.format(Locale.US, "%s (%s): %d units (r=%.2f)",
+            String summary = String.format(Locale.US, "%s (%s): %d units (r=%.2fm)",
                     entry.getType().name(), entry.getType().getLabel(), entry.getQuantity(), entry.getRadius());
             createMetadataRow(sheet, rowIndex++, " - " + entry.getType().name(), summary, styles.header, styles.left);
         }
@@ -113,7 +112,7 @@ public class ExcelExporter extends BaseExporter {
         Map<PlantType, List<Point>> groupedPoints = individual.getChromosomes().stream()
                 .collect(Collectors.groupingBy(Point::getType));
 
-        Map<PlantType, int[]> rangeMap = new HashMap<>();
+        Map<PlantType, int[]> rangeMap = new EnumMap<>(PlantType.class);
         int idCounter = 1;
 
         for (Map.Entry<PlantType, List<Point>> entry : groupedPoints.entrySet()) {
@@ -144,27 +143,26 @@ public class ExcelExporter extends BaseExporter {
     }
 
     private int[] setupLayoutAndCanvas(XSSFSheet sheet) {
-        // A. Auto-size colonne dati
+        // A. Auto-size SOLO colonne dati per leggibilità
         for (int i = 0; i < HEADERS.length; i++) {
             sheet.autoSizeColumn(i);
             int currentWidth = sheet.getColumnWidth(i);
-            sheet.setColumnWidth(i, (int) (currentWidth * 1.2) + 500);
+            sheet.setColumnWidth(i, (int) (currentWidth * 1.2) + 1000); // Padding
         }
 
-        // B. Setup Canvas Grafico (16 colonne x 40 righe)
-        int chartStartCol = 7;
-        int chartWidthCols = 16;
-        int chartHeightRows = (int) (chartWidthCols * CHART_ASPECT_RATIO);
+        // B. Definiamo le dimensioni del grafico "Hardcoded" ma equilibrate.
+        // Non tocchiamo più le larghezze delle colonne sottostanti (Chart Start Col ecc).
+        // Usiamo un box di 15 colonne x 30 righe.
+        // Dato che hai ROW_HEIGHT a 26.3f (molto alta), 30 righe coprono una buona altezza verticale.
+        // Questo crea un "Canvas" approssimativamente quadrato/rettangolare standard.
 
-        // Forza larghezza colonne grafico a 3000 unità (Canvas Fisso)
-        for (int i = 0; i < chartWidthCols; i++) {
-            sheet.setColumnWidth(chartStartCol + i, CHART_COL_WIDTH_UNITS);
-        }
+        int chartCols = 15;
+        int chartRows = 25;
 
-        return new int[]{chartWidthCols, chartHeightRows};
+        return new int[]{chartCols, chartRows};
     }
 
-    private void createMultiSeriesChart(XSSFSheet sheet, Map<PlantType, int[]> rangeMap, int anchorRow, int chartWidthCols, int chartHeightRows) {
+    private void createMultiSeriesChart(XSSFSheet sheet, Map<PlantType, int[]> rangeMap, int anchorRow, int chartCols, int chartRows) {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
         int colStart = 7;
@@ -172,29 +170,17 @@ public class ExcelExporter extends BaseExporter {
         // Anchor Quadrato basato sui calcoli precedenti
         XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0,
                 colStart, anchorRow,
-                colStart + chartWidthCols, anchorRow + chartHeightRows
+                colStart + chartCols, anchorRow + chartRows
         );
 
         XSSFChart chart = drawing.createChart(anchor);
         chart.setTitleText("Cultivation Map (By Species)");
-        chart.setTitleOverlay(true); // Overlay Titolo
+        chart.setTitleOverlay(false); // Overlay Titolo
 
         // Legenda in Overlay
         XDDFChartLegend legend = chart.getOrAddLegend();
         legend.setPosition(LegendPosition.TOP_RIGHT);
-        legend.setOverlay(true);
-
-        // Layout "Blindato" (Quadrato interno all'80%)
-        XDDFManualLayout layout = chart.getOrAddManualLayout();
-        layout.setXMode(LayoutMode.EDGE);
-        layout.setYMode(LayoutMode.EDGE);
-        layout.setWidthMode(LayoutMode.FACTOR);
-        layout.setHeightMode(LayoutMode.FACTOR);
-
-        layout.setX(0.10);
-        layout.setY(0.10);
-        layout.setWidthRatio(0.80);
-        layout.setHeightRatio(0.80);
+        legend.setOverlay(false);
 
         // Assi
         XDDFValueAxis bottomAxis = chart.createValueAxis(AxisPosition.BOTTOM);
@@ -219,7 +205,7 @@ public class ExcelExporter extends BaseExporter {
             XDDFScatterChartData.Series series = (XDDFScatterChartData.Series) data.addSeries(xs, ys);
             series.setTitle(type.getLabel() + " " + type.name(), null);
             series.setMarkerStyle(MarkerStyle.CIRCLE);
-            series.setMarkerSize((short) 8);
+            series.setMarkerSize((short) 5);
 
             XDDFShapeProperties properties = new XDDFShapeProperties();
             XDDFLineProperties lineProperties = new XDDFLineProperties();
@@ -249,14 +235,40 @@ public class ExcelExporter extends BaseExporter {
 
     private void createStyledCell(Row row, int colIndex, Object value, CellStyle style) {
         Cell cell = row.createCell(colIndex);
-        if (value instanceof Number) {
-            cell.setCellValue(((Number) value).doubleValue());
+        if (value instanceof Number number) {
+            cell.setCellValue(number.doubleValue());
         } else if (value != null) {
             cell.setCellValue(String.valueOf(value));
         } else {
             cell.setCellValue("");
         }
         if (style != null) cell.setCellStyle(style);
+    }
+
+    private void writeChartDisclaimer(XSSFSheet sheet, int startRow, ExcelStyles styles) {
+        int startCol = 7;
+        // --- RIGA 1: Avviso ---
+        // Recuperiamo la riga esistente (se c'è la tabella dati) o la creiamo (se siamo sotto)
+        Row row1 = sheet.getRow(startRow);
+        if (row1 == null) {
+            row1 = sheet.createRow(startRow);
+            row1.setHeightInPoints(ROW_HEIGHT); // Altezza standard
+        }
+
+        Cell cell1 = row1.createCell(startCol);
+        cell1.setCellValue("⚠️ Graph might not be to scale.");
+        cell1.setCellStyle(styles.hint); // Usa lo stile hint che hai già
+
+        // --- RIGA 2: Istruzione ---
+        Row row2 = sheet.getRow(startRow);
+        if (row2 == null) {
+            row2 = sheet.createRow(startRow);
+            row2.setHeightInPoints(ROW_HEIGHT);
+        }
+
+        Cell cell2 = row2.createCell(startCol+1);
+        cell2.setCellValue("👉 Pinch/Drag corner to resize."); // Testo più breve
+        cell2.setCellStyle(styles.hint);
     }
 
     /**
@@ -271,6 +283,7 @@ public class ExcelExporter extends BaseExporter {
         final CellStyle emoji;
         final CellStyle header;
         final CellStyle tableHeader;
+        final CellStyle hint;
 
         ExcelStyles(Workbook workbook) {
             // 1. Center
@@ -312,6 +325,18 @@ public class ExcelExporter extends BaseExporter {
             tableHeader = workbook.createCellStyle();
             tableHeader.cloneStyleFrom(center);
             tableHeader.setFont(headerFont);
+
+            // 8. Hint (Stile per il disclaimer)
+            hint = workbook.createCellStyle();
+            hint.setAlignment(HorizontalAlignment.LEFT);
+            hint.setVerticalAlignment(VerticalAlignment.TOP); // Allineato in alto
+            hint.setWrapText(true); // FONDAMENTALE per il \n
+
+            Font hintFont = workbook.createFont();
+            hintFont.setItalic(true);
+            hintFont.setFontHeightInPoints((short) 10); // Un po' più piccolo
+            hintFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex()); // Grigio discreto
+            hint.setFont(hintFont);
         }
     }
 }

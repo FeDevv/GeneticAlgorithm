@@ -41,39 +41,6 @@ public abstract class BaseExporter {
      * @return The absolute path of the generated file as a String (useful for UI feedback).
      * @throws IOException If filesystem operations (creation, writing) fail.
      */
-    /*
-    public final String export(Individual individual, Domain domain, PlantInventory inventory, String filename) throws IOException {
-
-        // Extension Normalization
-        // Ensure the filename ends with the correct suffix defined by the subclass.
-        String extension = getExtension();
-        if (!filename.toLowerCase().endsWith(extension)) {
-            filename += extension;
-        }
-
-        // Path Resolution
-        // Combines the export folder and the filename into a Path object.
-        Path path = Paths.get(EXPORT_FOLDER, filename);
-
-        // Directory Management (Lazy Creation)
-        // If the 'exports' folder doesn't exist, create it.
-        if (Files.notExists(path.getParent())) {
-            Files.createDirectories(path.getParent());
-        }
-
-        // Delegation (Hook Method)
-        // Execute the format-specific writing logic.
-        performExport(individual, domain, inventory, path);
-
-        // Result Propagation
-        // Return the absolute path so the Controller can display exactly where the file ended up.
-        return path.toAbsolutePath().toString();
-    }
-    */
-
-    /**
-     * MODIFICATO: Il metodo export ora usa resolveFilePath per coerenza.
-     */
     public final String export(Individual individual, Domain domain, PlantInventory inventory, String filename) throws IOException {
         // 1. Risolviamo il path usando la logica centralizzata
         Path path = resolveFilePath(filename);

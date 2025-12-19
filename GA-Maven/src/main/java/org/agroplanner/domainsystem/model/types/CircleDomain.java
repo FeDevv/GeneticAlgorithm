@@ -96,6 +96,6 @@ public class CircleDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Circle { radius = %.2f }", radius);
+        return String.format("Circle { radius = %.2fm }", radius);
     }
 }

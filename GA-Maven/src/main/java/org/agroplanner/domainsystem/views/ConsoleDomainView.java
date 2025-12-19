@@ -56,8 +56,7 @@ public class ConsoleDomainView implements DomainViewContract {
         System.out.println("└─────┴──────────────────────┘");
         System.out.println("      (Enter 0 to Return/Exit)");
 
-    };
-
+    }
 
     @Override
     public Optional<DomainType> askForDomainType(List<DomainType> types) {

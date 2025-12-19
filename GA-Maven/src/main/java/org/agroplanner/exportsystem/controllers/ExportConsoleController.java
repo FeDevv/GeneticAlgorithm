@@ -76,7 +76,7 @@ public class ExportConsoleController {
 
                 if (!overwrite) {
                     // Se l'utente sceglie "Rename" (false), saltiamo il resto del loop.
-                    // Il while(true) ricomincerà da capo chiedendo il formato e il nome.
+                    // Il while ricomincerà da capo chiedendo il formato e il nome.
                     continue;
                 }
                 // Se sceglie "Overwrite" (true), il codice prosegue verso STEP 3

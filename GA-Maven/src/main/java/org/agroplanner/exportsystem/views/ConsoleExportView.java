@@ -100,16 +100,10 @@ public class ConsoleExportView implements ExportViewContract {
 
             String name = scanner.nextLine().trim();
 
-            // Validation: Empty check
-            if (name.isEmpty()) {
-                System.out.println("⚠️ Filename cannot be empty.");
-                continue;
-            }
-
-            // 2. Validation: Spaces check (NUOVO)
-            if (name.contains(" ")) {
-                System.out.println("⚠️ Filename cannot contain spaces.");
-                System.out.println("   Please use underscores (_) or dashes (-) instead.");
+            // Validation: Empty check and spaces check
+            if (name.isEmpty() || name.contains(" ")) {
+                System.out.println("⚠️ Filename cannot be empty or contain spaces.");
+                System.out.println("   Please use underscores (_) or dashes (-) for spaces instead.");
                 continue;
             }
 

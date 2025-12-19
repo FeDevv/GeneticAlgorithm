@@ -76,6 +76,6 @@ public final class EvolutionUtils {
     public static long calculateTimeBudget(int individualSize) {
         long baseTime = 5000;   // 5 Seconds overhead
         long timePerGene = 100; // 0.1 Seconds per gene scaling factor
-        return baseTime + ((long) individualSize * timePerGene);
+        return baseTime + (individualSize * timePerGene);
     }
 }

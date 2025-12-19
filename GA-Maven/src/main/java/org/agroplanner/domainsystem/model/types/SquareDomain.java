@@ -107,6 +107,6 @@ public class SquareDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Square { side = %.2f }", side);
+        return String.format("Square { side = %.2fm }", side);
     }
 }

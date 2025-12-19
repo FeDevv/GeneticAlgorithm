@@ -117,7 +117,7 @@ public class EllipseDomain implements Domain {
 
     @Override
     public String toString() {
-        return String.format("Ellipse { semi-width = %.2f, semi-height = %.2f }", semiWidth, semiHeight);
+        return String.format("Ellipse { semi-width = %.2fm, semi-height = %.2fm }", semiWidth, semiHeight);
     }
 
 }
