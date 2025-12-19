@@ -20,7 +20,8 @@ import java.util.Map;
  *
  * <p><strong>Pattern:</strong> Singleton (Initialization-on-demand holder idiom).</p>
  */
-public class DomainFactory {
+public final class DomainFactory {
+
 
     /**
      * Private constructor to prevent direct instantiation.
