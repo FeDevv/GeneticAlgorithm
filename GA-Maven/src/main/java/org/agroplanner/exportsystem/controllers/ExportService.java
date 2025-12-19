@@ -17,22 +17,24 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * <p><strong>Business Logic for the Export Subsystem.</strong></p>
+ * <p><strong>Service Layer for Data Export.</strong></p>
  *
- * <p>This service orchestrates the saving of results to disk. It acts as a middleware between the UI Controller
- * and the specific export implementations, ensuring:</p>
+ * <p>This class acts as a facade between the Controller and the specific file generation logic.
+ * It orchestrates the export process by delegating to the appropriate {@link BaseExporter} implementation
+ * via the {@link ExporterFactory}.</p>
+ *
+ * <p><strong>Key Responsibilities:</strong></p>
  * <ul>
- * <li><strong>Input Sanitation:</strong> Validating filenames against system constraints.</li>
- * <li><strong>Strategy Dispatch:</strong> Selecting the correct format via the Factory.</li>
- * <li><strong>Error Handling:</strong> Translating low-level I/O errors into domain-specific exceptions.</li>
+ * <li><strong>Exception Translation:</strong> Catches low-level {@link java.io.IOException} and wraps them
+ * into high-level {@link ExportException} to decouple the Controller from I/O details.</li>
+ * <li><strong>Orchestration:</strong> Manages the lifecycle of the export operation (setup, write, close).</li>
  * </ul>
+ *
+ * <p><strong>Instantiation Strategy:</strong></p>
+ * <p>This service is <strong>stateless</strong>. It relies on the Java implicit default constructor.
+ * No complex dependency injection or initialization is required.</p>
  */
 public class ExportService {
-
-    /**
-     * Initializes the service by retrieving the Factory instance.
-     */
-    public ExportService() {  }
 
     /**
      * Retrieves the list of supported export formats.

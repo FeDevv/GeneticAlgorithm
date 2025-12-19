@@ -10,24 +10,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <p><strong>Business Logic for the Domain Subsystem.</strong></p>
+ * <p><strong>Service Layer for Domain Management.</strong></p>
  *
- * <p>This service acts as the bridge between the UI Controller and the low-level model logic (Factory and Entities).
- * Its responsibilities include:</p>
- * <ul>
- * <li><strong>Abstraction:</strong> Decoupling the controller from the specific instantiation logic (Factory pattern).</li>
- * <li><strong>Data Provisioning:</strong> Supplying available domain types to the UI.</li>
- * <li><strong>Geometric Validation:</strong> Calculating constraints based on the chosen domain (e.g., max valid point radius).</li>
- * </ul>
+ * <p>This class acts as a facade/gateway between the Controller and the Model (Domain entities).
+ * It handles logic related to domain capabilities validation and acts as a firewall for invalid inputs.</p>
  *
- * <p>This class is stateless regarding the session, but depends on the {@link DomainFactory} singleton.</p>
+ * <p><strong>Instantiation Strategy:</strong></p>
+ * <p>This service is <strong>stateless</strong>. It relies on the Java implicit default constructor
+ * and accesses the {@link DomainFactory} directly via its Enum Singleton instance.
+ * No dependency injection or complex initialization is required.</p>
  */
 public class DomainService {
-
-    /**
-     * Initializes the service and retrieves the singleton instance of the Factory.
-     */
-    public DomainService() {  }
 
     /**
      * Retrieves the list of supported domain types.
