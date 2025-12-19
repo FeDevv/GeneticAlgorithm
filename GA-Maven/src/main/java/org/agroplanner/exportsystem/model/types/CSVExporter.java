@@ -73,19 +73,14 @@ public class CSVExporter extends BaseExporter {
             writer.newLine();
 
             for (InventoryEntry entry : inventory.getEntries()) {
-                try {
-                    // Esempio output: # - TOMATO (🍅): 50 units, r=1.50
-                    writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2f",
-                            entry.getType().name(),      // Nome (ex key)
-                            entry.getType().getLabel(),  // Emoji (ex key)
-                            entry.getQuantity(),         // Quantità
-                            entry.getRadius()));         // Raggio specificato per questa riga
+                // Esempio output: # - TOMATO (🍅): 50 units, r=1.50
+                writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2f",
+                        entry.getType().name(),      // Nome (ex key)
+                        entry.getType().getLabel(),  // Emoji (ex key)
+                        entry.getQuantity(),         // Quantità
+                        entry.getRadius()));         // Raggio specificato per questa riga
 
-                    writer.newLine();
-
-                } catch (IOException e) {
-                    throw new RuntimeException("Error writing header", e);
-                }
+                writer.newLine();
             }
 
             writer.write("# Total Plants: " + individual.getDimension());

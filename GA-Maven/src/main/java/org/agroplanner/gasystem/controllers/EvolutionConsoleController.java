@@ -71,45 +71,39 @@ public class EvolutionConsoleController {
      * @throws EvolutionTimeoutException    If the calculation exceeds the time budget (Rethrown immediately).
      * @throws MaxAttemptsExceededException If the system fails to find a valid solution after N attempts.
      */
-    public Individual runEvolution() {
+    public Individual runEvolution() throws EvolutionTimeoutException, MaxAttemptsExceededException {
         view.showEvolutionStart();
 
         int currentAttempt = 0;
         double totalTimeMs = 0;
         Individual lastSolution = null;
 
-        try {
-            do {
-                currentAttempt++;
-                Instant start = Instant.now();
+        do {
+            currentAttempt++;
+            Instant start = Instant.now();
 
-                // EXECUTION: Delegate heavy lifting to the Service
-                // This blocks until the cycle finishes or timeouts.
-                lastSolution = service.executeEvolutionCycle();
+            // EXECUTION: Delegate heavy lifting to the Service
+            // This blocks until the cycle finishes or timeouts.
+            lastSolution = service.executeEvolutionCycle();
 
-                Instant end = Instant.now();
-                double durationMs = Duration.between(start, end).toMillis();
-                totalTimeMs += durationMs;
+            Instant end = Instant.now();
+            double durationMs = Duration.between(start, end).toMillis();
+            totalTimeMs += durationMs;
 
-                // VALIDATION: Check if the best solution found is actually valid.
-                // It might happen that the algorithm converged but couldn't solve all point positions.
-                if (service.isValidSolution(lastSolution)) {
-                    // SUCCESS: Valid solution found
-                    view.showSuccess(currentAttempt, totalTimeMs / 1000.0);
-                    return lastSolution;
-                }
+            // VALIDATION: Check if the best solution found is actually valid.
+            // It might happen that the algorithm converged but couldn't solve all point positions.
+            if (service.isValidSolution(lastSolution)) {
+                // SUCCESS: Valid solution found
+                view.showSuccess(currentAttempt, totalTimeMs / 1000.0);
+                return lastSolution;
+            }
 
-                // FAILURE (Recoverable): Invalid solution.
-                // We warn the user and loop again (if attempts remain).
-                view.showRetryWarning(currentAttempt, MAX_RETRY_ATTEMPTS, durationMs / 1000.0);
+            // FAILURE (Recoverable): Invalid solution.
+            // We warn the user and loop again (if attempts remain).
+            view.showRetryWarning(currentAttempt, MAX_RETRY_ATTEMPTS, durationMs / 1000.0);
 
-            } while (currentAttempt < MAX_RETRY_ATTEMPTS);
-        } catch (EvolutionTimeoutException e) {
-            // CRITICAL FAILURE (Timeout)
-            // It rethrow the specific exception so the Main Controller
-            // can handle it distinctly.
-            throw e;
-        }
+        } while (currentAttempt < MAX_RETRY_ATTEMPTS);
+
 
         // CRITICAL FAILURE (Exhausted Attempts)
         // If we exit the loop, it means we failed N times.

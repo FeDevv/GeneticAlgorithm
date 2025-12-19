@@ -28,8 +28,10 @@ public class FrameDomain implements Domain {
      * Optimization: Pre-calculated half-dimensions (boundaries).
      * Used to avoid repeated division operations in the {@link #isPointOutside(double, double)} loop.
      */
-    private final double halfOuterWidth, halfOuterHeight;
-    private final double halfInnerWidth, halfInnerHeight;
+    private final double halfOuterWidth;
+    private final double halfOuterHeight;
+    private final double halfInnerWidth;
+    private final double halfInnerHeight;
 
     /** The bounding box is defined by the outer rectangle. */
     private final Rectangle2D boundingBox;

@@ -65,7 +65,7 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         System.out.println("   System is restarting...\n");
 
         // UX: Small pause to let the user read the error
-        try { Thread.sleep(1500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        try { Thread.sleep(1500); } catch (InterruptedException _) { Thread.currentThread().interrupt(); }
     }
 
     // ------------------- RESULTS & FEEDBACK -------------------

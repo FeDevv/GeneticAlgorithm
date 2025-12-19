@@ -64,20 +64,15 @@ public class TxtExporter extends BaseExporter {
             // Print the manifest
             // Iteriamo sulla lista degli inserimenti
             for (InventoryEntry entry : inventory.getEntries()) {
-                try {
-                    // e.g. " - 🍅 TOMATO: 50 units (r=1.50)"
-                    String line = String.format(Locale.US, " - %s %s: %d units (r=%.2f)",
-                            entry.getType().getLabel(),  // Emoji
-                            entry.getType().name(),      // Nome
-                            entry.getQuantity(),         // Quantità
-                            entry.getRadius());          // Raggio
+                // e.g. " - 🍅 TOMATO: 50 units (r=1.50)"
+                String line = String.format(Locale.US, " - %s %s: %d units (r=%.2f)",
+                        entry.getType().getLabel(),  // Emoji
+                        entry.getType().name(),      // Nome
+                        entry.getQuantity(),         // Quantità
+                        entry.getRadius());          // Raggio
 
-                    writer.write(line);
-                    writer.newLine();
-
-                } catch (IOException e) {
-                    throw new RuntimeException("Error writing to file", e);
-                }
+                writer.write(line);
+                writer.newLine();
             }
 
             writer.newLine();

@@ -54,6 +54,11 @@ public class JsonExporter extends BaseExporter {
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
+        // RESOURCE MANAGEMENT NOTE:
+        // Unlike other exporters (CSV/Excel), we do not need an explicit try-with-resources block here.
+        // Jackson's 'writeValue(File, ...)' method automatically handles the entire I/O lifecycle:
+        // it opens the stream, writes the data, and strictly closes the resource.
+
         // Jackson Configuration
         ObjectMapper mapper = new ObjectMapper();
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
@@ -66,20 +71,7 @@ public class JsonExporter extends BaseExporter {
         metadata.put("domain_info", domain.toString());
 
         // Convert Inventory Map to a clean List of Objects for JSON
-        List<Map<String, Object>> inventoryList = new ArrayList<>();
-
-        // Iteriamo sulla lista degli inserimenti (InventoryEntry)
-        for (InventoryEntry entry : inventory.getEntries()) {
-            Map<String, Object> item = new LinkedHashMap<>();
-
-            // Recuperiamo i dati dall'oggetto 'entry' invece che dalla coppia key-value
-            item.put("plant_type", entry.getType().name());       // "TOMATO"
-            item.put("visual_label", entry.getType().getLabel()); // "🍅"
-            item.put("requested_qty", entry.getQuantity());
-            item.put("radius_constraint", entry.getRadius());
-
-            inventoryList.add(item);
-        }
+        List<Map<String, Object>> inventoryList = getMaps(inventory);
 
         metadata.put("inventory_request", inventoryList);
 
@@ -99,5 +91,23 @@ public class JsonExporter extends BaseExporter {
 
         // File Output
         mapper.writeValue(path.toFile(), rootNode);
+    }
+
+    private static List<Map<String, Object>> getMaps(PlantInventory inventory) {
+        List<Map<String, Object>> inventoryList = new ArrayList<>();
+
+        // Iteriamo sulla lista degli inserimenti (InventoryEntry)
+        for (InventoryEntry entry : inventory.getEntries()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+
+            // Recuperiamo i dati dall'oggetto 'entry' invece che dalla coppia key-value
+            item.put("plant_type", entry.getType().name());       // "TOMATO"
+            item.put("visual_label", entry.getType().getLabel()); // "🍅"
+            item.put("requested_qty", entry.getQuantity());
+            item.put("radius_constraint", entry.getRadius());
+
+            inventoryList.add(item);
+        }
+        return inventoryList;
     }
 }
