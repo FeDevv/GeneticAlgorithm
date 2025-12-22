@@ -1,31 +1,27 @@
 package org.agroplanner.shared.exceptions;
 
 /**
- * <p><strong>Exception: Geometric/Physical Constraint Violation.</strong></p>
+ * Indicates that a requested operation or instantiation violates the physical or geometric
+ * invariants of a Domain Entity.
  *
- * <p>Thrown when the parameters defining a geometric domain violate logical or physical rules.
- * This ensures the integrity of the domain model before any calculation begins.</p>
- *
- * <p><strong>Examples:</strong>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li>Defining a rectangle with negative width or height.</li>
- * <li>Defining a bounding box that is smaller than the objects it must contain.</li>
- * <li>Trying to calculate a radius for a shape that doesn't support it.</li>
+ * <li><strong>Domain Integrity:</strong> This exception serves as the primary enforcement mechanism for
+ * <em>Class Invariants</em> within the Domain Model. It ensures that no Domain Object (POJO)
+ * can ever exist in an inconsistent or physically impossible state.</li>
+ * <li><strong>Deep Protection:</strong> Typically thrown by constructors or factory methods immediately
+ * upon detecting invalid geometric relationships preventing the propagation of corrupt state
+ * to the Calculation Engine.</li>
  * </ul>
- * </p>
+ *
+ * @see TerrainExceptions
  */
 public class DomainConstraintException extends TerrainExceptions {
 
     /**
-     * Constructs an exception for a specific invalid parameter.
-     * <p>
-     * <strong>Helper Constructor:</strong> Automatically formats the message to ensure
-     * consistent logging standards across the application.
-     * <br>
-     * <em>Format: "Invalid parameter 'paramName': reason"</em>
-     * </p>
+     * Constructs an exception for a specific parameter validation failure, enforcing a standardized message format.
      *
-     * @param paramName The name of the variable that failed validation (e.g., "width").
+     * @param paramName The name of the parameter that violated the constraint.
      * @param reason    The specific rule that was broken (e.g., "must be strictly positive").
      */
     public DomainConstraintException(String paramName, String reason) {
@@ -33,12 +29,13 @@ public class DomainConstraintException extends TerrainExceptions {
     }
 
     /**
-     * Constructs an exception for generic or relational constraint violations.
-     * <p>
-     * Used when the error involves multiple parameters interacting (e.g., "Radius X is too large for Width Y").
-     * </p>
+     * Constructs an exception for complex or relational constraint violations.
      *
-     * @param message The detailed error description.
+     * <p><strong>Use Case:</strong></p>
+     * Used for <em>Cross-Field Validation</em> where the validity of one parameter depends on another
+     * (e.g., ensuring an Inner Radius is strictly smaller than an Outer Radius).
+     *
+     * @param message The detailed description of the constraint violation.
      */
     public DomainConstraintException(String message) {
         super(message);

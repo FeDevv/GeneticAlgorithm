@@ -10,26 +10,36 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * <p><strong>UI Controller for the Domain Creation Subsystem.</strong></p>
+ * Controller component orchestrating the domain initialization workflow within the CLI environment.
  *
- * <p>This controller acts as the orchestrator for the domain creation workflow in a Console environment.
- * It follows the <strong>Model-View-Controller (MVC)</strong> pattern:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li>It delegates user interaction to the {@link DomainViewContract} (View).</li>
- * <li>It delegates business logic and validation to the {@link DomainService} (Service/Model).</li>
- * <li>It manages the control flow (retries, error handling, exit conditions).</li>
+ * <li><strong>Pattern:</strong> MVC Controller. It acts as the mediator between the user interface
+ * ({@link DomainViewContract}) and the business logic ({@link DomainService}).</li>
+ * <li><strong>Responsibility:</strong> Manages the session state during the configuration phase,
+ * enforcing the execution order (Selection -> Parameter Input -> Instantiation).</li>
+ * <li><strong>Fault Tolerance:</strong> Implements a <em>Retry Loop</em> strategy. Instead of terminating upon
+ * validation errors, the controller catches domain-specific exceptions and cycles the workflow,
+ * allowing the user to correct their input dynamically.</li>
  * </ul>
  */
 public class DomainConsoleController {
 
+    /**
+     * Abstraction of the User Interface.
+     */
     private final DomainViewContract view;
+
+    /**
+     * Facade for Domain Business Logic.
+     */
     private final DomainService service;
 
     /**
-     * Constructs the controller with the necessary dependencies.
+     * Constructs the controller injecting required dependencies.
      *
-     * @param view    The view implementation responsible for I/O operations.
-     * @param service The service responsible for business logic and domain instantiation.
+     * @param view    The IO handler implementation.
+     * @param service The domain logic facade.
      */
     public DomainConsoleController(DomainViewContract view, DomainService service) {
         this.view = view;
@@ -37,28 +47,36 @@ public class DomainConsoleController {
     }
 
     /**
-     * Executes the interactive wizard for domain creation.
-     * <p>
-     * This method runs a synchronous loop that guides the user through type selection and parameter input.
-     * It implements a <strong>"Retry Loop"</strong> mechanism: if the user provides invalid input
-     * (syntactic or semantic), the system catches the exception, displays an error message,
-     * and allows the user to try again without crashing the application.
-     * </p>
+     * Executes the synchronous wizard for geometric domain creation.
      *
-     * @return An {@link Optional} containing the created {@link Domain} if successful,
-     * or {@code Optional.empty()} if the user explicitly requested to exit/cancel.
+     * <p><strong>Workflow:</strong></p>
+     * <ol>
+     * <li><strong>Type Selection:</strong> Fetches available {@link DomainType}s from the Service and prompts the user via the View.</li>
+     * <li><strong>Data Acquisition:</strong> Requests the specific parameters defined by the selected type's schema.</li>
+     * <li><strong>Instantiation:</strong> Invokes the Service to create the entity. This triggers the "Deep Protection" validation chain.</li>
+     * </ol>
+     *
+     * <p><strong>Error Handling Strategy:</strong></p>
+     * Differentiates between error categories to provide specific feedback:
+     * <ul>
+     * <li>{@link DomainConstraintException}: Semantic errors (e.g., "Inner Radius > Outer Radius"). Logic is rejected.</li>
+     * <li>{@link InvalidInputException}: Structural errors (e.g., Missing keys). Data is rejected.</li>
+     * <li>{@link Exception}: Unexpected system failures. Caught to prevent JVM crash (Graceful Degradation).</li>
+     * </ul>
+     *
+     * @return an {@link Optional} containing the valid {@link Domain} instance,
+     * or {@code Optional.empty()} if the user cancels the operation (Exit condition).
      */
     public Optional<Domain> runDomainCreationWizard() {
         while (true) {
             // ==================================================================================
             // STEP 1: TYPE SELECTION
             // ==================================================================================
-            // Delegate the menu display and choice collection to the View.
-            // The service provides the list of available types to keep the UI agnostic.
+            // Data Flow: Service (Data) -> Controller -> View (Render)
             view.showAvailableDomains(service.getAvailableDomainTypes());
             Optional<DomainType> selectedType = view.askForDomainType(service.getAvailableDomainTypes());
 
-            // EXIT CONDITION: The user chose option "0" (Quit).
+            // EXIT CONDITION: User selected "Quit".
             if (selectedType.isEmpty()) {
                 return Optional.empty();
             }
@@ -67,42 +85,41 @@ public class DomainConsoleController {
             // STEP 2: PARAMETER ACQUISITION
             // ==================================================================================
             DomainType type = selectedType.get();
-            // The View handles data type conversion (Scanner -> Double) and basic syntactic validation (positive numbers).
+            // The View handles low-level parsing (String -> Double)
             Map<String, Double> params = view.askForParameters(type);
 
             // ==================================================================================
-            // STEP 3: CREATION & DEEP PROTECTION
+            // STEP 3: CREATION & VALIDATION (The "Deep Protection" Boundary)
             // ==================================================================================
             try {
-                // Attempts to create the domain via the Service.
-                // This is where "Deep Protection" kicks in: the Factory/Model constructors will
-                // validate the consistency of the parameters (e.g., innerRadius < outerRadius).
+                // Delegation: The Service orchestrates the Factory, which invokes Constructors.
+                // Any violation of Physical or Topological invariants throws an exception here.
                 Domain domain = service.createDomain(type, params);
 
                 view.showSuccessMessage();
                 return Optional.of(domain);
 
             } catch (DomainConstraintException e) {
-                // 🛑 CASE A: SEMANTIC ERROR (Business Logic)
-                // The input was syntactically correct (numbers), but logically invalid for the specific Domain
-                // (e.g., Inner Radius >= Outer Radius).
-                // Action: Show the specific error message defined in the Domain model.
+                // 🛑 CATEGORY: SEMANTIC/LOGIC ERROR
+                // The input numbers are valid doubles, but they form an impossible geometry.
+                // Action: Feedback -> Retry.
                 view.showErrorMessage(e.getMessage());
 
             } catch (InvalidInputException e) {
-                // 🛑 CASE B: VALIDATION ERROR (Data Integrity)
-                // Missing parameters, null values, or generic input errors caught by the Service/Factory.
+                // 🛑 CATEGORY: DATA INTEGRITY ERROR
+                // Malformed request (e.g., missing required parameter).
+                // Action: Feedback -> Retry.
                 view.showErrorMessage("Input Error: " + e.getMessage());
 
             } catch (Exception e) {
-                // 🛑 CASE C: UNEXPECTED SYSTEM ERROR (Safety Net)
-                // Catches bugs like NullPointerException or OutOfMemoryError.
-                // Prevents the application from crashing entirely, allowing the user to retry or exit safely.
+                // 🛑 CATEGORY: UNEXPECTED FAILURE (Safety Net)
+                // Catches RuntimeExceptions (NPE, OOM, etc.) to keep the CLI alive.
                 view.showErrorMessage("Unexpected System Error: " + e.getMessage());
-                // e.printStackTrace(); // For debugging purposes only
+                // e.printStackTrace(); // Uncomment for dev debugging only
             }
 
-            // LOOP: If an exception occurred, the 'while' loop restarts, allowing the user to correct the input.
+            // LOOP: The loop structure ensures that after an exception is caught and displayed,
+            // execution returns to the start of the wizard (Retry).
         }
     }
 }

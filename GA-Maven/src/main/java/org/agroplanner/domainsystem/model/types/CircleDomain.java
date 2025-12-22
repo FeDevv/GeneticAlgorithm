@@ -9,85 +9,105 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * <p><strong>Concrete Domain Implementation: Circle.</strong></p>
+ * Concrete implementation of a Circular geometric domain centered at the Cartesian origin {@code (0, 0)}.
  *
- * <p>Represents a 2D circular area centered at the origin {@code (0, 0)}.
- * This class guarantees immutability and state consistency upon creation.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Concrete Strategy for the {@link Domain} interface.</li>
+ * <li><strong>Computational Optimization:</strong> Implements <em>Squared Euclidean Distance</em> comparisons
+ * to eliminate expensive square root operations during boundary checks.</li>
+ * <li><strong>Sampling Efficiency:</strong> The ratio between the circular domain area (pi r^2) and its
+ * bounding box ((2r)^2) is pi/4 (approx. 0.785). This ensures a high acceptance rate (~78.5%)
+ * during the initialization phase (Rejection Sampling), making it highly efficient for stochastic generation.</li>
+ * </ul>
  */
 public class CircleDomain implements Domain {
 
     // ------------------- FIELDS -------------------
 
-    /** The radius defining the boundary of the domain. */
+    /**
+     * The radial distance defining the domain boundary.
+     */
     private final double radius;
 
     /**
-     * The smallest square containing the circle.
-     * Calculated once during initialization for performance.
+     * The cached Minimum Bounding Rectangle (MBR).
+     * <p>Defined as a square with side length {@code 2*radius} centered at the origin.</p>
      */
     private final Rectangle2D boundingBox;
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Constructs a circular domain centered at {@code (0, 0)}.
+     * Initializes a new Circular domain centered at {@code (0, 0)}.
      *
-     * @param radius The radius of the circle.
-     * @throws DomainConstraintException If the radius is not strictly positive.
+     * <p><strong>Deep Protection:</strong></p>
+     * Enforces the class invariant that a physical domain must have a strictly positive radius.
+     * Invalid inputs are rejected immediately to prevent geometric corruption.
+     *
+     * @param radius The radius of the circle (must be strictly positive).
+     * @throws DomainConstraintException If {@code radius <= 0}.
      */
     public CircleDomain(double radius) {
 
-        // Deep Protection / Defensive Programming:
-        // Even if the Factory validates inputs, the Model itself must ensure it never exists in an invalid state.
+        // Invariant Enforcement
         if (radius <= 0) {
             throw new DomainConstraintException("radius", "Must be strictly positive.");
         }
 
         this.radius = radius;
 
-        // Implementation Choice: Pre-calculate the bounding box.
+        // Optimization: Pre-calculate the bounding box.
         // The box spans from [-r, -r] to [r, r]. width = 2r, height = 2r.
+        // This is calculated once at instantiation (O(1)) to support O(1) retrieval later.
         this.boundingBox = new Rectangle2D.Double(-radius, -radius, radius*2, radius*2);
     }
 
     // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Checks if a coordinate {@code (x, y)} lies outside the circle.
+     * Evaluates geometric constraints using Squared Euclidean Distance.
      *
-     * <p><strong>Optimization:</strong> Uses squared Euclidean distance {@code (x² + y² > r²)}
-     * to avoid the computationally expensive {@link Math#sqrt(double)} operation.</p>
+     * <p><strong>Algorithmic Optimization (Hot Path):</strong></p>
+     * Instead of calculating the actual distance {@code d = sqrt(x² + y²)} and comparing {@code d > r},
+     * the method compares the squared values: {@code (x² + y²) > r²}.
+     * <br>
+     * Since the square function is monotonic for positive numbers, the inequality holds true.
+     * This avoids the {@link Math#sqrt(double)} CPU instruction, which is significantly more expensive
+     * than simple multiplication, boosting performance during intensive fitness evaluations.
      *
-     * @param x The X coordinate.
-     * @param y The Y coordinate.
-     * @return {@code true} if the point is strictly outside the radius; {@code false} otherwise.
+     * @param x The Cartesian X-coordinate.
+     * @param y The Cartesian Y-coordinate.
+     * @return {@code true} if the point lies strictly outside the circular radius.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
-        // Inequality: x² + y² > r²
+        // Optimized Inequality: x² + y² > r²
         return (x * x + y * y) > (radius * radius);
     }
 
     /**
-     * Validates an entire individual against the circular boundary.
-     * <p>Complexity: O(N), where N is the number of points (genes).</p>
+     * Validates the spatial integrity of a candidate solution.
      *
-     * @param individual The solution to validate.
-     * @return {@code true} if every point is within the circle.
+     * <p><strong>Complexity:</strong> O(N), where N is the number of points.</p>
+     *
+     * @param individual The candidate solution.
+     * @return {@code true} if all points fall within the circle.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
         List<Point> points = individual.getChromosomes();
         for (Point p : points) {
+            // Delegation to the optimized geometric predicate
             if (isPointOutside(p.getX(), p.getY())) { return false; }
         }
         return true;
     }
 
     /**
-     * Retrieves the Bounding Box used for random point generation.
+     * Retrieves the pre-calculated Bounding Box.
      *
-     * @return A {@link Rectangle2D} centered at (0,0) with side length {@code 2*radius}.
+     * @return A {@link Rectangle2D} centered at (0,0) with dimensions {@code 2r x 2r}.
      */
     @Override
     public Rectangle2D getBoundingBox() {

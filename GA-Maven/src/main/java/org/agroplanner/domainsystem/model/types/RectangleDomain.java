@@ -9,87 +9,115 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * <p><strong>Concrete Domain Implementation: Rectangle.</strong></p>
+ * Concrete implementation of a Rectangular geometric domain centered at the Cartesian origin {@code (0, 0)}.
  *
- * <p>Represents a rectangular domain centered at the origin {@code (0, 0)}.
- * The domain spans from {@code [-width/2, -height/2]} to {@code [width/2, height/2]}.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Concrete Strategy for the {@link Domain} interface.</li>
+ * <li><strong>Coordinate System:</strong> Defines the valid region as spanning from {@code [-width/2, -height/2]}
+ * to {@code [+width/2, +height/2]}. This origin-centered approach facilitates efficient boundary checking
+ * using axial symmetry.</li>
+ * <li><strong>Immutability:</strong> The class state is frozen upon instantiation, ensuring Thread-Safety
+ * without synchronization mechanisms.</li>
+ * </ul>
  */
 public class RectangleDomain implements Domain {
 
     // ------------------- FIELDS -------------------
 
+    /** The scalar width of the domain along the X-axis. */
     private final double width;
+
+    /** The scalar height of the domain along the Y-axis. */
     private final double height;
 
     /**
-     * Optimization: Pre-calculated half-dimensions.
-     * Used to leverage symmetry checks (Math.abs) instead of range checks.
+     * <strong>Performance Cache (X-Axis):</strong> Stores {@code width / 2.0}.
+     * <p>Used to optimize the {@link #isPointOutside(double, double)} method by replacing runtime division
+     * with a memory lookup.</p>
      */
     private final double halfWidth;
+
+    /**
+     * <strong>Performance Cache (Y-Axis):</strong> Stores {@code height / 2.0}.
+     * <p>Used to optimize boundary checks along the vertical axis.</p>
+     */
     private final double halfHeight;
 
     /**
-     * For a rectangular domain, the bounding box coincides exactly with the domain boundaries.
+     * The cached Minimum Bounding Rectangle (MBR).
      */
     private final Rectangle2D boundingBox;
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Constructs a Rectangular domain centered at {@code (0, 0)}.
+     * Initializes a new Rectangular domain centered at {@code (0, 0)}.
      *
-     * @param width  The total width of the rectangle.
-     * @param height The total height of the rectangle.
-     * @throws DomainConstraintException If dimensions are not strictly positive.
+     * <p><strong>Deep Protection:</strong></p>
+     * Validates that both physical dimensions are strictly positive before object construction completes.
+     * This enforces the "Class Invariant" that a physical domain must have non-zero, positive area.
+     *
+     * @param width  The total width along the X-axis.
+     * @param height The total height along the Y-axis.
+     * @throws DomainConstraintException If either dimension is {@code <= 0}.
      */
     public RectangleDomain(double width, double height) {
 
-        // Deep Protection: Integrity check
+        // Invariant Enforcement: Width
         if (width <= 0) {
             throw new DomainConstraintException("width", "Must be strictly positive.");
         }
 
+        // Invariant Enforcement: Height
         if (height <= 0) {
             throw new DomainConstraintException("height", "Must be strictly positive.");
         }
 
-        // I campi sono final, garantendo l'immutabilità del dominio.
         this.width = width;
         this.height = height;
 
-        // Optimization: Pre-calculate boundaries relative to origin
+        // Optimization: Pre-calculate boundaries relative to the origin.
+        // This moves the computational cost from the "Hot Path" (isPointOutside) to the constructor.
         this.halfWidth = width / 2.0;
         this.halfHeight = height / 2.0;
 
-        // Bounding Box: Top-Left at (-w/2, -h/2)
-        this.boundingBox = new Rectangle2D.Double(-width/2, -height/2, width, height);
+        // Bounding Box Initialization:
+        // Top-Left corner is calculated as (-w/2, -h/2).
+        this.boundingBox = new Rectangle2D.Double(-halfWidth, -halfHeight, width, height);
     }
 
     // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Checks if a coordinate {@code (x, y)} lies outside the rectangle.
+     * Evaluates geometric constraints using axial symmetry.
      *
-     * <p><strong>Optimization:</strong>
-     * Since the rectangle is centered at (0,0), a point is outside if its absolute distance
-     * from the center along an axis exceeds half the dimension of that axis.
-     * Formula: {@code |x| > width/2 || |y| > height/2}
-     * </p>
      *
-     * @param x The X coordinate.
-     * @param y The Y coordinate.
-     * @return {@code true} if the point is strictly outside the boundaries.
+     * <p><strong>Algorithmic Efficiency:</strong></p>
+     * A point is strictly outside the domain if its absolute distance from the center along
+     * <em>any</em> axis exceeds the corresponding semi-dimension.
+     * <br>
+     * Formula: {@code |x| > (width/2) OR |y| > (height/2)}
+     *
+     * @param x The Cartesian X-coordinate.
+     * @param y The Cartesian Y-coordinate.
+     * @return {@code true} if the point lies strictly outside the rectangular boundaries.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
-        // Check using symmetry:
-        // Instead of: x < -half || x > half
-        // We do: Math.abs(x) > half
+        // Optimized check using symmetry (Math.abs)
+        // Eliminates the need for 4 comparisons (x < min, x > max, y < min, y > max)
+        // reducing it to 2 comparisons with absolute values.
         return Math.abs(x) > halfWidth || Math.abs(y) > halfHeight;
     }
 
     /**
-     * Validates an entire individual against the rectangular boundary.
+     * Validates the spatial integrity of a candidate solution.
+     *
+     * <p><strong>Complexity:</strong> O(N), where N is the number of points (genes).</p>
+     *
+     * @param individual The candidate solution.
+     * @return {@code true} if all points fall within the rectangle.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
@@ -101,8 +129,13 @@ public class RectangleDomain implements Domain {
     }
 
     /**
-     * Retrieves the Bounding Box.
-     * For this specific domain type, the Bounding Box is geometrically identical to the domain itself.
+     * Retrieves the pre-calculated Bounding Box.
+     *
+     * <p><strong>Geometric Identity:</strong></p>
+     * Since the domain is a rectangle aligned with the Cartesian axes, its Minimum Bounding Rectangle (MBR)
+     * is geometrically identical to the domain itself. Returns the cached instance in O(1) time.
+     *
+     * @return The immutable boundary definition.
      */
     @Override
     public Rectangle2D getBoundingBox() {

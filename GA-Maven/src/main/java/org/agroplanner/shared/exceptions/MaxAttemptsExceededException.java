@@ -1,19 +1,22 @@
 package org.agroplanner.shared.exceptions;
 
 /**
- * <p><strong>Exception: Convergence Failure.</strong></p>
+ * Indicates that an iterative process has exhausted its maximum allowed execution attempts
+ * without producing a valid result.
  *
- * <p>Thrown when an iterative process (such as the Evolutionary Algorithm's retry loop)
- * exhausts its maximum allowed attempts without producing a valid result.</p>
+ * <p><strong>Domain Context:</strong></p>
+ * Genetic and evolutionary algorithms are stochastic in nature. This exception enforces
+ * a termination condition to prevent infinite loops when a solution cannot be found
+ * within the defined constraints.
  *
- * <p><strong>Use Case:</strong>
- * Used by the {@code EvolutionConsoleController} to signal that despite multiple restarts,
- * the algorithm could not solve the geometric constraints (likely due to an overcrowded domain).</p>
+ * @see TerrainExceptions
  */
 public class MaxAttemptsExceededException extends TerrainExceptions {
+
     /**
-     * Constructs the exception with a detail message.
-     * @param message Detailed explanation of the failure.
+     * Constructs a new exception indicating the retry limit has been reached.
+     *
+     * @param message A description of the failure context (e.g., specific operation and limit reached).
      */
     public MaxAttemptsExceededException(String message) {
         super(message);

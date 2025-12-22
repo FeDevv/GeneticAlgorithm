@@ -9,47 +9,79 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * <p><strong>Concrete Domain Implementation: Rectangular Frame.</strong></p>
+ * Concrete implementation of a Rectangular Frame geometric domain.
  *
- * <p>Represents a non-convex domain defined by the area between two concentric rectangles centered at {@code (0, 0)}.
- * Valid points must lie inside the outer rectangle but outside the inner rectangle (the hole).</p>
+ * <p><strong>Architecture & Topology:</strong></p>
+ * <ul>
+ * <li><strong>Geometry:</strong> Represents a <strong>non-convex</strong> domain defined by the region between two
+ * concentric rectangles centered at {@code (0, 0)}. It functionally acts as a "Picture Frame".</li>
+ * <li><strong>Constraint Logic:</strong> Implements a composite boundary check. Valid points must reside within
+ * the "Band" defined by the outer container and the inner exclusion zone (hole).</li>
+ * <li><strong>Sampling Efficiency:</strong> Similar to the Annulus, the efficiency of Rejection Sampling depends on the
+ * frame thickness. Thin frames result in a higher rejection rate during initial population generation.</li>
+ * </ul>
  */
 public class FrameDomain implements Domain {
 
     // ------------------- FIELDS -------------------
 
-    // Original dimensions (kept for toString and external info)
+    // Original dimensions
     private final double innerWidth;
     private final double innerHeight;
     private final double outerWidth;
     private final double outerHeight;
 
     /**
-     * Optimization: Pre-calculated half-dimensions (boundaries).
-     * Used to avoid repeated division operations in the {@link #isPointOutside(double, double)} loop.
+     * <strong>Performance Cache (Outer):</strong> Stores {@code outerWidth / 2.0}.
+     * <p>Used to perform symmetric boundary checks on the container's X-axis.</p>
      */
     private final double halfOuterWidth;
+
+    /**
+     * <strong>Performance Cache (Outer):</strong> Stores {@code outerHeight / 2.0}.
+     * <p>Used to perform symmetric boundary checks on the container's Y-axis.</p>
+     */
     private final double halfOuterHeight;
+
+    /**
+     * <strong>Performance Cache (Inner):</strong> Stores {@code innerWidth / 2.0}.
+     * <p>Used to perform symmetric boundary checks on the hole's X-axis.</p>
+     */
     private final double halfInnerWidth;
+
+    /**
+     * <strong>Performance Cache (Inner):</strong> Stores {@code innerHeight / 2.0}.
+     * <p>Used to perform symmetric boundary checks on the hole's Y-axis.</p>
+     */
     private final double halfInnerHeight;
 
-    /** The bounding box is defined by the outer rectangle. */
+    /**
+     * The Minimum Bounding Rectangle (MBR) defined solely by the outer dimensions.
+     */
     private final Rectangle2D boundingBox;
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Constructs a Frame domain.
+     * Initializes a new Frame domain centered at {@code (0, 0)}.
+     *
+     * <p><strong>Deep Protection & Topology Check:</strong></p>
+     * Enforces two layers of validation:
+     * <ol>
+     * <li><strong>Intrinsic:</strong> All physical dimensions must be strictly positive.</li>
+     * <li><strong>Relational:</strong> The inner rectangle must be strictly smaller than the outer rectangle
+     * along corresponding axes to ensure a valid topology with positive area.</li>
+     * </ol>
      *
      * @param innerWidth  Width of the central hole.
      * @param innerHeight Height of the central hole.
      * @param outerWidth  Width of the outer boundary.
      * @param outerHeight Height of the outer boundary.
-     * @throws DomainConstraintException If dimensions are non-positive or if inner >= outer (invalid topology).
+     * @throws DomainConstraintException If dimensions are non-positive or if {@code inner >= outer}.
      */
     public FrameDomain(double innerWidth, double innerHeight, double outerWidth, double outerHeight) {
 
-        // Deep Protection: Intrinsic Validity
+        // Phase 1: Intrinsic Validity
         if (innerWidth <= 0) {
             throw new DomainConstraintException("inner width", "must be strictly positive (> 0).");
         }
@@ -63,8 +95,8 @@ public class FrameDomain implements Domain {
             throw new DomainConstraintException("outer width", "must be strictly positive (> 0).");
         }
 
-        // Deep Protection: Topology Consistency
-        // The inner rectangle must be strictly contained within the outer one.
+        // Phase 2: Relational Validity (Topology Consistency)
+        // Check if the hole fits inside the container.
         if (innerWidth >= outerWidth || innerHeight >= outerHeight) {
             throw new DomainConstraintException(
                     String.format("Invalid Topology: Inner dimensions (%.2fx%.2f) must be strictly smaller than Outer dimensions (%.2fx%.2f).",
@@ -77,32 +109,37 @@ public class FrameDomain implements Domain {
         this.innerWidth = innerWidth;
         this.innerHeight = innerHeight;
 
-        // Pre-calculate boundaries relative to origin (0,0)
+        // Optimization: Pre-calculate half-dimensions for axial symmetry checks.
+        // Moves division cost from Hot Path to constructor.
         this.halfOuterWidth = outerWidth / 2.0;
         this.halfOuterHeight = outerHeight / 2.0;
         this.halfInnerWidth = innerWidth / 2.0;
         this.halfInnerHeight = innerHeight / 2.0;
 
-        // Bounding Box: Centered at (0,0)
+        // Bounding Box Initialization:
+        // Centered at (0,0), defined by outer dimensions.
         this.boundingBox = new Rectangle2D.Double(-outerWidth / 2.0, -outerHeight / 2.0, outerWidth, outerHeight);
     }
 
     // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Checks if a coordinate {@code (x, y)} lies outside the frame area.
-     * <p>
-     * Logic: A point is invalid if:
-     * <ul>
-     * <li>It is outside the outer rectangle (Math.abs(coord) > half_outer_dimension).</li>
-     * <li>OR</li>
-     * <li>It is inside the inner hole (Math.abs(coord) < half_inner_dimension).</li>
-     * </ul>
-     * </p>
+     * Evaluates geometric constraints using axial symmetry and boolean logic.
      *
-     * @param x The X coordinate.
-     * @param y The Y coordinate.
-     * @return {@code true} if the point is invalid.
+     *
+     * <p><strong>Algorithmic Logic (Hot Path):</strong></p>
+     * The method determines if a point is <strong>invalid</strong> by checking two conditions:
+     * <ul>
+     * <li><strong>Outer Violation (OR Logic):</strong> Checks if {@code |x| > outerX OR |y| > outerY}.
+     * If true, the point is outside the container.</li>
+     * <li><strong>Inner Violation (AND Logic):</strong> Checks if {@code |x| < innerX AND |y| < innerY}.
+     * Both conditions must be true for the point to be inside the hole. (e.g., if x is in the hole range but y is not,
+     * the point is in the valid frame band).</li>
+     * </ul>
+     *
+     * @param x The Cartesian X-coordinate.
+     * @param y The Cartesian Y-coordinate.
+     * @return {@code true} if the point lies strictly outside the valid frame area.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
@@ -111,27 +148,32 @@ public class FrameDomain implements Domain {
         double absX = Math.abs(x);
         double absY = Math.abs(y);
 
-        // 1. Outer Boundary Check
-        // If |x| > width/2 OR |y| > height/2, it is outside the outer box.
+        // 1. Outer Boundary Check (Short-circuit OR)
+        // If it breaks ANY outer boundary, it is invalid.
         if (absX > halfOuterWidth || absY > halfOuterHeight) {
             return true;
         }
 
-        // 2. Inner Hole Check
-        // If we are here, we are inside the outer box.
-        // To be in the hole (invalid), we must be strictly inside BOTH inner dimensions.
-        // i.e., |x| < innerWidth/2 AND |y| < innerHeight/2
 
+        // 2. Inner Hole Check (Short-circuit AND)
+        // To be strictly inside the hole (invalid), it must be within BOTH inner boundaries.
+        // If it is within X bounds but outside Y bounds, it is in the valid "top" or "bottom" frame bar.
         return (absX < halfInnerWidth) && (absY < halfInnerHeight);
     }
 
     /**
-     * Validates an entire individual against the frame constraints.
+     * Validates the spatial integrity of a candidate solution.
+     *
+     * <p><strong>Complexity:</strong> O(N), where N is the number of points.</p>
+     *
+     * @param individual The candidate solution.
+     * @return {@code true} if all points fall within the frame.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
         List<Point> points = individual.getChromosomes();
         for (Point p : points) {
+            // Delegation to the geometric predicate
             if (isPointOutside(p.getX(), p.getY())) { return false; }
         }
         return true;
@@ -139,6 +181,8 @@ public class FrameDomain implements Domain {
 
     /**
      * Retrieves the Bounding Box of the outer rectangle.
+     *
+     * @return A {@link Rectangle2D} covering the outer container.
      */
     @Override
     public Rectangle2D getBoundingBox() {

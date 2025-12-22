@@ -8,32 +8,34 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <p><strong>Factory for Domain Instantiation.</strong></p>
+ * Central factory component responsible for the instantiation of concrete geometric domains.
  *
- * <p>This class implements the <strong>Factory Method Pattern</strong> to centralize the creation logic
- * of concrete {@link Domain} objects (e.g., Circle, Rectangle).
- * Its responsibilities adhere to the <strong>Single Responsibility Principle (SRP)</strong>:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li>It decouples the creation logic from the client (Service/Controller).</li>
- * <li>It performs preliminary validation on input parameters based on the {@link DomainType} metadata.</li>
+ * <li><strong>Pattern:</strong> Implements the <em>Parameterized Factory Method</em> pattern. It centralizes
+ * the complex logic of converting raw configuration maps into strongly-typed {@link Domain} objects.</li>
+ * <li><strong>SOLID Principles:</strong> Supports the <em>Open/Closed Principle (OCP)</em> partially (new shapes
+ * require updating the switch, but clients remain unaffected) and the <em>Dependency Inversion Principle (DIP)</em>
+ * by decoupling high-level controllers from concrete domain implementations.</li>
+ * <li><strong>Singleton Strategy:</strong> Uses the <em>Initialization-on-demand holder idiom</em> (Bill Pugh)
+ * to guarantee thread-safety and lazy initialization without the performance overhead of synchronized blocks.</li>
  * </ul>
- *
- * <p><strong>Pattern:</strong> Singleton (Initialization-on-demand holder idiom).</p>
  */
 public class DomainFactory {
 
     /**
-     * Private constructor to prevent direct instantiation.
+     * Private constructor to strictly enforce the Singleton pattern.
      */
     private DomainFactory() {
-        // Logica di inizializzazione vuota (stateless)
+        // Stateless initialization
     }
 
     /**
-     * Static Inner Class (Lazy Holder).
+     * Static Inner Class responsible for holding the Singleton instance.
      * <p>
-     * This class is loaded by the JVM only when {@code getInstance()} is invoked for the first time.
-     * This idiom guarantees native Thread-Safety without the overhead of synchronized blocks.
+     * <strong>JVM Guarantee:</strong> This class is not loaded until {@link #getInstance()} is called.
+     * The ClassLoader mechanism guarantees that the static initialization of {@code INSTANCE} is serial
+     * and thread-safe, eliminating the need for explicit locking.
      * </p>
      */
     private static class FactoryHolder {
@@ -42,7 +44,8 @@ public class DomainFactory {
 
     /**
      * Retrieves the global singleton instance of the factory.
-     * @return The singleton instance.
+     *
+     * @return The shared {@code DomainFactory} instance.
      */
     public static DomainFactory getInstance() {
         return FactoryHolder.INSTANCE;
@@ -51,24 +54,27 @@ public class DomainFactory {
     // ------------------- BUSINESS LOGIC -------------------
 
     /**
-     * Creates a concrete instance of a Domain based on the provided type and parameters.
-     * <p>
-     * This method acts as the entry point for the creation process. It delegates the specific
-     * instantiation to a switch expression after validating the inputs.
-     * </p>
+     * Fabricates a specific {@link Domain} implementation based on the provided metadata and parameters.
      *
-     * @param type   The metadata describing the domain to create.
-     * @param params The map containing configuration values (e.g., width, radius).
-     * @return A new instance of the specific {@link Domain} implementation.
-     * @throws InvalidInputException     If required parameters are missing, null, or if the type is unsupported.
-     * @throws DomainConstraintException If parameters are present but mathematically invalid (e.g., negative).
+     * <p><strong>Validation Pipeline:</strong></p>
+     * <ol>
+     * <li>Performs structural validation (presence of required keys) via {@link #validateParameters}.</li>
+     * <li>Delegates instantiation to the specific domain constructor.</li>
+     * <li>Domain constructors enforce deep semantic invariants (e.g., inner radius < outer radius).</li>
+     * </ol>
+     *
+     * @param type   The metadata descriptor indicating which concrete class to instantiate.
+     * @param params The configuration map containing the geometric values (e.g., "radius" -> 5.0).
+     * @return A new, fully initialized and validated instance of a {@link Domain} subclass.
+     * @throws InvalidInputException     If the provided map is missing required keys defined in {@link DomainType} or wrong values are entered.
+     * @throws DomainConstraintException If the parameters are present but numerically invalid (e.g., negative).
      */
     public Domain createDomain(DomainType type, Map<String, Double> params) {
 
-        // Pre-creation Validation
+        // Phase 1: Pre-creation Validation (Fail-Fast)
         validateParameters(type, params);
 
-        // Instantiation (Switch Expression)
+        // Phase 2: Instantiation (Switch Expression)
         return switch (type) {
             case CIRCLE ->
                     new CircleDomain(params.get("radius"));
@@ -84,22 +90,26 @@ public class DomainFactory {
                     new FrameDomain(params.get("innerWidth"), params.get("innerHeight"), params.get("outerWidth"), params.get("outerHeight"));
             case ANNULUS ->
                     new AnnulusDomain(params.get("innerRadius"), params.get("outerRadius"));
-            // Defensive Programming: Covers the case where an Enum is added but the Factory is not updated.
+
+            // Defensive Programming: Handles future enum expansions that miss a factory implementation
             default -> throw new InvalidInputException("Unsupported domain type implementation: " + type);
         };
     }
 
     /**
-     * internal helper method for validation.
-     * <p>
-     * Checks that all required parameters defined in {@link DomainType#getRequiredParameters()}
-     * are present, non-null, and strictly positive.
-     * </p>
+     * Internal helper to enforce the parameter contract defined by the {@link DomainType}.
      *
-     * @param type   The domain type.
-     * @param params The input parameters.
-     * @throws InvalidInputException     If a key is missing or value is null.
-     * @throws DomainConstraintException If a value is <= 0.
+     * <p><strong>Checks Performed:</strong></p>
+     * <ul>
+     * <li><strong>Completeness:</strong> Ensures the map contains all keys listed in {@link DomainType#getRequiredParameters()}.</li>
+     * <li><strong>Non-Nullity:</strong> Ensures no value is null.</li>
+     * <li><strong>Positivity:</strong> Enforces the fundamental geometric rule that dimensions must be strictly positive.</li>
+     * </ul>
+     *
+     * @param type   The domain type schema.
+     * @param params The input parameters to validate.
+     * @throws InvalidInputException     If the schema contract is violated (missing keys).
+     * @throws DomainConstraintException If physical constraints are violated (negative values).
      */
     private void validateParameters(DomainType type, Map<String, Double> params) {
 
@@ -118,7 +128,7 @@ public class DomainFactory {
 
             // --- VALIDATION 2: BASIC CONSTRAINTS ---
             // Basic geometric rule: dimensions must be positive.
-            // More complex constraints (e.g., inner < outer) are handled by the specific Domain constructors.
+            // Complex relational constraints (e.g., inner < outer) are deferred to the Domain constructors.
             if (value <= 0) {
                 throw new DomainConstraintException(key, "must be strictly positive (> 0).");
             }

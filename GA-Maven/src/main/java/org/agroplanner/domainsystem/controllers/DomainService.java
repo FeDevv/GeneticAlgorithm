@@ -10,68 +10,69 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <p><strong>Service Layer for Domain Management.</strong></p>
+ * Service component responsible for the logical management of geometric domains.
  *
- * <p>This class acts as a facade/gateway between the Controller and the Model (Domain entities).
- * It handles logic related to domain capabilities validation and acts as a firewall for invalid inputs.</p>
- *
- * <p><strong>Instantiation Strategy:</strong></p>
- * <p>This service is <strong>stateless</strong>. It relies on the Java implicit default constructor
- * and accesses the {@link DomainFactory} directly via its Enum Singleton instance.
- * No dependency injection or complex initialization is required.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Service Layer / Facade. It acts as a gateway between the presentation-focused
+ * Controller and the underlying Domain Model, providing a simplified interface for domain creation and analysis.</li>
+ * <li><strong>Statelessness:</strong> This class maintains no internal state. It delegates object creation
+ * to the {@link DomainFactory} singleton and performs calculations based solely on method arguments.
+ * This design promotes low coupling and allows the service to be used as a shared resource.</li>
+ * </ul>
  */
 public class DomainService {
 
     /**
-     * Retrieves the list of supported domain types.
-     * <p>Used by the View to populate selection menus dynamically.</p>
+     * Retrieves the catalog of supported geometric shapes.
      *
-     * @return A list containing all enum constants of {@link DomainType}.
+     * <p><strong>Usage:</strong></p>
+     * Consumed by the View layer to dynamically populate selection menus (e.g., CLI options or Dropdowns),
+     * ensuring the UI is always synchronized with the available {@link DomainType} enumeration.
+     *
+     * @return A list containing all defined {@link DomainType} constants.
      */
     public List<DomainType> getAvailableDomainTypes() {
         return Arrays.asList(DomainType.values());
     }
 
     /**
-     * Attempts to create a specific Domain instance based on the provided parameters.
-     * <p>
-     * This method delegates the actual object creation to the {@link DomainFactory}.
-     * It acts as a gateway for "Deep Protection", allowing exceptions from the Model layer
-     * to bubble up to the Controller.
-     * </p>
+     * Orchestrates the creation of a concrete Domain entity.
      *
-     * <p>
-     * Throws InvalidInputException    If required parameters are missing or null.
-     * Throws DomainConstraintException If the parameters are present but violate geometric or logic constraints
-     * (e.g., negative dimensions, inner radius > outer radius).
-     * </p>
+     * <p><strong>Pattern (Delegation):</strong></p>
+     * Delegates the actual instantiation logic to the {@link DomainFactory}. This method acts as a
+     * pass-through for the "Deep Protection" mechanism: exceptions originating from the Model's validation
+     * layers are allowed to bubble up to the Controller for user feedback.
      *
-     * @param type   The type of domain to create (e.g., RECTANGLE, CIRCLE).
-     * @param params A map of parameters required by the specific domain constructor (e.g., "width", "radius").
-     * @return A new, fully validated instance of {@link Domain}.
+     * @param type   The metadata descriptor for the desired shape (e.g., RECTANGLE).
+     * @param params The configuration map containing the required geometric parameters.
+     * @return A fully initialized, validated, and immutable {@link Domain} instance.
+     * @see DomainFactory#createDomain(DomainType, Map)
      */
     public Domain createDomain(DomainType type, Map<String, Double> params) {
         return DomainFactory.getInstance().createDomain(type, params);
     }
 
     /**
-     * Calculates the maximum permissible radius for a point (gene) within the given domain.
-     * <p>
-     * This logic resides in the Service layer because it represents a business rule:
-     * a point cannot be larger than the smallest dimension of the container, otherwise
-     * it would be physically impossible to place it without overlapping the boundaries.
-     * </p>
+     * Computes the theoretical upper bound for a plant's radius within a specific domain.
      *
-     * @param domain The domain instance to analyze.
-     * @return The maximum valid radius (half of the shortest side of the bounding box).
+     * <p><strong>Business Rule:</strong></p>
+     * Ensures that users cannot configure plants that are physically too large to fit in the field.
+     * The logic uses a conservative heuristic based on the Minimum Bounding Rectangle (MBR).
+     * <br>
+     * <em>Logic:</em> A circular object cannot be contained within a shape if its diameter exceeds
+     * the shortest dimension of that shape's bounding box.
+     *
+     * @param domain The geometric domain instance to analyze.
+     * @return The maximum permissible radius (half of the MBR's shortest side).
      */
     public double calculateMaxValidRadius(Domain domain) {
         Rectangle2D boundingBox = domain.getBoundingBox();
         double boxWidth = boundingBox.getWidth();
         double boxHeight = boundingBox.getHeight();
 
-        // Geometric Constraint: The diameter cannot exceed the shortest side of the box.
-        // Therefore, Radius <= min(width, height) / 2.0
+        // Geometric Constraint: The diameter (2*r) cannot exceed the shortest side of the box.
+        // Therefore: r_max = min(width, height) / 2.0
         return Math.min(boxWidth, boxHeight) / 2.0;
     }
 }

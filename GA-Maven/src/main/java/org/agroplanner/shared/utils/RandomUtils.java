@@ -8,23 +8,26 @@ import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * <p><strong>Utility Class for Stochastic Operations.</strong></p>
+ * Static utility class providing high-throughput stochastic primitives used throughout the
+ * evolutionary process.
  *
- * <p>This class centralizes all random number generation logic used by the Genetic Algorithm.
- * It is designed for high-performance concurrent environments.</p>
- *
- * <p><strong>Architectural Choice: ThreadLocalRandom</strong><br>
- * Since the Evolution Engine uses {@code parallelStream()}, standard {@code java.util.Random} would cause
- * thread contention (waiting for locks). {@code ThreadLocalRandom} avoids this by keeping an isolated
- * seed for each thread, ensuring linear scalability.</p>
+ * <p><strong>Architecture & Concurrency:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Static Utility (Stateless).</li>
+ * <li><strong>Thread Safety:</strong> Delegates all random generation to {@link java.util.concurrent.ThreadLocalRandom}.
+ * Unlike {@code java.util.Random}, which uses an atomic seed and suffers from thread contention
+ * in parallel environments, {@code ThreadLocalRandom} maintains isolated seeds per thread.
+ * This ensures linear scalability when the Genetic Algorithm executes via {@code parallelStream()}.</li>
+ * </ul>
  */
 public class RandomUtils {
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Private constructor to prevent instantiation.
-     * This is a static utility class.
+     * Prevents instantiation to enforce the static utility pattern.
+     *
+     * @throws IllegalStateException if verified via reflection.
      */
     private RandomUtils() {
         throw new IllegalStateException("Utility class");
@@ -33,12 +36,21 @@ public class RandomUtils {
     // ------------------- CORE METHODS -------------------
 
     /**
-     * Generates a list of distinct integers within a range.
-     * <p>Used primarily for <strong>Tournament Selection</strong> to pick N distinct candidates from the population.</p>
+     * Generates a set of distinct integers selected from a uniform distribution.
+     * <p>
+     * Implements <em>Sampling without Replacement</em> logic. This is algorithmically required
+     * for selecting distinct parents during the Tournament Selection phase without bias.
+     * </p>
      *
-     * @param n            The number of unique indices required.
-     * @param maxExclusive The upper bound of the range (0 to maxExclusive-1).
-     * @return A list of unique integers.
+     * <p><strong>Performance Note:</strong>
+     * Uses a {@link HashSet} for O(1) average time complexity checking of duplicates.
+     * </p>
+     *
+     * @param n            The cardinality of the required set (number of unique indices).
+     * @param maxExclusive The upper bound of the sample space (0 to maxExclusive-1).
+     * @return A list containing exactly {@code n} unique integers.
+     * @throws IllegalArgumentException (Implicit) if {@code n > maxExclusive}, causing an infinite loop.
+     * Caller is responsible for validating bounds.
      */
     public static List<Integer> uniqueIndices(int n, int maxExclusive) {
         // Use a Set to automatically handle uniqueness efficiently.
@@ -54,41 +66,42 @@ public class RandomUtils {
     }
 
     /**
-     * Simulates a binary decision (Coin Flip).
-     * <p>Used for <strong>Uniform Crossover</strong> to decide inheritance (Mom vs Dad).</p>
+     * Simulates a Bernoulli trial with p=0.5 (Fair Coin Toss).
+     * <p>
+     * Provides the boolean entropy required for operations like <em>Uniform Crossover</em>,
+     * determining gene inheritance direction.
+     * </p>
      *
-     * @return 0 or 1.
+     * @return {@code 0} or {@code 1} with equal probability.
      */
     public static int coinToss() {
-        // Usa ThreadLocalRandom
         return ThreadLocalRandom.current().nextInt(2);
     }
 
     /**
-     * Generates a normalized random probability.
-     * <p>Used for rate checks (e.g., "Is random() < mutationProbability?").</p>
+     * Generates a pseudorandom {@code double} value from a uniform distribution between 0.0 and 1.0.
+     * <p>
+     * This value serves as the basis for probabilistic thresholds (e.g., determining if a
+     * Mutation event should occur based on the mutation rate).
+     * </p>
      *
-     * @return A double value between 0.0 (inclusive) and 1.0 (exclusive).
+     * @return A value in the range [0.0, 1.0).
      */
     public static double randDouble() {
         return ThreadLocalRandom.current().nextDouble();
     }
 
     /**
-     * Returns the current thread's Random instance.
-     * <p>Required for methods like {@link java.util.Collections#shuffle(List, Random)}.</p>
-     */
-    public static Random getRandom() {
-        return ThreadLocalRandom.current();
-    }
-
-    /**
-     * Generates a random Point strictly within the given Bounding Box.
-     * <p>Used for the initialization of the <strong>First Generation</strong>.</p>
+     * Generates a new coordinate point strictly contained within a specified geometric region.
+     * <p>
+     * Applies <em>Linear Interpolation</em> on normalized random factors to map the [0,1]
+     * probability space onto the target 2D Cartesian bounds.
+     * </p>
      *
-     * @param boundingBox The geometric limits (minX, minY, width, height).
-     * @param radius      The fixed radius of the new point.
-     * @return A new Point instance with randomized coordinates.
+     * @param boundingBox The 2D geometric constraints (minX, minY, width, height).
+     * @param radius      The radius attribute for the generated point.
+     * @param type        The botanical classification associated with this point.
+     * @return A new {@link Point} instance with coordinates localized within the bounding box.
      */
     public static Point insideBoxGenerator(Rectangle2D boundingBox, double radius, PlantType type) {
 

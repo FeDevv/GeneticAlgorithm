@@ -9,40 +9,59 @@ import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 /**
- * <p><strong>Concrete Domain Implementation: Right-Angled Triangle.</strong></p>
+ * Concrete implementation of a Right-Angled Triangle geometric domain.
  *
- * <p>Represents a triangular domain positioned in the first quadrant.
- * The right angle is located at the origin {@code (0, 0)}. The legs of the triangle extend along
- * the positive X-axis (Base) and the positive Y-axis (Height).</p>
+ * <p><strong>Architecture & Geometry:</strong></p>
+ * <ul>
+ * <li><strong>Coordinate System:</strong> The triangle is anchored in the first quadrant of the Cartesian plane.
+ * The right angle coincides with the origin {@code (0, 0)}. The legs extend along the positive X-axis (Base)
+ * and the positive Y-axis (Height).</li>
+ * <li><strong>Linear Constraints:</strong> Unlike rectangular domains which rely solely on orthogonal bounds,
+ * this class implements a <em>Linear Inequality Constraint</em> to define the hypotenuse boundary.</li>
+ * <li><strong>Sampling Efficiency:</strong> The ratio between the domain area and its Bounding Box is exactly 0.5 (50%).
+ * This implies that during the initial population generation (Rejection Sampling), approximately half of the
+ * random points generated within the bounding box will be discarded as invalid.</li>
+ * </ul>
  */
 public class RATDomain implements Domain {
 
     // ------------------- FIELDS -------------------
 
-    private final double base;   // Leg along the X-axis
-    private final double height; // Leg along the Y-axis
+    /** The scalar length of the leg lying on the X-axis. */
+    private final double base;
+
+    /** The scalar length of the leg lying on the Y-axis. */
+    private final double height;
 
     /**
-     * Optimization: Pre-calculated slope of the hypotenuse (height / base).
-     * Used to avoid repeated division operations during point validation.
+     * <strong>Performance Cache:</strong> Stores the slope coefficient {@code (height / base)}.
+     * <p>
+     * Pre-calculating this value eliminates a division operation from the {@link #isPointOutside}
+     * method (Hot Path), transforming the hypotenuse check into a faster multiplication and subtraction sequence.
+     * </p>
      */
     private final double slope;
 
-    /** The bounding box enclosing the triangle [0, 0, base, height]. */
+    /**
+     * The Minimum Bounding Rectangle (MBR) enclosing the triangle.
+     */
     private final Rectangle2D boundingBox;
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Constructs a Right-Angled Triangle domain.
+     * Initializes a Right-Angled Triangle domain anchored at {@code (0,0)}.
      *
-     * @param base   The length of the leg on the X-axis.
-     * @param height The length of the leg on the Y-axis.
-     * @throws DomainConstraintException If dimensions are not strictly positive.
+     * <p><strong>Deep Protection:</strong></p>
+     * Validates that the geometric dimensions allow for a non-degenerate triangle with positive area.
+     *
+     * @param base   The length of the horizontal leg (must be strictly positive).
+     * @param height The length of the vertical leg (must be strictly positive).
+     * @throws DomainConstraintException If dimensions are {@code <= 0}.
      */
     public RATDomain(double base, double height) {
 
-        // Deep Protection: Integrity check
+        // Invariant Enforcement
         if (base <= 0) {
             throw new DomainConstraintException("base", "Must be strictly positive.");
         }
@@ -54,58 +73,72 @@ public class RATDomain implements Domain {
         this.base = base;
         this.height = height;
 
-        // Pre-calculate the slope ratio.
+        // Optimization: Linear coefficient calculation.
+        // Represents 'm' in the line equation y = mx + q (where q is height, but we use an intercept form).
         this.slope = height / base;
 
-        // Bounding Box: Anchored at (0,0) extending to (base, height).
+        // Bounding Box Initialization:
+        // Anchored at (0,0) and extending to the max dimensions (base, height).
         this.boundingBox = new Rectangle2D.Double(0, 0, base, height);
     }
 
     // ------------------- DOMAIN CONTRACT IMPLEMENTATION -------------------
 
     /**
-     * Checks if a coordinate {@code (x, y)} lies outside the triangle.
-     *
-     * <p><strong>Geometric Logic:</strong>
-     * The point is outside if:
+     * Evaluates the geometric constraints comprising two orthogonal boundaries and one linear boundary.
+     * <p><strong>Geometric Logic:</strong></p>
+     * A point {@code P(x,y)} is considered <strong>outside</strong> if it satisfies any of the following:
      * <ul>
-     * <li>It is to the left of the Y-axis (x < 0).</li>
-     * <li>It is below the X-axis (y < 0).</li>
-     * <li>It is above the hypotenuse line (y > H - (H/B) * x).</li>
+     * <li><strong>Orthogonal Violation:</strong> {@code x < 0} OR {@code y < 0} (Point is not in the first quadrant).</li>
+     * <li><strong>Hypotenuse Violation:</strong> The point lies above the line connecting {@code (0, height)} and {@code (base, 0)}.
+     * <br>Equation derived from: {@code y > height - (slope * x)}</li>
      * </ul>
-     * </p>
      *
-     * @param x The X coordinate.
-     * @param y The Y coordinate.
-     * @return {@code true} if the point is strictly outside the triangular area.
+     * @param x The Cartesian X-coordinate.
+     * @param y The Cartesian Y-coordinate.
+     * @return {@code true} if the point lies strictly outside the triangular region.
      */
     @Override
     public boolean isPointOutside(double x, double y) {
 
-        // Axes Constraint: Must be in the first quadrant
+        // 1. Orthogonal Constraints (Fastest checks first)
+        // Check if point is outside the first quadrant axes.
         boolean outsideAxes = (x < 0) || (y < 0);
         if (outsideAxes) return true;
 
-        // Hypotenuse Constraint
-        // The line equation is y = H - slope * x.
-        // If y is greater than that value, the point is "above" the triangle.
+        // 2. Linear Constraint (Hypotenuse)
+        // The line equation is: y = height - (slope * x)
+        // If the point's Y is greater than the Y on the line for that X, it is outside.
         return y > (height - (slope * x));
     }
 
     /**
-     * Validates an entire individual against the triangular boundary.
+     * Validates the spatial integrity of a candidate solution.
+     *
+     * <p><strong>Complexity:</strong> O(N), where N is the number of points.</p>
+     *
+     * @param individual The candidate solution.
+     * @return {@code true} if all points fall within the triangle boundaries.
      */
     @Override
     public boolean isValidIndividual(Individual individual) {
         List<Point> points = individual.getChromosomes();
         for (Point p : points) {
+            // Delegation to the geometric predicate
             if (isPointOutside(p.getX(), p.getY())) { return false; }
         }
         return true;
     }
 
     /**
-     * Retrieves the Bounding Box [0, 0, base, height].
+     * Retrieves the Bounding Box defined as {@code [0, 0, base, height]}.
+     *
+     * <p><strong>Algorithmic Note:</strong></p>
+     * For a Right-Angled Triangle, the Bounding Box covers exactly twice the area of the domain.
+     * This ensures a 50% acceptance rate for uniform random point generation, which is highly efficient
+     * for Rejection Sampling algorithms.
+     *
+     * @return The immutable boundary definition.
      */
     @Override
     public Rectangle2D getBoundingBox() {

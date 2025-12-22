@@ -14,5 +14,5 @@ public class Main {
 
 /*
 * OBIETTIVI
-* 1. RISCRIVI I COMMENTI
+* 1. RISCRIVI I COMMENTI; completed : [shared] [inventory] [domainsystem]
 */

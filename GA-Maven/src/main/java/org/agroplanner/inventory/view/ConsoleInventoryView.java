@@ -8,16 +8,36 @@ import java.util.Optional;
 import java.util.Scanner;
 
 /**
- * <p><strong>Concrete View for Inventory Configuration.</strong></p>
+ * Concrete implementation of the {@link InventoryViewContract} based on the Command Line Interface (CLI).
  *
- * <p>Handles the user interaction for selecting plant types, quantities, and specific dimensions.
- * Refactored for English localization and consistent CLI styling.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Responsibility:</strong> Handles the Presentation Layer. It translates abstract data requests
+ * into low-level {@code System.in} / {@code System.out} operations.</li>
+ * <li><strong>Robustness:</strong> Implements "Blocking Input Loops". The control flow prevents the user
+ * from proceeding until syntactically valid data is provided, handling type mismatches (e.g., entering
+ * text where a number is expected) by flushing the input buffer.</li>
+ * <li><strong>Localization:</strong> Enforces {@link Locale#US} for floating-point operations to ensure
+ * consistency in decimal separators (dot vs comma) regardless of the host OS settings.</li>
+ * </ul>
+ *
+ * <p><strong>Static Analysis Note:</strong>
+ * Suppresses {@code java:S106} (Standard Output usage) as this is inherently a Console view.
+ * </p>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleInventoryView implements InventoryViewContract {
 
+    /**
+     * Wrapper around the standard input stream.
+     */
     private final Scanner scanner;
 
+    /**
+     * Constructs the view with a specific input scanner.
+     *
+     * @param scanner The input source (typically {@code new Scanner(System.in)}), injected for testability.
+     */
     public ConsoleInventoryView(Scanner scanner) {
         this.scanner = scanner;
     }
@@ -34,6 +54,10 @@ public class ConsoleInventoryView implements InventoryViewContract {
 
     // ------------------- WIZARD FLOW -------------------
 
+    /**
+     * {@inheritDoc}
+     * <p>Renders the ASCII header for the configuration wizard.</p>
+     */
     @Override
     public void showWizardStart() {
         System.out.println("\n");
@@ -43,6 +67,10 @@ public class ConsoleInventoryView implements InventoryViewContract {
         printDoubleSeparator();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Renders a formatted ASCII table displaying the available plant catalog.</p>
+     */
     @Override
     public void showAvailablePlants(PlantType[] types) {
         System.out.println("\nAvailable Catalog:");
@@ -57,6 +85,13 @@ public class ConsoleInventoryView implements InventoryViewContract {
         System.out.println("└─────┴──────────────┴──────┘");
     }
 
+    /**
+     * {@inheritDoc}
+     * <p><strong>Input Strategy:</strong>
+     * Enters a validation loop that requires the user to input a valid integer corresponding to
+     * a known {@link PlantType} ID. Non-integer inputs are discarded to prevent crashes.
+     * </p>
+     */
     @Override
     public PlantType askForPlantSelection(PlantType[] types) {
         while (true) {
@@ -65,22 +100,27 @@ public class ConsoleInventoryView implements InventoryViewContract {
             if (scanner.hasNextInt()) {
                 int inputId = scanner.nextInt();
 
+                // Functional lookup
                 Optional<PlantType> selection = PlantType.getById(inputId);
 
+                // Verification: ID exists AND is in the provided allowed list
                 if (selection.isPresent() && Arrays.asList(types).contains(selection.get())) {
                     PlantType p = selection.get();
                     System.out.printf("  Selected: %s %s%n", p.getLabel(), p.name());
                     return p;
                 }
             } else {
-                scanner.next(); // Flush garbage
+                // Stream Cleaning: Flush the invalid token from the buffer
+                scanner.next();
             }
 
-            // Messaggio di errore standardizzato
             System.out.println("❌ Invalid ID. Please select a number from the table.");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int askForQuantity(PlantType selectedType) {
         while (true) {
@@ -97,10 +137,19 @@ public class ConsoleInventoryView implements InventoryViewContract {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p><strong>Validation Logic:</strong>
+     * Performs a "Pre-Flight Check" against {@code maxAllowedRadius}. If the user inputs a radius
+     * physically larger than the domain, it is rejected immediately at the UI level to prevent
+     * logical errors downstream.
+     * </p>
+     */
     @Override
     public double askForRadius(PlantType selectedType, double maxAllowedRadius) {
         while (true) {
-            // Locale.US ensures dot separator (1.5 instead of 1,5)
+            // Force US Locale to standardise decimal separator handling (avoiding "1,5" vs "1.5" ambiguity)
             System.out.printf(Locale.US, "%n> Radius (meters) for %s (Max %.2f): ", selectedType.name(), maxAllowedRadius);
 
             if (scanner.hasNextDouble()) {
@@ -120,6 +169,9 @@ public class ConsoleInventoryView implements InventoryViewContract {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean askIfAddMore() {
         System.out.println(); // Spacing
@@ -135,6 +187,9 @@ public class ConsoleInventoryView implements InventoryViewContract {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showCurrentStatus(int totalItems, double maxCurrentRadius) {
         System.out.println("\n");
@@ -146,6 +201,9 @@ public class ConsoleInventoryView implements InventoryViewContract {
         printSingleSeparator();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showErrorMessage(String message) {
         System.out.println("\n⛔ CONFIGURATION ERROR:");

@@ -6,19 +6,33 @@ import java.util.*;
 
 
 /**
- * <p><strong>Concrete View Implementation for CLI (Command Line Interface).</strong></p>
+ * Concrete implementation of the {@link DomainViewContract} targeting the Command Line Interface (CLI).
  *
- * <p>Handles user interaction for Domain definition.
- * Refactored for visual consistency, ASCII tables, and robust English input handling.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Responsibility:</strong> Handles the Presentation Layer for the domain subsystem. It translates
+ * abstract requests (e.g., "Ask for parameters") into low-level {@code System.in} / {@code System.out} operations.</li>
+ * <li><strong>Dynamic Form Generation:</strong> Implements a <strong>Metadata-Driven UI</strong> approach.
+ * Instead of hard-coding prompts for every shape (e.g., {@code askForRadius}), this class iterates over the
+ * parameter schema provided by {@link DomainType#getRequiredParameters()} to generate input forms dynamically at runtime.</li>
+ * <li><strong>Robustness:</strong> Utilizes "Blocking Input Loops" to enforce data integrity at the entry point.
+ * The control flow prevents the user from proceeding until syntactically valid data is provided, ensuring
+ * that the Controller layer receives only clean data.</li>
+ * </ul>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleDomainView implements DomainViewContract {
 
+    /**
+     * Shared scanner instance for reading standard input.
+     */
     private final Scanner scanner;
 
     /**
-     * Constructs the view sharing an existing Scanner instance.
-     * @param scanner The shared scanner instance.
+     * Constructs the view using a shared input source.
+     *
+     * @param scanner The {@link Scanner} instance injected via Dependency Injection.
+     * Sharing a single scanner across views prevents resource leaks and stream closure issues.
      */
     public ConsoleDomainView(Scanner scanner) {
         this.scanner = scanner;
@@ -36,6 +50,10 @@ public class ConsoleDomainView implements DomainViewContract {
 
     // ------------------- INTERACTION LOGIC -------------------
 
+    /**
+     * {@inheritDoc}
+     * <p>Renders a formatted ASCII table listing the available geometric shapes.</p>
+     */
     @Override
     public void showAvailableDomains(List<DomainType> types){
         printDoubleSeparator();
@@ -58,6 +76,14 @@ public class ConsoleDomainView implements DomainViewContract {
 
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p><strong>Input Strategy:</strong>
+     * Enters a validation loop expecting an integer ID.
+     * Handles the special case {@code 0} as an explicit "Exit" command.
+     * </p>
+     */
     @Override
     public Optional<DomainType> askForDomainType(List<DomainType> types) {
         // Validation Loop
@@ -67,24 +93,35 @@ public class ConsoleDomainView implements DomainViewContract {
             if (scanner.hasNextInt()) {
                 int choice = scanner.nextInt();
 
-                // CASE A: Exit
+                // CASE A: Explicit Exit Signal
                 if (choice == 0) return Optional.empty();
 
-                // CASE B: Valid Selection
+                // CASE B: Valid Selection Lookup
                 Optional<DomainType> selection = DomainType.fromMenuId(choice);
+
+                // Verification: Exists in Enum AND is in the allowed list provided
                 if (selection.isPresent() && types.contains(selection.get())) {
                     System.out.println("   Selected: " + selection.get().getDisplayName());
                     return selection;
                 }
             } else {
-                scanner.next(); // Flush invalid token
+                // Stream Cleaning: Flush invalid token (e.g., user typed "abc")
+                scanner.next();
             }
 
-            // CASE C: Invalid Input
+            // CASE C: Invalid Input Feedback
             System.out.println("❌ Invalid selection. Please enter a valid ID from the table.");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     *
+     * <p><strong>Dynamic Execution:</strong></p>
+     * Iterates through the {@code requiredParameters} list defined in the {@link DomainType} metadata.
+     * For each parameter key, it invokes a helper method to robustly collect a positive double value.
+     * This allows the View to support any new DomainType added to the Model without requiring code changes here (OCP).
+     */
     @Override
     public Map<String, Double> askForParameters(DomainType type) {
         Map<String, Double> params = new HashMap<>();
@@ -94,20 +131,26 @@ public class ConsoleDomainView implements DomainViewContract {
         System.out.println(" ⚙️  PARAMETERS FOR: " + type.getDisplayName().toUpperCase());
         printSingleSeparator();
 
-        // Dynamic Form Generation
+        // Dynamic Form Generation Loop
         for (String key : type.getRequiredParameters()) {
-            // Helper method handles the specific input loop for each parameter
+            // Helper method handles the input sanitization for each specific field
             double value = readPositiveDouble(key);
             params.put(key, value);
         }
         return params;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showSuccessMessage() {
         System.out.println("\n✅ DOMAIN SUCCESSFULLY CONFIGURED.");
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showErrorMessage(String message) {
         System.out.println("\n⛔ CONFIGURATION ERROR:");
@@ -118,8 +161,15 @@ public class ConsoleDomainView implements DomainViewContract {
     // ------------------- INPUT HELPERS -------------------
 
     /**
-     * Reads a double from the console for a specific parameter.
-     * Enforces strictly positive values (> 0).
+     * Helper method to capture a strictly positive double value from the console.
+     *
+     * <p><strong>Input Sanitization:</strong></p>
+     * Implements a blocking loop that rejects non-numeric inputs and values {@code <= 0}.
+     * This ensures that the generated map in {@link #askForParameters(DomainType)} contains
+     * only syntactically valid data.
+     *
+     * @param paramName The name of the parameter to prompt for (used in the UI label).
+     * @return A validated, positive double.
      */
     private double readPositiveDouble(String paramName) {
         // Format label nicely (e.g., "width" -> "WIDTH")
@@ -137,6 +187,7 @@ public class ConsoleDomainView implements DomainViewContract {
                     System.out.println("⚠️  Value must be strictly positive (> 0).");
                 }
             } else {
+                // Flush garbage input
                 String input = scanner.next();
                 System.out.printf("❌ '%s' is not a valid number. Retry.%n", input);
             }
