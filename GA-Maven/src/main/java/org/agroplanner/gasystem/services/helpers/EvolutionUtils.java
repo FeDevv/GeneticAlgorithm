@@ -5,43 +5,44 @@ import org.agroplanner.gasystem.model.Individual;
 import java.util.List;
 
 /**
- * <p><strong>Stateless Utility Methods for the Evolutionary Process.</strong></p>
+ * Stateless utility toolbox providing helper algorithms for the evolutionary process.
  *
- * <p>This class acts as a toolbox for the {@code EvolutionService}, providing helper methods
- * that do not require maintaining the state of the service. It handles:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li><strong>Reduction Logic:</strong> Identifying the best candidate from a population (Max-Finding).</li>
- * <li><strong>Time Heuristics:</strong> calculating dynamic timeouts based on problem complexity.</li>
+ * <li><strong>Pattern:</strong> Utility Class. Consists exclusively of static methods and cannot be instantiated.</li>
+ * <li><strong>Role:</strong> Offloads specific algorithmic tasks (Reduction, Estimation) from the main
+ * {@code EvolutionService}, keeping the core logic clean and focused on the orchestration of the lifecycle.</li>
+ * <li><strong>Statelessness:</strong> Functions are pure (output depends only on input), making them inherently
+ * thread-safe and testable in isolation.</li>
  * </ul>
- *
- * <p>Utility Class (Final, Static methods only).</p>
  */
 public final class EvolutionUtils {
 
     /**
-     * Private constructor to prevent instantiation.
+     * Private constructor to strictly prevent instantiation.
      */
     private EvolutionUtils() {
         throw new IllegalStateException("Utility class");
     }
 
     /**
-     * Identifies the absolute best solution between the current generation and the historical record.
+     * Identifies the optimal solution by comparing the current generation's best against the historical record.
      *
-     * <p><strong>Logic:</strong>
-     * <ol>
-     * <li>Scans the current {@code population} to find the local best ("King of the Generation").</li>
-     * <li>Compares the local King with the global {@code currentRecord} (Best solution found so far).</li>
-     * <li>Returns the winner, ensuring the algorithm never "forgets" a superior solution found in the past.</li>
-     * </ol>
-     * </p>
+     * <p><strong>Algorithmic Complexity:</strong> O(N)</p>
+     * Performs a linear scan of the population to find the local maximum. This is computationally more efficient
+     * than sorting the entire population (O(N log N)), which is unnecessary just to find the single best element.
      *
-     * @param population    The list of individuals in the current generation.
-     * @param currentRecord The best individual found in previous generations (can be {@code null} for the first run).
-     * @return The absolute best {@link Individual}.
+     * <p><strong>Monotonicity Guarantee:</strong></p>
+     * This method enforces the <em>Elitism Principle</em> at the global level. By comparing the local champion
+     * against {@code currentRecord}, it ensures that the "Global Best" quality never degrades over generations,
+     * effectively making the optimization process monotonic non-decreasing.
+     *
+     * @param population    The list of individuals in the current generation (must not be empty).
+     * @param currentRecord The best individual found in all previous generations (nullable for the first epoch).
+     * @return The absolute superior solution between the current local best and the historical global best.
      */
     public static Individual findBestSolution(List<Individual> population, Individual currentRecord) {
-        // Find the best within the current population (Local Max)
+        // Step 1: Linear Reduction to find Local Max (King of the Generation)
         Individual king = population.getFirst();
         for (int i = 1; i < population.size(); i++) {
             if (king.getFitness() < population.get(i).getFitness()) {
@@ -49,33 +50,34 @@ public final class EvolutionUtils {
             }
         }
 
-        // Handle First Generation case (No history yet)
+        // Handle cold start (First Generation)
         if (currentRecord == null) {
             return king;
         }
 
-        // Global Comparison (Elitism Logic)
-        // If the new king beats the old record, he becomes the new record.
-        // Otherwise, we keep the old record.
+        // Step 2: Global Comparison
+        // If the new king outperforms the old record, promote him. Otherwise, retain history.
         return (king.getFitness() > currentRecord.getFitness()) ? king : currentRecord;
     }
 
     /**
-     * Calculates the dynamic Time Budget (Execution Ceiling) based on the problem size.
+     * Estimates a dynamic computational budget (Time Limit) based on problem complexity.
      *
-     * <p><strong>Heuristic Formula:</strong> {@code T(n) = Base + (Factor * n)}</p>
+     * <p><strong>Heuristic Model:</strong> {@code T(n) = Base + (Slope * n)}</p>
+     * Calculates a timeout ceiling that scales linearly with the dimensionality of the solution.
      * <ul>
-     * <li><strong>Base (5000ms):</strong> Fixed overhead for initialization, JVM warmup, and basic operations.</li>
-     * <li><strong>Factor (100ms/gene):</strong> Estimated processing time per gene per cycle.</li>
+     * <li><strong>Base (5000ms):</strong> Covers JVM warmup, class loading, and fixed framework overhead.</li>
+     * <li><strong>Slope (100ms/gene):</strong> Estimated processing cost per gene across all generations.</li>
      * </ul>
-     * <p>This ensures the timeout scales linearly with complexity, preventing false positives on large inputs.</p>
+     * This adaptive approach prevents "False Positive" timeouts on physically large problems that genuinely
+     * require more CPU time to converge.
      *
-     * @param individualSize The number of genes (points) in the individual.
-     * @return The calculated timeout limit in milliseconds.
+     * @param individualSize The number of genes (points) in the solution vector.
+     * @return The calculated execution time budget in milliseconds.
      */
     public static long calculateTimeBudget(int individualSize) {
-        long baseTime = 5000;   // 5 Seconds overhead
-        long timePerGene = 100; // 0.1 Seconds per gene scaling factor
+        long baseTime = 5000;   // 5s Fixed Overhead
+        long timePerGene = 100; // Linear scaling factor
         return baseTime + (individualSize * timePerGene);
     }
 }

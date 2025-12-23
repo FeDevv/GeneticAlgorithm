@@ -17,12 +17,17 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * <p><strong>Concrete Exporter: JSON (JavaScript Object Notation).</strong></p>
+ * Concrete implementation of the Export Strategy targeting <strong>JSON (JavaScript Object Notation)</strong>.
  *
- * <p>This strategy exports the solution in a structured, hierarchical format ideal for machine processing,
- * web integration, or storage in NoSQL databases.</p>
- *
- * <p><strong>Technology Stack:</strong> Uses the <strong>Jackson</strong> library for high-performance POJO serialization.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Integration Ready:</strong> Generates a structured, hierarchical payload ideal for interoperability
+ * with Web Frontends (React/Angular), REST APIs, or NoSQL databases (MongoDB).</li>
+ * <li><strong>Library Leverage:</strong> Utilizes <strong>Jackson</strong> for high-performance POJO serialization,
+ * eliminating the need for manual string concatenation and escaping logic.</li>
+ * <li><strong>Deterministic Ordering:</strong> Uses {@link LinkedHashMap} to construct the JSON tree.
+ * While JSON parsers do not mandate order, enforcing "Metadata First, Data Second" improves human readability.</li>
+ * </ul>
  */
 public class JsonExporter extends BaseExporter {
 
@@ -32,75 +37,81 @@ public class JsonExporter extends BaseExporter {
     }
 
     /**
-     * Serializes the solution data into a JSON file.
-     *
-     * <p><strong>Output Structure:</strong>
+     * Serializes the solution context and data into a JSON file.
+     * <p><strong>Output Schema:</strong></p>
      * <pre>
      * {
-     * "metadata": { "domain_description": "...", "target_distance": ... },
+     * "metadata": {
+     * "domain_info": "...",
+     * "inventory_request": [ ... ]
+     * },
      * "solution": {
-     * "fitness": ...,
-     * "points": [ { "x": 1.0, "y": 2.0, "radius": ... }, ... ]
+     * "fitness": 0.95,
+     * "total_plants": 150,
+     * "plants": [ { "x": 10.5, "y": 20.1, ... }, ... ]
      * }
      * }
      * </pre>
-     * </p>
      *
-     * @param individual The solution to serialize.
-     * @param domain     The context metadata.
+     * @param individual The solution genotype.
+     * @param domain     The geometric context.
+     * @param inventory  The biological context.
      * @param path       The target file path.
-     * @throws IOException If serialization or writing fails.
+     * @throws IOException If the disk write operation fails.
      */
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
         // RESOURCE MANAGEMENT NOTE:
-        // Unlike other exporters (CSV/Excel), we do not need an explicit try-with-resources block here.
-        // Jackson's 'writeValue(File, ...)' method automatically handles the entire I/O lifecycle:
-        // it opens the stream, writes the data, and strictly closes the resource.
+        // Unlike manual writers (CSV/Txt), we do not need an explicit try-with-resources block here.
+        // Jackson's 'mapper.writeValue(File, ...)' automatically handles the entire I/O lifecycle:
+        // it opens the stream, streams the content, and strictly closes the resource upon completion or failure.
 
-        // Jackson Configuration
+        // 1. Configuration
         ObjectMapper mapper = new ObjectMapper();
+        // Enable pretty-printing for human readability
         mapper.enable(SerializationFeature.INDENT_OUTPUT);
 
-        // Root Object (LinkedHashMap to preserve order: Metadata -> Solution)
+        // 2. Root Construction (LinkedHashMap preserves insertion order)
         Map<String, Object> rootNode = new LinkedHashMap<>();
 
-        // --- 1. METADATA SECTION ---
+        // --- SECTION A: METADATA ---
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("domain_info", domain.toString());
+        metadata.put("timestamp", System.currentTimeMillis());
 
-        // Convert Inventory Map to a clean List of Objects for JSON
-        List<Map<String, Object>> inventoryList = getMaps(inventory);
-
+        // Transform Inventory domain objects into JSON-friendly Maps
+        List<Map<String, Object>> inventoryList = serializeInventory(inventory);
         metadata.put("inventory_request", inventoryList);
 
-        // --- 2. SOLUTION SECTION ---
+        // --- SECTION B: SOLUTION ---
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("fitness", individual.getFitness());
         result.put("total_plants", individual.getDimension());
 
-        // Automatic Serialization:
-        // Jackson calls .getX(), .getY(), .getType(), .getRadius() on each Point.
-        // Since we updated the Point class, the 'type' and 'radius' fields appear automatically here.
+        // Automatic POJO Serialization:
+        // Jackson uses reflection to call .getX(), .getY(), .getType(), .getRadius() on each Point.
+        // The Point class structure is automatically mapped to JSON Array of Objects.
         result.put("plants", individual.getChromosomes());
 
-        // Assembly
+        // 3. Assembly
         rootNode.put("metadata", metadata);
         rootNode.put("solution", result);
 
-        // File Output
+        // 4. Persistence
         mapper.writeValue(path.toFile(), rootNode);
     }
 
-    private static List<Map<String, Object>> getMaps(PlantInventory inventory) {
+    /**
+     * Helper method to convert the Inventory Domain Model into a serializable Map structure.
+     * <p>Acts as a lightweight DTO (Data Transfer Object) mapper.</p>
+     */
+    private static List<Map<String, Object>> serializeInventory(PlantInventory inventory) {
         List<Map<String, Object>> inventoryList = new ArrayList<>();
 
-        // Iteriamo sulla lista degli inserimenti (InventoryEntry)
         for (InventoryEntry entry : inventory.getEntries()) {
             Map<String, Object> item = new LinkedHashMap<>();
 
-            // Recuperiamo i dati dall'oggetto 'entry' invece che dalla coppia key-value
             item.put("plant_type", entry.getType().name());       // "TOMATO"
             item.put("visual_label", entry.getType().getLabel()); // "🍅"
             item.put("requested_qty", entry.getQuantity());

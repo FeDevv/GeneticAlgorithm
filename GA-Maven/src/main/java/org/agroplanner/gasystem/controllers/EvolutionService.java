@@ -21,67 +21,74 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 /**
- * <p><strong>The Engine Room: Genetic Algorithm Orchestrator.</strong></p>
+ * Service component acting as the <strong>Orchestrator Engine</strong> of the Genetic Algorithm.
  *
- * <p>This service encapsulates the high-level logic of the Evolutionary Process.
- * It acts as a <strong>Facade</strong> for the Genetic Algorithm subsystem, coordinating:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li>Initialization (via {@link PopulationFactory}).</li>
- * <li>Operators (Selection, Crossover, Mutation).</li>
- * <li>Evaluation (via {@link FitnessCalculator}).</li>
- * <li>Safety Mechanisms (Timeouts and Deep Protection).</li>
+ * <li><strong>Pattern:</strong> Facade / Mediator. It encapsulates the complexity of the evolutionary operators,
+ * providing a simple high-level interface ({@link #executeEvolutionCycle()}) to the Controller layer.</li>
+ * <li><strong>Concurrency Strategy:</strong> Leverages Java <strong>Parallel Streams</strong> to parallelize the most
+ * CPU-intensive phases (Reproduction and Evaluation). This is made thread-safe by the immutable design of the
+ * {@link org.agroplanner.gasystem.model.Point} class.</li>
+ * <li><strong>Reliability:</strong> Implements a "Circuit Breaker" mechanism via {@link EvolutionTimeoutException}
+ * to prevent runaway processes on large datasets.</li>
  * </ul>
  */
 public class EvolutionService {
 
     // ------------------- CONTEXT STATE -------------------
 
+    /** The geometric boundaries of the problem. */
     private final Domain domain;
 
-    /** * The comprehensive plan containing types, quantities, and radii.
-     * Replaces the old scalar 'individualSize' and 'pointRadius'.
-     */
+    /** The biological requirements (Recipe). */
     private final PlantInventory inventory;
 
     // ------------------- OPERATORS & HELPERS -------------------
 
-    /** Evaluates the quality of solutions. */
+    /** The objective function engine. */
     private final FitnessCalculator fitnessCalculator;
 
-    /** Introduces random variations (The "Gamma Rays"). */
+    /** The mutation operator (Diversity). */
     private final Mutation gammaRays;
 
-    /** Mixes genetic material (The "Mixer"). */
+    /** The crossover operator (Recombination). */
     private final Crossover mixer;
 
-    /** Selects parents and survivors. */
+    /** The selection operator (Survival). */
     private final Selection selector;
 
-    /** Creates the initial population. */
+    /** The factory for Generation 0. */
     private final PopulationFactory populationFactory;
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Initializes the Evolutionary Engine.
+     * Initializes the Evolutionary Engine and wires all dependencies.
      *
-     * @param domain         The geometric problem domain.
-     * @throws InvalidInputException     If inputs are negative or zero.
-     * @throws DomainConstraintException If the requested point size is physically too large for the domain.
+     * <p><strong>Deep Protection & Validation:</strong></p>
+     * Performs sanity checks before allocating resources. For example, it verifies that the largest requested plant
+     * can physically fit within the domain bounds to avoid running an impossible simulation.
+     *
+     * @param domain    The geometric problem domain.
+     * @param inventory The plant configuration.
+     * @throws InvalidInputException     If the inventory is empty.
+     * @throws DomainConstraintException If geometric constraints are violated (e.g., Plant Radius > Domain Size).
      */
     public EvolutionService(Domain domain, PlantInventory inventory) {
 
-        // 1. DEEP PROTECTION: Basic Input Validation
+        // 1. Basic Integrity Check
         if (inventory.getTotalPopulationSize() <= 0) {
             throw new InvalidInputException("Inventory cannot be empty. Please select at least one plant.");
         }
 
+        // 2. Geometric Feasibility Check (Physics Constraint)
+        // Check if the largest atom (plant) fits into the container.
         double maxRadius = inventory.getMaxRadius();
         double minDomainDim = Math.min(domain.getBoundingBox().getWidth(), domain.getBoundingBox().getHeight());
 
-        // 2. DEEP PROTECTION: Cross-Field Logic Check
-        // Ensure the requested point isn't larger than the domain itself.
-        // We check against half the smallest dimension of the bounding box.
+        // Constraint: Diameter (2*r) must be <= Smallest Dimension.
+        // Or strictly: Radius <= SmallestDimension / 2.0
         if (maxRadius > minDomainDim / 2.0) {
             throw new DomainConstraintException("maxRadius",
                     String.format("The largest plant in inventory (r=%.2f) is too big for this domain.", maxRadius));
@@ -90,12 +97,11 @@ public class EvolutionService {
         this.domain = domain;
         this.inventory = inventory;
 
-        // COMPONENT WIRING
-        // Instantiate the specialized operators required for the lifecycle.
+        // 3. Component Wiring (Dependency Composition)
         this.populationFactory = new PopulationFactory(domain, inventory);
         this.fitnessCalculator = new FitnessCalculator(domain, maxRadius);
 
-        // Operators are configured with global constants from GeneticConfig
+        // Operators configuration injection from GeneticConfig
         this.gammaRays = new Mutation(GeneticConfig.MUTATION_PROB, GeneticConfig.INITIAL_MUTATION_STRENGTH, domain, GeneticConfig.GENERATIONS);
         this.mixer = new Crossover(GeneticConfig.CROSSOVER_PROB);
         this.selector = new Selection(GeneticConfig.TOURNAMENT_SIZE, GeneticConfig.ELITES_PERCENTAGE);
@@ -104,53 +110,48 @@ public class EvolutionService {
     // ------------------- CORE LOGIC -------------------
 
     /**
-     * Executes a full evolutionary simulation cycle (e.g., 800 generations).
+     * Executes the full evolutionary lifecycle.
      *
-     * <p><strong>Flow:</strong>
+     *
+     * <p><strong>Execution Flow:</strong></p>
      * <ol>
-     * <li><strong>Genesis:</strong> Create random initial population.</li>
-     * <li><strong>Evolution Loop:</strong> Iterate for N generations.
+     * <li><strong>Genesis:</strong> Spawns the initial random population.</li>
+     * <li><strong>Evolution Loop:</strong> Iterates for {@code GeneticConfig.GENERATIONS}.
      * <ul>
-     * <li>Check Timeout (Safety Guard).</li>
-     * <li><strong>Elitism:</strong> Save best individuals.</li>
-     * <li><strong>Reproduction:</strong> Generate children via Tournament -> Crossover -> Mutation.</li>
-     * <li><strong>Evaluation:</strong> Calculate fitness (Parallelized).</li>
+     * <li><em>Timeout Check:</em> Aborts if CPU time exceeds the calculated budget.</li>
+     * <li><em>Elitism:</em> Secures the best individuals.</li>
+     * <li><em>Parallel Reproduction:</em> Uses multi-threading to Select, Cross, and Mutate children.</li>
+     * <li><em>Evaluation:</em> Computes fitness for new solutions.</li>
      * </ul>
      * </li>
-     * <li><strong>Result:</strong> Return the absolute best solution found.</li>
      * </ol>
-     * </p>
      *
-     * @return The best {@link Individual} evolved during this cycle.
-     * @throws EvolutionTimeoutException If the process exceeds the calculated time budget.
+     * @return The absolute best {@link Individual} found during the run (detached copy).
+     * @throws EvolutionTimeoutException If the simulation takes too long.
      */
     public Individual executeEvolutionCycle() throws EvolutionTimeoutException {
 
-        // 1. Setup Time Budget (Safety Mechanism against infinite loops or excessive lag)
+        // 1. Resource Estimation
         long maxDurationMs = EvolutionUtils.calculateTimeBudget(inventory.getTotalPopulationSize());
         Instant startTime = Instant.now();
 
-        // 2. Genesis (Phase 1)
+        // 2. Genesis (Generation 0)
         List<Individual> population = populationFactory.createFirstGeneration();
 
-        // Initial Evaluation (Parallelized for performance)
+        // Initial Evaluation (Parallelized)
         population.parallelStream().forEach(ind ->
                 ind.setFitness(fitnessCalculator.getFitness(ind))
         );
 
-        // Track Global Best (The "King")
+        // Initialize Global Best Tracker
         Individual bestSoFar = EvolutionUtils.findBestSolution(population, null);
 
-
-
-        // 3. Evolution Loop (Phase 2)
+        // 3. Main Evolutionary Loop
         for (int i = 0; i < GeneticConfig.GENERATIONS; i++) {
 
-            // --- TIME GUARD CHECK ---
-            // Verify execution time at the start of each generation.
+            // --- SAFETY GUARD: TIMEOUT ---
             Instant now = Instant.now();
             long elapsedMs = Duration.between(startTime, now).toMillis();
-
             if (elapsedMs > maxDurationMs) {
                 throw new EvolutionTimeoutException(
                         String.format("Evolution timed out after %d ms (Limit: %d ms). Processed %d/%d generations.",
@@ -158,38 +159,42 @@ public class EvolutionService {
                 );
             }
 
-            // Snapshot current generation for read-access during parallel processing
+            // --- PHASE A: ELITISM (Sequential) ---
+            // Must be done sequentially to correctly identify the top K sorted elements.
             final List<Individual> currentGeneration = population;
             List<Individual> newGeneration = new ArrayList<>(GeneticConfig.POPULATION_SIZE);
-
-            // Elitism (Preservation)
             List<Individual> elites = selector.selectElites(currentGeneration);
             newGeneration.addAll(elites);
 
-            // Reproduction (Innovation)
-            // Generate the rest of the population using Parallel Streams.
+            // --- PHASE B: REPRODUCTION (Parallel) ---
+            // Calculating how many children we need to fill the rest of the population.
             int childrenToGenerate = GeneticConfig.POPULATION_SIZE - elites.size();
             final int currentGenerationAge = i;
 
+            // it is used a parallel stream to generate children.
+            // Since Selection, Crossover, and Mutation logic is thread-safe (stateless or immutable),
+            // this scales linearly with CPU cores.
             List<Individual> children = IntStream.range(0, childrenToGenerate)
-                    .parallel() // <--- CRITICAL: Enables multi-core processing
+                    .parallel()
                     .mapToObj(j -> {
                         // 1. Selection (Tournament)
                         Individual dad = selector.tournament(currentGeneration);
                         Individual mom = selector.tournament(currentGeneration);
 
-                        // Prevent asexual reproduction (optional, but good practice)
+                        // Prevent asexual reproduction
                         while (mom == dad) {
                             mom = selector.tournament(currentGeneration);
                         }
 
-                        // 2. Crossover (Mixing)
+                        // 2. Crossover (Recombination)
                         Individual child = mixer.uniformCrossover(mom, dad);
 
-                        // 3. Mutation (Variation) - In-place modification
+                        // 3. Mutation (Variation)
+                        // Note: Mutation modifies the child in-place. Safe because 'child' is local to this thread.
                         gammaRays.mutate(child, currentGenerationAge);
 
-                        // 4. Evaluation (Fitness) - Done immediately on the new child
+                        // 4. Evaluation (Fitness)
+                        // Immediate evaluation avoids a separate pass later.
                         child.setFitness(fitnessCalculator.getFitness(child));
 
                         return child;
@@ -198,26 +203,27 @@ public class EvolutionService {
 
             newGeneration.addAll(children);
 
-            // Update Records
+            // --- PHASE C: UPDATE ---
+            // Check if we found a new champion.
             bestSoFar = EvolutionUtils.findBestSolution(newGeneration, bestSoFar);
 
-            // Advance Generation
+            // Advance generation pointer
             population = newGeneration;
         }
 
-        // Return a defensive copy to detach the result from internal logic references.
+        // Return a defensive copy to ensure the result is independent of the engine's state.
         return bestSoFar.copy();
     }
 
     /**
-     * Validates if a solution is fully compliant with the domain geometry.
-     * <p>
-     * Used by the UI Controller to determine if a retry is needed (e.g., if the best solution
-     * still has points outside the boundary).
-     * </p>
+     * Checks if a specific solution satisfies all Domain Hard Constraints.
      *
-     * @param ind The individual to check.
-     * @return {@code true} if valid, {@code false} otherwise.
+     * <p><strong>Usage:</strong></p>
+     * Used by the Controller/UI to verify the final result. Even if a solution is the "best found",
+     * it might still be invalid (e.g., points outside boundaries). This method acts as the final gatekeeper.
+     *
+     * @param ind The individual to inspect.
+     * @return {@code true} if all points are strictly within the domain bounds.
      */
     public boolean isValidSolution(Individual ind) {
         return domain.isValidIndividual(ind);

@@ -4,56 +4,84 @@ import java.util.Arrays;
 import java.util.Optional;
 
 /**
- * <p><strong>Catalog of Supported Export Formats.</strong></p>
+ * Defines the catalog of supported output formats.
  *
- * <p>This enum defines the available output strategies for the generated solutions.
- * Like {@code DomainType}, it acts as a centralized <strong>Metadata Repository</strong> used by:</p>
+ * <p><strong>Architecture & Role:</strong></p>
+ * This Enum acts as a centralized <strong>Metadata Registry</strong> used across the Export MVC layers:
  * <ul>
- * <li><strong>UI (View):</strong> To render selection menus via {@code getMenuId()} and {@code getDisplayName()}.</li>
- * <li><strong>Factory:</strong> To dispatch the correct {@code ExportStrategy} implementation.</li>
+ * <li><strong>View Layer:</strong> Uses {@code menuId} and {@code info} to render user-friendly selection menus.</li>
+ * <li><strong>Controller Layer:</strong> Uses {@code fromMenuId()} to map raw user input to strong types.</li>
+ * <li><strong>Service Layer:</strong> Uses {@code extension} to configure file system I/O writers.</li>
  * </ul>
  */
 public enum ExportType {
 
     // ------------------- ENUM CONSTANTS -------------------
 
-    /** Comma Separated Values */
+    /**
+     * Raw Data Format.
+     * Best for simple data exchange or importing into other lightweight tools.
+     */
     CSV(1, "Raw Data", ".csv"),
 
-    /** Microsoft Excel (.xlsx) */
+    /**
+     * Spreadsheet Format (Microsoft Excel).
+     * Includes formatting and potential for charts/formulas. Best for end-user analytics.
+     */
     EXCEL(2, "Spreadsheet + Charts", ".xlsx"),
 
-    /** Plain Text (.txt) */
+    /**
+     * Human-Readable Text Report.
+     * Best for quick console inspection or simple logs.
+     */
     TXT(3, "Simple Text Report", ".txt"),
 
-    /** JavaScript Object Notation */
+    /**
+     * Machine-Readable Format (JSON).
+     * Best for interoperability, web integration, or REST API payloads.
+     */
     JSON(4, "Web/System Integration", ".json"),
 
-    /** Portable Document Format */
+    /**
+     * Portable Document Format.
+     * Best for finalized, printable reports that must maintain visual integrity.
+     */
     PDF(5, "Printable Report", ".pdf");
 
     // ------------------- FIELDS -------------------
 
-    /** Unique numeric identifier used for CLI menu selection. */
+    /**
+     * The unique numeric key used for CLI menu binding.
+     */
     private final int menuId;
 
-    /** User-friendly name used for display in UI logs and prompts. */
+    /**
+     * The descriptive label shown in the User Interface.
+     */
     private final String info;
 
+    /**
+     * The file system suffix associated with this format.
+     * Used by the writer strategy to generate the correct filename.
+     */
     private final String extension;
+
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Initializes the export type metadata.
+     * Configures the export format metadata.
      *
-     * @param menuId      The unique selection ID.
-     * @param info infos.
+     * @param menuId    The unique selection ID.
+     * @param info      The display name description.
+     * @param extension The file extension (including the dot).
      */
     ExportType(int menuId, String info, String extension) {
         this.menuId = menuId;
         this.info = info;
         this.extension = extension;
     }
+
+    // ------------------- ACCESSORS -------------------
 
     /**
      * Retrieves the numeric ID for menu selection.
@@ -64,7 +92,7 @@ public enum ExportType {
     }
 
     /**
-     * Retrieves the user-friendly name of the format.
+     * Retrieves the user-friendly description.
      * @return The display string.
      */
     public String getExportInfo() {
@@ -72,21 +100,24 @@ public enum ExportType {
     }
 
     /**
-     * Retrieves the file extension associated with this format.
-     * @return The extension string (e.g., ".xlsx").
+     * Retrieves the standard file extension.
+     * @return The suffix string (e.g., ".xlsx").
      */
     public String getExtension() {
         return extension;
     }
 
+    // ------------------- LOOKUP UTILITIES -------------------
+
     /**
      * Resolves an {@link ExportType} from a numeric menu ID.
-     * <p>
-     * Used by the View/Controller to map raw user input (int) to a specific export enum.
-     * </p>
+     *
+     * <p><strong>Usage:</strong></p>
+     * Used by the Controller to safely translate raw integer input from the View into a
+     * domain-specific Enum constant.
      *
      * @param id The numeric ID entered by the user.
-     * @return An {@link Optional} containing the matching type, or empty if not found.
+     * @return An {@link Optional} containing the matching type, or {@code empty()} if the ID is invalid.
      */
     public static Optional<ExportType> fromMenuId(int id) {
         return Arrays.stream(ExportType.values())

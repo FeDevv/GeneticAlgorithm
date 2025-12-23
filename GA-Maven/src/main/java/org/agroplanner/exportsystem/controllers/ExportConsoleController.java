@@ -11,11 +11,15 @@ import org.agroplanner.exportsystem.views.ExportViewContract;
 import java.util.Optional;
 
 /**
- * <p><strong>UI Controller for the Export Subsystem.</strong></p>
+ * Controller component managing the interactive "Export Wizard" session.
  *
- * <p>This controller manages the user interaction flow for saving results (The "Export Wizard").
- * It acts as an intermediary between the View (User Input) and the Service (File I/O),
- * providing error recovery loops.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Wizard Controller. It guides the user through a multi-step process
+ * (Format Selection &rarr; Filename Entry &rarr; Overwrite Check &rarr; Persist), ensuring data integrity at each step.</li>
+ * <li><strong>Responsibility:</strong> Orchestrates the interaction between the User (View) and the File System (Service).
+ * It acts as an error barrier, catching exceptions locally to allow retries without losing the calculated solution.</li>
+ * </ul>
  */
 public class ExportConsoleController {
 
@@ -23,10 +27,10 @@ public class ExportConsoleController {
     private final ExportService service;
 
     /**
-     * Initializes the controller.
+     * Initializes the controller with required dependencies.
      *
-     * @param view    The abstraction of the UI.
-     * @param service The business logic handler.
+     * @param view    The UI handler for prompts and feedback.
+     * @param service The business logic handler for file operations.
      */
     public ExportConsoleController(ExportViewContract view, ExportService service) {
         this.view = view;
@@ -34,77 +38,76 @@ public class ExportConsoleController {
     }
 
     /**
-     * Launches the interactive Export Wizard.
+     * Launches the interactive export session.
      *
-     * <p><strong>Flow:</strong>
+     * <p><strong>Workflow (Recovery Loop):</strong></p>
+     * Implements a stateful loop that persists until either a successful export occurs or the user explicitly cancels.
      * <ol>
-     * <li>Ask user for Export Format (CSV, Excel, etc.).</li>
-     * <li>Ask user for Filename.</li>
-     * <li>Delegate saving to the Service.</li>
-     * <li><strong>Error Handling:</strong> If an error occurs (e.g., invalid name, disk full),
-     * show an error message and restart the loop, allowing the user to retry without losing progress.</li>
+     * <li><strong>Format Selection:</strong> Prompt user for file type (CSV, Excel, etc.).</li>
+     * <li><strong>Filename Entry:</strong> Prompt user for target name.</li>
+     * <li><strong>Collision Detection:</strong> Check if file exists. If so, ask user to Overwrite or Rename.</li>
+     * <li><strong>Execution:</strong> Attempt write operation via Service.</li>
+     * <li><strong>Error Handling:</strong> Catch exceptions (Invalid Name, Disk Error) and display feedback,
+     * allowing the user to try again immediately.</li>
      * </ol>
-     * </p>
      *
-     * @param solution The solution data to export.
-     * @param domain   The context data.
+     * @param solution  The computed solution to save.
+     * @param domain    The geometric context.
+     * @param inventory The biological context (metadata).
      */
     public void runExportWizard(Individual solution, Domain domain, PlantInventory inventory) {
 
-        // --- RETRY LOOP (Wizard Style) ---
-        // Keeps the user inside the export flow until success or explicit cancellation.
+        // --- INTERACTION LOOP ---
+        // Keeps the user inside the wizard until success or cancellation.
         while (true) {
 
-            // STEP 1: Select Format
+            // STEP 1: Format Selection
             view.showAvailableExports(service.getAvailableExportTypes());
             Optional<ExportType> selectedType = view.askForExportType(service.getAvailableExportTypes());
 
-            // If user cancels (returns Empty), exit the wizard.
+            // Exit Condition: User chose Cancel
             if (selectedType.isEmpty()) return;
 
-            // STEP 2: Input Filename
+            // STEP 2: Filename Entry
             String filename = view.askForFilename();
 
-            // --- NEW STEP: OVERWRITE CHECK ---
-            // Prima di provare a salvare, chiediamo al Service se il file c'è già.
-            // Nota: checkFileExists userà l'exporter corretto per capire l'estensione (.csv, .xlsx)
+            // STEP 3: Collision Detection (Overwrite Protection)
+            // Pre-check if the target file already exists to prevent accidental data loss.
             boolean fileExists = service.checkFileExists(selectedType.get(), filename);
 
             if (fileExists) {
-                // Se esiste, la View chiede cosa fare
+                // Interactive Resolution: Ask user decision
                 boolean overwrite = view.askOverwriteOrRename(filename);
 
                 if (!overwrite) {
-                    // Se l'utente sceglie "Rename" (false), saltiamo il resto del loop.
-                    // Il while ricomincerà da capo chiedendo il formato e il nome.
+                    // User chose "Rename". Restart loop to ask for filename again.
                     continue;
                 }
-                // Se sceglie "Overwrite" (true), il codice prosegue verso STEP 3
-                // e il file verrà sovrascritto naturalmente.
+                // User chose "Overwrite". Proceed to save.
             }
 
-            // STEP 3: Execution & Feedback
+            // STEP 4: Execution & Recovery
             try {
-                // We pass the full INVENTORY so the exporter can write metadata (e.g. "Requested: 50 Tomatoes").
-                // Delegate to Service (Deep Protection & IO Handling happen there)
+                // Delegate heavy lifting to Service layer.
+                // We pass the full INVENTORY so the exporter can write rich metadata headers.
                 String savedPath = service.performExport(solution, domain, inventory, selectedType.get(), filename);
 
-                // Success Feedback
+                // Success State: Show feedback and break the loop.
                 view.showSuccessMessage(savedPath);
                 return; // Exit loop on success
 
             } catch (InvalidInputException e) {
-                // Recoverable User Error (e.g., bad characters in filename).
+                // Recoverable User Error (e.g., filename contains invalid chars like '?').
+                // Show error and loop again to let user correct the input.
                 view.showErrorMessage("Input Error: " + e.getMessage());
-                // Loop continues -> User can try entering a new name.
 
             } catch (ExportException e) {
-                // System/IO Error (e.g., Disk Full, Permission Denied).
+                // Recoverable System Error (e.g., Disk Full, Permission Denied).
+                // Show error and loop again (user might choose a different drive or format).
                 view.showErrorMessage("Export Error: " + e.getMessage());
-                // Loop continues -> User can try a different path or format.
 
             } catch (Exception e) {
-                // Unexpected Bug (Safety Net).
+                // Safety Net for unexpected runtime bugs.
                 view.showErrorMessage("Unexpected System Error: " + e.getMessage());
             }
         }

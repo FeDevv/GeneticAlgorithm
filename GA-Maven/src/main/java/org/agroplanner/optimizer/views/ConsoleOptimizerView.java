@@ -4,10 +4,22 @@ import java.util.Locale;
 import java.util.Scanner;
 
 /**
- * <p><strong>Concrete View Implementation for the Main UC Flow.</strong></p>
+ * Concrete implementation of the Main Application View targeting the System Console.
  *
- * <p>Implements the global interaction layer using the System Console.
- * Refactored for professional aesthetic, English localization, and strict architectural alignment.</p>
+ * <p><strong>Architecture & UX:</strong></p>
+ * <ul>
+ * <li><strong>Visual Consistency:</strong> Establishes a strict visual grammar (Double lines for major states,
+ * single lines for sections, Emojis for status) to reduce cognitive load.</li>
+ * <li><strong>Cognitive Pacing:</strong> Implements artificial delays (e.g., during error reporting) to prevent
+ * "Screen Flash" effects, ensuring the user has time to read critical feedback before the UI repaints.</li>
+ * <li><strong>Localization Safety:</strong> Enforces {@link Locale#US} for all floating-point outputs to ensure
+ * deterministic formatting (dots vs commas), regardless of the host OS settings.</li>
+ * </ul>
+ *
+ * <p><strong>Static Analysis:</strong>
+ * Suppresses {@code java:S106} because writing to {@code System.out}/{@code System.err} is the
+ * core responsibility of this CLI adapter.
+ * </p>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleOptimizerView implements OptimizerViewContract {
@@ -15,8 +27,8 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
     private final Scanner scanner;
 
     /**
-     * Initializes the view with a shared Scanner.
-     * @param scanner The system input source.
+     * Constructs the view with the shared system scanner.
+     * @param scanner The input source.
      */
     public ConsoleOptimizerView(Scanner scanner) {
         this.scanner = scanner;
@@ -34,6 +46,10 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
 
     // ------------------- LIFECYCLE MESSAGES -------------------
 
+    /**
+     * {@inheritDoc}
+     * <p>Displays the branding banner to establish system identity.</p>
+     */
     @Override
     public void showWelcomeMessage() {
         System.out.println("\n\n");
@@ -44,12 +60,19 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         System.out.println();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>Uses emojis and spacing to clearly delineate a new run context.</p>
+     */
     @Override
     public void showNewSessionMessage() {
         System.out.println("\n🚀 STARTING NEW OPTIMIZATION SESSION...");
         printSingleSeparator();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showExitMessage() {
         System.out.println("\n");
@@ -58,6 +81,14 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         printDoubleSeparator();
     }
 
+    /**
+     * {@inheritDoc}
+     * <p><strong>UX Pattern (Artificial Delay):</strong>
+     * When a session aborts, we pause the thread for 1.5 seconds.
+     * This prevents the error message from being instantly buried by the "New Session" header
+     * of the restarting loop, ensuring the user actually sees <em>why</em> it failed.
+     * </p>
+     */
     @Override
     public void showSessionAborted(String reason) {
         System.out.println("\n⛔ SESSION ABORTED.");
@@ -70,16 +101,26 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
 
     // ------------------- RESULTS & FEEDBACK -------------------
 
+    /**
+     * {@inheritDoc}
+     * <p>Uses an ASCII box to frame the most important metric (Fitness).</p>
+     */
     @Override
     public void showSolutionValue(double fitness) {
         System.out.println("\n🏆 OPTIMIZATION COMPLETE!");
         System.out.println("┌────────────────────────────────────────────────────────┐");
-        // Using Locale.US to ensure dot separator (e.g., 0.9855)
+        // Force US Locale for consistent formatting (0.9855 instead of 0,9855)
         System.out.printf(Locale.US, "│  FINAL FITNESS SCORE:      %-27.6f │%n", fitness);
         System.out.println("└────────────────────────────────────────────────────────┘");
         System.out.println("   (Target: 1.000000 = No overlaps detected)");
     }
 
+    /**
+     * {@inheritDoc}
+     * <p><strong>Input Strategy:</strong>
+     * Uses a robust validation loop that rejects any input other than 'y' or 'n' (case-insensitive).
+     * </p>
+     */
     @Override
     public boolean askIfPrintChromosome() {
         while (true) {
@@ -93,6 +134,9 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void printSolutionDetails(String details) {
         printSingleSeparator();
@@ -101,6 +145,9 @@ public class ConsoleOptimizerView implements OptimizerViewContract {
         printSingleSeparator();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean askForNewSession() {
         System.out.println(); // Spazio per respirare

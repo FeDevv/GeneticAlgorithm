@@ -23,13 +23,17 @@ import java.nio.file.Path;
 import java.util.Locale;
 
 /**
- * <p><strong>Concrete Exporter: PDF (Portable Document Format).</strong></p>
+ * Concrete implementation of the Export Strategy targeting <strong>Portable Document Format (PDF)</strong>.
  *
- * <p>This strategy generates a read-only, printable report of the solution.
- * It utilizes the <strong>iText</strong> library to construct a high-quality document containing
- * formatted text and tabular data.</p>
- *
- * <p><strong>Use Case:</strong> Ideal for final presentation, archiving, or sharing results with non-technical stakeholders.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Library:</strong> Utilizes <strong>iText 7</strong> for high-level document composition.
+ * This abstracts away the low-level PDF syntax (dictionaries, streams), allowing for a declarative layout approach.</li>
+ * <li><strong>Use Case:</strong> Generates an immutable, "Print-Ready" report suitable for stakeholders.
+ * Unlike Excel/JSON (which are for analysis/integration), this format focuses on <strong>Visual Presentation</strong>.</li>
+ * <li><strong>Visual Hierarchy:</strong> Employs font sizing, semantic weighting (Bold/Italic), and color coding
+ * to guide the reader's eye to key metrics (e.g., Fitness Score).</li>
+ * </ul>
  */
 public class PdfExporter extends BaseExporter {
 
@@ -39,31 +43,34 @@ public class PdfExporter extends BaseExporter {
     }
 
     /**
-     * Generates the PDF document.
+     * Composes and writes the PDF document structure.
      *
-     * <p><strong>Architecture (iText):</strong>
+     * <p><strong>Layout Strategy:</strong></p>
      * <ol>
-     * <li>{@code PdfWriter}: Low-level component that writes bytes to the file stream.</li>
-     * <li>{@code PdfDocument}: Manages the PDF internal structure (pages, objects).</li>
-     * <li>{@code Document}: High-level layout engine that handles paragraphs, tables, and flow.</li>
+     * <li><strong>Header:</strong> Branding and Title.</li>
+     * <li><strong>Metadata Block:</strong> Input parameters (Domain, Inventory).</li>
+     * <li><strong>KPI Block:</strong> Key Performance Indicators (Total Count, Fitness). Highlighted for visibility.</li>
+     * <li><strong>Data Grid:</strong> A structured 5-column table listing the solution coordinates.</li>
      * </ol>
-     * </p>
      *
-     * @param individual The solution data.
-     * @param domain     The domain context.
-     * @param path       The destination path.
-     * @throws IOException If file creation fails.
+     * @param individual The solution phenotype.
+     * @param domain     The problem constraints.
+     * @param inventory  The biological inputs.
+     * @param path       The target file path.
+     * @throws IOException If the file stream cannot be opened.
      */
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // PDF Infrastructure
+        // 1. Infrastructure Setup (Low-Level)
         PdfWriter writer = new PdfWriter(path.toString());
         PdfDocument pdf = new PdfDocument(writer);
 
+        // 2. Document Composition (High-Level)
+        // The 'try-with-resources' ensures the document is closed and flushed properly.
         try (Document document = new Document(pdf)) {
 
-            // --- REPORT HEADER ---
+            // --- SECTION A: HEADER ---
             document.add(new Paragraph("Optimization Report")
                     .setFontSize(18)
                     .setBold()
@@ -75,63 +82,67 @@ public class PdfExporter extends BaseExporter {
                     .setTextAlignment(TextAlignment.CENTER)
                     .setMarginBottom(20));
 
-            // --- CONTEXT & METADATA ---
+            // --- SECTION B: CONTEXT & CONFIGURATION ---
             document.add(new Paragraph("Configuration Details")
                     .setFontSize(14)
                     .setBold());
 
-            document.add(new Paragraph("Domain: " + domain.toString()).setFontSize(11));
+            document.add(new Paragraph("Domain Geometry: " + domain.toString()).setFontSize(11));
 
-            // Inventory Manifest Section
+            // Inventory Manifest
             document.add(new Paragraph("Requested Inventory:").setBold().setFontSize(11).setMarginTop(5));
 
             for (InventoryEntry item : inventory.getEntries()) {
 
-                // E.g.: " - 🍅 TOMATO: 50 units (r=1.50)"
+                // Formatting: " - 🍅 TOMATO: 50 units (r=1.50m)"
                 String line = String.format(Locale.US, " - %s %s: %d units (r=%.2fm)",
-                        item.getType().getLabel(), // Emoji (recuperato da getType)
-                        item.getType().name(),     // Nome (recuperato da getType)
-                        item.getQuantity(),        // Quantità diretta dell'entry
-                        item.getRadius());         // Raggio specifico dell'entry
+                        item.getType().getLabel(),
+                        item.getType().name(),
+                        item.getQuantity(),
+                        item.getRadius());
 
-                document.add(new Paragraph(line).setFontSize(10).setMarginLeft(10));
+                document.add(new Paragraph(line)
+                        .setFontSize(10)
+                        .setMarginLeft(10)  // Indentation for list effect
+                );
             }
 
+            // --- SECTION C: RESULTS (KPIs) ---
             document.add(new Paragraph(String.format(Locale.US, "Total Plants Placed: %d", individual.getDimension()))
                     .setMarginTop(5));
 
-            // Fitness Score Highlight
+            // Visual Pop: Highlight Fitness in Blue
             document.add(new Paragraph(String.format(Locale.US, "Final Fitness Score: %.6f", individual.getFitness()))
                     .setBold()
                     .setFontSize(12)
-                    .setFontColor(com.itextpdf.kernel.colors.ColorConstants.BLUE) // Visual pop
+                    .setFontColor(com.itextpdf.kernel.colors.ColorConstants.BLUE)
                     .setMarginBottom(15));
 
-            // --- DATA TABLE SECTION ---
+            // --- SECTION D: DATA TABLE ---
             document.add(new Paragraph("Solution Coordinates")
                     .setFontSize(14)
                     .setBold()
                     .setMarginBottom(5));
 
-            // Table Configuration: 5 Columns
-            // ID (1), Type (3), X (2), Y (2), Radius (2) -> Width Ratios
+            // Table Setup: Responsive Column Widths (Percentages)
+            // Ratios: ID(1) : Type(3) : X(2) : Y(2) : Radius(2)
             float[] columnWidths = {1, 3, 2, 2, 2};
             Table table = new Table(UnitValue.createPercentArray(columnWidths));
             table.setWidth(UnitValue.createPercentValue(100));
 
-            // Headers
+            // Table Headers
             addHeaderCell(table, "ID");
             addHeaderCell(table, "Type");
             addHeaderCell(table, "X(m)");
             addHeaderCell(table, "Y(m)");
             addHeaderCell(table, "Radius(m)");
 
-            // Data Population
+            // Table Population
             int index = 0;
             for (Point p : individual.getChromosomes()) {
                 table.addCell(createCell(String.valueOf(index++)));
 
-                // Concatenate Emoji + Name: "🍅 TOMATO"
+                // Composite String: "🍅 TOMATO"
                 String typeStr = p.getType().getLabel() + " " + p.getType().name();
                 table.addCell(createCell(typeStr));
 
@@ -140,16 +151,23 @@ public class PdfExporter extends BaseExporter {
                 table.addCell(createCell(String.format(Locale.US, "%.2f", p.getRadius())));
             }
 
+            // Finalize: Add table to layout flow
             document.add(table);
         }
     }
 
-    // Helper to keep code clean
+    // ------------------- PRIVATE HELPERS (Layout DRY) -------------------
+
+    /**
+     * Creates a styled header cell with bold text and center alignment.
+     */
     private void addHeaderCell(Table table, String text) {
         table.addHeaderCell(new Cell().add(new Paragraph(text).setBold().setTextAlignment(TextAlignment.CENTER)));
     }
 
-    // Helper for centering data cells
+    /**
+     * Creates a standard data cell with right alignment (optimal for numbers).
+     */
     private Cell createCell(String text) {
         return new Cell().add(new Paragraph(text).setTextAlignment(TextAlignment.RIGHT).setFontSize(9));
     }

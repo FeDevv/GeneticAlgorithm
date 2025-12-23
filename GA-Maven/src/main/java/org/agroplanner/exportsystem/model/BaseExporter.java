@@ -10,84 +10,98 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * <p><strong>Abstract Strategy for Data Export.</strong></p>
+ * Abstract base class defining the skeleton of an export operation.
  *
- * <p>This class acts as the skeleton for all export algorithms, implementing the <strong>Template Method Pattern</strong>.
- * It centralizes common infrastructure logic (directory management, file extension handling, path resolution)
- * while delegating the specific format writing to concrete subclasses.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Template Method. The {@link #export} method defines the invariant workflow
+ * (validation -> preparation -> execution), while specific writing logic is deferred to subclasses
+ * via the abstract {@link #performExport} hook.</li>
+ * <li><strong>Responsibility:</strong> Centralizes infrastructure concerns such as Directory Management
+ * (ensuring folders exist) and Path Normalization (handling extensions), adhering to the <em>Don't Repeat Yourself (DRY)</em> principle.</li>
+ * </ul>
  */
 public abstract class BaseExporter {
 
     /**
-     * The default root directory for all generated files.
+     * The fixed root directory (Sandbox) for all generated reports.
      */
     public static final String EXPORT_FOLDER = "exports";
 
     /**
-     * Orchestrates the export process.
-     * <p>
-     * This method is {@code final} to prevent subclasses from altering the structural logic of the export flow.
-     * It ensures that:
-     * <ol>
-     * <li>The filename has the correct extension.</li>
-     * <li>The target directory exists (creating it if necessary).</li>
-     * <li>The actual writing is delegated to the specific implementation.</li>
-     * </ol>
-     * </p>
+     * Orchestrates the complete export lifecycle (The Template Method).
      *
-     * @param individual The solution data to export.
-     * @param domain     The problem domain context.
-     * @param filename   The user-specified filename (with or without extension).
-     * @return The absolute path of the generated file as a String (useful for UI feedback).
-     * @throws IOException If filesystem operations (creation, writing) fail.
+     * <p><strong>Design Contract:</strong></p>
+     * This method is declared {@code final} to strictly enforce the execution order. Subclasses cannot override
+     * the safety checks (e.g., directory creation) but must provide the implementation for the writing phase.
+     *
+     *
+     * @param individual The solution data (Genotype/Phenotype).
+     * @param domain     The geometric context (Boundaries).
+     * @param inventory  The biological context (Plant metadata).
+     * @param filename   The raw target filename requested by the user.
+     * @return The absolute file system path of the generated artifact (for UI feedback).
+     * @throws IOException If any I/O error occurs (FileSystem permission, disk full, etc.).
      */
     public final String export(Individual individual, Domain domain, PlantInventory inventory, String filename) throws IOException {
-        // 1. Risolviamo il path usando la logica centralizzata
+        // 1. Path Resolution & Normalization
+        // Ensures the filename has the correct extension and points to the right folder.
         Path path = resolveFilePath(filename);
 
-        // 2. Creazione cartelle (rimane uguale)
+        // 2. Environment Preparation (Defensive IO)
+        // Automatically creates the directory tree if it doesn't exist.
         if (Files.notExists(path.getParent())) {
             Files.createDirectories(path.getParent());
         }
 
-        // 3. Scrittura
+        // 3. Execution (The Hook)
+        // Delegates the format-specific writing logic to the concrete implementation.
         performExport(individual, domain, inventory, path);
+
         return path.toAbsolutePath().toString();
     }
 
     /**
-     * NUOVO METODO: Calcola il percorso finale senza scrivere il file.
-     * Utile per i controlli di esistenza pre-export.
+     * Computes the final target path without performing I/O.
+     *
+     * <p><strong>Utility:</strong></p>
+     * Exposed publicly to allow Controllers/Services to perform "Pre-Flight Checks"
+     * (e.g., checking if the file already exists before attempting to write).
+     *
+     * @param filename The user input.
+     * @return A sanitized {@link Path} object with the correct extension appended.
      */
     public Path resolveFilePath(String filename) {
         String extension = getExtension();
-        // Normalizzazione estensione
+
+        // Extension Normalization:
+        // If the user forgot the extension (e.g., "report"), we append it ("report.csv").
+        // We use case-insensitive check to be user-friendly.
         if (!filename.toLowerCase().endsWith(extension)) {
             filename += extension;
         }
-        // Risoluzione path
+
+        // Path Construction:
+        // Joins the root folder with the sanitized filename.
         return Paths.get(EXPORT_FOLDER, filename);
     }
 
     // ------------------- ABSTRACT HOOKS -------------------
 
     /**
-     * Defines the file extension associated with the specific format.
-     * @return The extension string including the dot (e.g., ".csv", ".xlsx").
+     * Template Hook: Provides the specific file extension for the implementing format.
+     * @return The suffix including the dot (e.g., {@code .json}).
      */
     protected abstract String getExtension();
 
     /**
-     * Executes the actual writing of data to the file.
-     * <p>
-     * Concrete implementations (CSV, Excel, etc.) must implement this method to translate
-     * the domain objects into bytes/characters.
-     * </p>
+     * Template Hook: Executes the format-specific serialization logic.
      *
-     * @param individual The data source.
-     * @param domain     The context.
-     * @param path       The fully resolved target path (guaranteed to have a valid parent directory).
-     * @throws IOException If the low-level writing operation fails.
+     * @param individual The data to write.
+     * @param domain     The domain context.
+     * @param inventory  The inventory context.
+     * @param path       The fully validated and prepared target path.
+     * @throws IOException If the writing process fails.
      */
     protected abstract void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException;
 }

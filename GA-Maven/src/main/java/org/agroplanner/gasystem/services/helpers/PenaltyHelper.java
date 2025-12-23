@@ -4,39 +4,50 @@ import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.shared.utils.DistanceCalculator;
 
 /**
- * <p><strong>Utility for Constraint Violation Quantification.</strong></p>
+ * Stateless utility responsible for quantifying geometric constraint violations via numerical penalties.
  *
- * <p>This class encapsulates the mathematical logic to calculate penalties arising from
- * geometric collisions (overlaps). It isolates the "Soft Constraint" logic from the
- * main fitness evaluation loop.</p>
- *
- * <p>Utility Class (Stateless, Static methods).</p>
+ * <p><strong>Architecture & Math:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Helper / Calculator.</li>
+ * <li><strong>Strategy (Soft Constraints):</strong> Implements the <em>Penalty Method</em>. Instead of treating collisions
+ * as hard constraints (immediately discarding invalid individuals), this class assigns a scalable numerical cost.
+ * This preserves the connectivity of the search space, allowing the algorithm to traverse through slightly invalid
+ * states to reach better optima.</li>
+ * </ul>
  */
 public final class PenaltyHelper {
 
     /**
-     * Private constructor to prevent instantiation.
+     * Private constructor to strictly prevent instantiation.
      */
     private PenaltyHelper() {
         throw new IllegalStateException("Utility class");
     }
 
     /**
-     * Calculates the penalty score for a collision between two points.
+     * Computes the scalar penalty for a geometric intersection between two entities.
      *
-     * <p><strong>Mathematical Strategy: Quadratic Penalty.</strong><br>
-     * Instead of a linear penalty, this method applies a quadratic function: {@code (overlap² * weight)}.
-     * This ensures that:</p>
+     * <p><strong>Mathematical Strategy: Quadratic Penalty Function.</strong></p>
+     * The penalty is calculated as: P = weight×(overlap)^2.
+     *
+     * <p><strong>Why Quadratic? (Gradient Dynamics):</strong></p>
+     * Compared to a linear penalty (P ∝ overlap), the quadratic approach offers superior evolutionary dynamics:
      * <ul>
-     * <li><strong>Deep Overlaps</strong> incur a massive penalty, forcing the algorithm to fix them immediately.</li>
-     * <li><strong>Slight Overlaps</strong> incur a small penalty, allowing for fine-tuning movements ("sliding").</li>
+     * <li><strong>Micro-Adjustments (Low Gradient):</strong> When overlap is minimal (circles barely touching),
+     * the penalty curve is flat. This allows genes to "slide" against each other for dense packing without
+     * incurring catastrophic fitness drops.</li>
+     * <li><strong>Macro-Correction (High Gradient):</strong> As overlap increases, the penalty spikes non-linearly.
+     * This creates immense selection pressure against deep collisions, forcing the population to fix major
+     * structural errors immediately.</li>
      * </ul>
      *
-     * @param point1             The first geometric entity.
-     * @param point2             The second geometric entity.
-     * @param overlapWeight      The tuning parameter scaling the severity of the penalty.
-     * @param distanceCalculator The utility used to compute Euclidean distance.
-     * @return A positive double representing the penalty if an overlap exists; {@code 0.0} otherwise.
+     *
+     *
+     * @param point1             The first geometric entity (source).
+     * @param point2             The second geometric entity (target).
+     * @param overlapWeight      The hyperparameter scaling the severity of the penalty (Sensitivity).
+     * @param distanceCalculator The service used to compute the Euclidean metric.
+     * @return A strictly non-negative double: {@code > 0} if overlapping, {@code 0.0} if disjoint or touching.
      */
     public static double calculatePairPenalty(
             Point point1, Point point2,
@@ -46,21 +57,21 @@ public final class PenaltyHelper {
         double radius1 = point1.getRadius();
         double radius2 = point2.getRadius();
 
-        // The minimum distance required between centers to avoid touching.
+        // Contact Threshold: The minimum distance required between centers to avoid intersection.
         double requiredDistance = radius1 + radius2;
 
-        // The actual Euclidean distance between centers.
+        // Metric: Actual Euclidean distance between centroids.
         double actualDistance = distanceCalculator.getDistance(point1, point2);
 
-        // Collision Detection:
-        // If actual distance < sum of radii, the circles are overlapping.
+        // Collision Logic:
+        // If the actual distance is less than the sum of radii, the distinct identities overlap.
         if (actualDistance < requiredDistance) {
 
-            // Calculate the magnitude of the violation (how much they overlap).
+            // Magnitude: How deep is the penetration?
             double overlap = requiredDistance - actualDistance;
 
-            // Apply Quadratic Penalty: (overlap * overlap) * weight
-            // Using overlap^2 makes the penalty gradient smoother and steeper for bad violations.
+            // Penalty Function: Quadratic growth.
+            // Using (overlap * overlap) avoids Math.pow() overhead and provides the desired gradient.
             return (overlap * overlap) * overlapWeight;
         }
 

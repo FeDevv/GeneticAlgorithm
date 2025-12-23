@@ -4,29 +4,33 @@ import org.agroplanner.shared.exceptions.InvalidInputException;
 import org.agroplanner.exportsystem.model.types.*;
 
 /**
- * <p><strong>Factory for Export Strategy Instantiation.</strong></p>
+ * Factory component responsible for the instantiation of concrete Export Strategies.
  *
- * <p>This class implements the <strong>Factory Method Pattern</strong> to centralize the creation logic
- * of concrete {@link BaseExporter} implementations. It serves two main architectural purposes:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li><strong>Decoupling:</strong> The client (Controller) relies only on the abstraction (BaseExporter) and the metadata (ExportType), never on concrete classes.</li>
- * <li><strong>Validation:</strong> It acts as a gatekeeper, ensuring that requested export types are actually supported/implemented.</li>
+ * <li><strong>Pattern:</strong> Factory Method. It encapsulates the decision logic of <em>which</em> class to instantiate,
+ * decoupling the Controller (Client) from the specific implementations ({@link CSVExporter}, {@link ExcelExporter}, etc.).</li>
+ * <li><strong>Singleton Strategy:</strong> Implements the <em>Initialization-on-demand holder idiom</em>.
+ * This ensures the instance is created lazily (only when needed) and is inherently thread-safe without the performance overhead of synchronization.</li>
+ * <li><strong>Open/Closed Principle (Partial):</strong> While adding a new format requires modifying this switch statement,
+ * the client code remains unchanged, isolating the modification impact to this single factory class.</li>
  * </ul>
- *
- * <p><strong>Pattern:</strong> Singleton (Initialization-on-demand holder idiom).</p>
  */
 public class ExporterFactory {
 
     // ------------------- SINGLETON PATTERN -------------------
 
-    /** Private constructor to prevent direct instantiation. */
+    /**
+     * Private constructor to strictly prevent direct instantiation.
+     */
     private ExporterFactory() {
 
     }
 
     /**
-     * Static Inner Class (Lazy Holder).
-     * Loaded only when {@code getInstance()} is called, ensuring thread safety without synchronized blocks.
+     * <strong>Lazy Holder:</strong>
+     * The JVM loads this static inner class only when {@link #getInstance()} is invoked for the first time.
+     * This provides a lock-free, thread-safe singleton initialization.
      */
     private static class FactoryHolder {
         private static final ExporterFactory INSTANCE = new ExporterFactory();
@@ -43,12 +47,17 @@ public class ExporterFactory {
     // ------------------- FACTORY METHOD -------------------
 
     /**
-     * Creates and returns a concrete Exporter instance based on the requested type.
+     * Dispatches the request to the appropriate concrete Exporter implementation.
+     *
+     * <p><strong>Safety Net (Configuration Drift):</strong></p>
+     * The {@code switch} statement maps the metadata enum to the actual strategy class.
+     * The {@code default} branch acts as a safeguard: if a developer adds a new constant to {@link ExportType}
+     * but forgets to update this factory, the system will fail fast with a descriptive exception rather than
+     * returning null or behaving unpredictably.
      *
      * @param type The metadata enum describing the desired output format.
      * @return A new instance of a class extending {@link BaseExporter}.
-     * @throws InvalidInputException If the type is null or if the factory doesn't know how to handle the requested type
-     * (Defensive Programming against unimplemented Enums).
+     * @throws InvalidInputException If {@code type} is null or if the requested format is not yet mapped to an implementation.
      */
     public BaseExporter createExporter(ExportType type) {
         // Deep Protection: Null Safety
@@ -64,9 +73,7 @@ public class ExporterFactory {
             case JSON -> new JsonExporter();
             case PDF -> new PdfExporter();
 
-            // Defensive Programming (Safety Net)
-            // Covers the edge case where a developer adds a new constant to ExportType
-            // but forgets to implement the corresponding logic here.
+            // Edge Case: Enum exists but Factory implementation is missing.
             default -> throw new InvalidInputException("Unsupported export type: " + type);
         };
     }

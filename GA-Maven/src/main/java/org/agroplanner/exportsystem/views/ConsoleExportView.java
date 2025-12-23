@@ -7,10 +7,22 @@ import java.util.Optional;
 import java.util.Scanner;
 
 /**
- * <p><strong>Concrete View Implementation for Data Export.</strong></p>
+ * Concrete implementation of the Export View targeting the Command Line Interface (CLI).
  *
- * <p>Handles the user interaction for saving results to disk.
- * Features strict filename validation and a clear menu for format selection.</p>
+ * <p><strong>Architecture & UX:</strong></p>
+ * <ul>
+ * <li><strong>Role:</strong> Handles the user interaction for the "Export Wizard". It translates high-level requests
+ * (e.g., "Select Format") into concrete console inputs/outputs.</li>
+ * <li><strong>Defensive UI:</strong> Implements aggressive <strong>Input Sanitization</strong> at the source.
+ * It validates filenames against OS-specific illegal characters <em>before</em> sending them to the Controller,
+ * providing immediate feedback to the user.</li>
+ * <li><strong>Data Safety:</strong> Manages the "Conflict Resolution" dialog (Overwrite vs Rename), acting as
+ * a safety gate to prevent accidental data loss.</li>
+ * </ul>
+ *
+ * <p><strong>Static Analysis:</strong>
+ * Suppresses {@code java:S106} as standard output usage is expected for this CLI component.
+ * </p>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleExportView implements ExportViewContract {
@@ -18,8 +30,8 @@ public class ConsoleExportView implements ExportViewContract {
     private final Scanner scanner;
 
     /**
-     * Initializes the view with a shared Scanner.
-     * @param scanner The system input source.
+     * Constructs the view using the shared system scanner.
+     * @param scanner The input source (System.in).
      */
     public ConsoleExportView(Scanner scanner) {
         this.scanner = scanner;
@@ -62,34 +74,52 @@ public class ConsoleExportView implements ExportViewContract {
         System.out.println("      (Enter 0 to Cancel)");
     }
 
+    /**
+     * {@inheritDoc}
+     * <p><strong>Input Strategy:</strong>
+     * Uses a validation loop to ensure the user selects a valid ID from the table.
+     * Handles '0' as an explicit exit signal (returning {@code Optional.empty()}).
+     * </p>
+     */
     @Override
     public Optional<ExportType> askForExportType(List<ExportType> availableTypes) {
         // Validation Loop
         while (true) {
-            // Stile standardizzato con \n
             System.out.print("\n> Select ID: ");
 
             if (scanner.hasNextInt()) {
                 int inputId = scanner.nextInt();
-                scanner.nextLine();
+                scanner.nextLine(); // Consume newline buffer
 
-                // CASE A: Cancel
+                // CASE A: User Cancel
                 if (inputId == 0) return Optional.empty();
 
-                // CASE B: Lookup by ID (Usa il tuo metodo!)
+                // CASE B: Valid Lookup
                 Optional<ExportType> selection = ExportType.fromMenuId(inputId);
 
+                // Verification: Exists AND is in the provided list
                 if (selection.isPresent() && availableTypes.contains(selection.get())) {
                     return selection;
                 }
             } else {
-                scanner.nextLine(); // Flush
+                scanner.nextLine(); // Flush invalid token
             }
 
             System.out.println("❌ Invalid ID. Please select a number from the table.");
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p><strong>Sanitization Logic:</strong>
+     * Enforces strict filename rules to ensure cross-platform compatibility and security.
+     * Rejects:
+     * <ul>
+     * <li>Empty strings or spaces (forces underscores/dashes).</li>
+     * <li>Reserved characters: {@code < > : " / \ | ? *}</li>
+     * </ul>
+     * </p>
+     */
     @Override
     public String askForFilename() {
         printSingleSeparator();
@@ -118,6 +148,9 @@ public class ConsoleExportView implements ExportViewContract {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showSuccessMessage(String path) {
         System.out.println("\n✅ EXPORT SUCCESSFUL!");
@@ -125,6 +158,9 @@ public class ConsoleExportView implements ExportViewContract {
         printSingleSeparator();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void showErrorMessage(String error) {
         System.out.println("\n⛔ EXPORT FAILED:");
@@ -133,16 +169,14 @@ public class ConsoleExportView implements ExportViewContract {
     }
 
     /**
-     * Asks the user how to handle a file conflict.
-     * @param filename The name of the file causing the conflict.
-     * @return true for Overwrite, false for Rename.
+     * {@inheritDoc}
+     * <p><strong>UX Pattern:</strong> Binary Choice Loop (Overwrite vs Rename).</p>
      */
     public boolean askOverwriteOrRename(String filename) {
         System.out.println("⚠️ File '" + filename + "' already exists.");
         System.out.print("\n> Do you want to [O]verwrite or [R]ename? (o/r): ");
 
         while (true) {
-            // nextLine() per sicurezza sul buffer
             String input = scanner.nextLine().trim();
 
             if (input.equalsIgnoreCase("o")) {

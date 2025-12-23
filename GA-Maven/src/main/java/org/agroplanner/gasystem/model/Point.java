@@ -4,62 +4,67 @@ import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.shared.exceptions.InvalidInputException;
 
 /**
- * <p><strong>The Fundamental Unit of the Genetic Algorithm (The Gene).</strong></p>
+ * Immutable representation of a geometric entity in 2D space, functioning as the <strong>Gene</strong>
+ * within the evolutionary algorithm.
  *
- * <p>This class represents a geometric point with a radius (a circular entity) in the 2D space.
- * In the context of the Genetic Algorithm, a {@code Point} acts as a <strong>Gene</strong>:
- * an atomic, indivisible part of a solution ({@link Individual}).</p>
- *
- * <p><strong>Architectural Choice: Immutability.</strong><br>
- * This class is designed to be completely immutable (all fields are {@code final}).
- * This provides several critical benefits:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li><strong>Thread Safety:</strong> Instances can be safely shared across parallel streams without synchronization.</li>
- * <li><strong>Genetic Isolation:</strong> When Mutation or Crossover operators act, they create <em>new</em> points
- * rather than modifying existing ones. This prevents side-effects where mutating a child accidentally mutates the parent.</li>
+ * <li><strong>Pattern:</strong> Immutable Value Object.</li>
+ * <li><strong>Role (The Gene):</strong> Represents an atomic, indivisible unit of the solution genotype.
+ * A collection of these points forms the {@link Individual} (Chromosome).</li>
+ * <li><strong>Concurrency & Safety:</strong>
+ * Being deeply immutable, instances of this class are inherently <strong>Thread-Safe</strong>.
+ * This allows the genetic operators (Crossover, Mutation) to function in parallel streams without
+ * synchronization overhead. Furthermore, it prevents <em>Side-Effects</em>: modifying a child's gene
+ * implies creating a new object, guaranteeing that the parent's genome remains historically intact.</li>
  * </ul>
  */
 public class Point {
-    // ------------------- STATE -------------------
 
-    /** The X coordinate of the center. */
+    // ------------------- STATE (IMMUTABLE) -------------------
+
+    /** The Cartesian X-coordinate (center of the plant). */
     private final double x;
 
-    /** The Y coordinate of the center. */
+    /** The Cartesian Y-coordinate (center of the plant). */
     private final double y;
 
-    /** The identity tag. */
+    /** The biological identity of the plant (Metadata). */
     private final PlantType type;
 
     /**
-     * The radius (size) of the object.
-     * Defines the spatial footprint for overlap calculations.
+     * The physical radius of the organism.
+     * <p>Defines the spatial footprint used for collision detection (Fitness Function).</p>
      */
     private final double radius;
 
     // ------------------- CONSTRUCTORS -------------------
 
     /**
-     * Primary constructor: Creates a full Gene.
+     * Constructs a new Gene (Point).
+     *
+     * <p><strong>Validation Logic (Fail-Fast):</strong></p>
+     * Ensures that no "Zombie Genes" (invalid states) can exist within the population.
      *
      * @param x      The X coordinate.
      * @param y      The Y coordinate.
-     * @param radius The physical radius of the object.
-     * @param type   The plant identifier.
+     * @param radius The physical radius (must be > 0).
+     * @param type   The species identifier (must not be null).
+     * @throws InvalidInputException if coordinates are NaN, radius is non-positive, or type is missing.
      */
     public Point(double x, double y, double radius, PlantType type) {
-        // Validation: Coordinates
-        // Accettiamo coordinate negative? Dipende dal dominio, ma di solito i NaN sono il nemico.
+        // 1. Numerical Stability Check
+        // NaN (Not a Number) propagates virally in calculations, corrupting the entire fitness score.
         if (Double.isNaN(x) || Double.isNaN(y)) {
             throw new InvalidInputException("Coordinates cannot be NaN.");
         }
 
-        // Validation: Radius
+        // 2. Physical Constraint Check
         if (radius <= 0) {
             throw new InvalidInputException("Point radius must be positive. Got: " + radius);
         }
 
-        // Validation: Type (CRITICO PER L'EXPORT)
+        // 3. Metadata Integrity Check
         if (type == null) {
             throw new InvalidInputException("PlantType cannot be null. Every point must have a species identity.");
         }
@@ -70,36 +75,41 @@ public class Point {
         this.type = type;
     }
 
+    // ------------------- ACCESSORS -------------------
+
     /**
-     * Retrieves the X coordinate.
-     * @return The value on the horizontal axis.
+     * Retrieves the horizontal position.
+     * @return The X coordinate.
      */
     public double getX() { return x; }
 
     /**
-     * Retrieves the Y coordinate.
-     * @return The value on the vertical axis.
+     * Retrieves the vertical position.
+     * @return The Y coordinate.
      */
     public double getY() { return y; }
 
     /**
-     * Retrieves the radius.
-     * @return The size of the object.
+     * Retrieves the physical footprint size.
+     * @return The radius in meters.
      */
     public double getRadius() { return radius; }
 
+    /**
+     * Retrieves the biological classification.
+     * @return The {@link PlantType} enum constant.
+     */
     public PlantType getType() { return type; }
 
-    /**
-     * Returns a formatted string representation of the point coordinates.
-     * <p>Format: {@code (x.xxxx, y.yyyy)}</p>
-     *
-     * @return The string representation suitable for logging or export.
-     */
 
+    // ------------------- OBJECT CONTRACT -------------------
+
+    /**
+     * Returns a compact string representation suitable for visualization and debugging.
+     * <p>Format: {@code NAME[r=0.00]@(x.xxxx, y.yyyy)}</p>
+     */
     @Override
     public String toString() {
-        // Esempio output: Pomodoro[r=1.50]@(10.00, 20.00)
         return String.format("%s[r=%.2f]@(%.4f, %.4f)", type.name(), radius, x, y);
     }
 }

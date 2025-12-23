@@ -22,14 +22,31 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * <p><strong>Concrete Exporter: Microsoft Excel (.xlsx)</strong></p>
- * <p>Cleaned up version with separated Styles and Logic.</p>
+ * Concrete implementation of the Export Strategy targeting <strong>Microsoft Excel (.xlsx)</strong>.
+ *
+ * <p><strong>Architecture & Complexity:</strong></p>
+ * This is the most technically complex exporter in the system. Unlike text-based formats (CSV, JSON),
+ * it generates a binary Office Open XML file using the <strong>Apache POI</strong> library.
+ *
+ *
+ * <p><strong>Key Features:</strong></p>
+ * <ul>
+ * <li><strong>Native Visualization:</strong> Generates a dynamic <em>Scatter Plot</em> using XDDF APIs. The chart is not a static image,
+ * but a real Excel object that the user can interact with (resize, format, filter series).</li>
+ * <li><strong>Style Encapsulation:</strong> Uses a static inner class {@link ExcelStyles} to decouple formatting logic
+ * (fonts, borders, colors) from data population logic.</li>
+ * <li><strong>Multi-Series Grouping:</strong> Data points are grouped by {@link PlantType} so that each species
+ * appears as a distinct series in the chart legend.</li>
+ * </ul>
  */
 public class ExcelExporter extends BaseExporter {
 
     private static final String[] HEADERS = {"ID", "TYPE", "LABEL", "X(m)", "Y(m)", "RADIUS(m)"};
 
-    // Costanti di Layout per garantire il rapporto 1:1 su Mac e Windows
+    /**
+     * Fixed row height in points (approx 35 pixels).
+     * Used to ensure consistent rendering across different OS DPI settings (Windows vs macOS).
+     */
     private static final float ROW_HEIGHT = 26.3f;
 
     @Override
@@ -37,41 +54,54 @@ public class ExcelExporter extends BaseExporter {
         return ExportType.EXCEL.getExtension();
     }
 
+    /**
+     * Orchestrates the creation of the spreadsheet.
+     *
+     * <p><strong>Workflow:</strong></p>
+     * <ol>
+     * <li><strong>Setup:</strong> Initialize Workbook and Styles.</li>
+     * <li><strong>Metadata:</strong> Write domain and inventory info at the top.</li>
+     * <li><strong>Data Table:</strong> Write the point coordinates, grouping them by species to track row ranges.</li>
+     * <li><strong>Visualization:</strong> Use the tracked row ranges to build the XDDF Scatter Chart.</li>
+     * </ol>
+     */
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             XSSFSheet sheet = workbook.createSheet("Optimization Plan");
 
-            // 1. Inizializzazione Stili (separata dalla logica)
+            // 1. Style Initialization (Separation of Concerns)
+            // Pre-allocate styles to avoid creating duplicates in the loop (POI Best Practice).
             ExcelStyles styles = new ExcelStyles(workbook);
 
             int rowIndex = 0;
 
-            // 2. Scrittura Metadati
+            // 2. Metadata Section
             rowIndex = writeMetadata(sheet, rowIndex, domain, inventory, individual, styles);
 
-            // 3. Scrittura Header Tabella
+            // 3. Table Header
             int headerRowIndex = rowIndex;
             rowIndex = writeHeader(sheet, rowIndex, styles);
 
-            // 4. Scrittura Dati (Main Loop)
-            // Ritorna la mappa dei range per il grafico
+            // 4. Data Population & Range Tracking
+            // We need to know exactly which rows contain "TOMATO", which contain "CORN", etc., for the chart.
             Map<PlantType, int[]> rangeMap = writeDataRows(sheet, rowIndex, individual, styles);
 
-            // 5. Setup Layout (Auto-size e Canvas quadrato per il grafico)
-            // Calcoliamo le dimensioni del grafico basandoci sulla griglia creata
+            // 5. Layout Engine
+            // Calculates where to place the chart canvas based on the data table size.
             int[] chartDimensions = setupLayoutAndCanvas(sheet);
             int chartCols = chartDimensions[0];
             int chartRows = chartDimensions[1];
 
-            // 6. Generazione Grafico
+            // 6. Chart Generation (XDDF)
             createMultiSeriesChart(sheet, rangeMap, headerRowIndex, chartCols, chartRows);
 
+            // UX hints near the chart
             int disclaimerRow = headerRowIndex + chartRows + 1;
             writeChartDisclaimer(sheet, disclaimerRow, styles);
 
-            // 7. Scrittura su disco
+            // 7. Disk I/O
             try (OutputStream fileOut = Files.newOutputStream(path)) {
                 workbook.write(fileOut);
             }
@@ -95,7 +125,7 @@ public class ExcelExporter extends BaseExporter {
         createMetadataRow(sheet, rowIndex++, "Total Plants:", String.valueOf(inventory.getTotalPopulationSize()), styles.header, styles.left);
         createMetadataRow(sheet, rowIndex++, "Fitness:", String.format("%.6f", individual.getFitness()), styles.header, styles.left);
 
-        return rowIndex + 1; // +1 per lo Spacer
+        return rowIndex + 1; // +1 for spacer row
     }
 
     private int writeHeader(XSSFSheet sheet, int rowIndex, ExcelStyles styles) {
@@ -108,6 +138,13 @@ public class ExcelExporter extends BaseExporter {
         return rowIndex + 1;
     }
 
+    /**
+     * Writes data rows grouped by PlantType.
+     *
+     * <p><strong>Why Grouping?</strong></p>
+     * Charts require contiguous data ranges for each series. By sorting/grouping points by type first,
+     * we can say "Tomatoes are from row 10 to 20", allowing us to create a specific "Tomato Series" in the chart.
+     */
     private Map<PlantType, int[]> writeDataRows(XSSFSheet sheet, int rowIndex, Individual individual, ExcelStyles styles) {
         Map<PlantType, List<Point>> groupedPoints = individual.getChromosomes().stream()
                 .collect(Collectors.groupingBy(Point::getType));
@@ -131,43 +168,44 @@ public class ExcelExporter extends BaseExporter {
                 createStyledCell(row, 1, p.getType().name(), styles.center);
                 createStyledCell(row, 2, p.getType().getLabel(), styles.emoji);
 
-                // Arrotondamento reale per evitare numeri sporchi
+                // Use double precision for coordinates
                 createStyledCell(row, 3, p.getX(), styles.decimal);
                 createStyledCell(row, 4, p.getY(), styles.decimal);
                 createStyledCell(row, 5, p.getRadius(), styles.radius);
             }
 
+            // Track the range [start, end] for this plant type
             rangeMap.put(type, new int[]{startRow, rowIndex - 1});
         }
         return rangeMap;
     }
 
     private int[] setupLayoutAndCanvas(XSSFSheet sheet) {
-        // A. Auto-size SOLO colonne dati per leggibilità
+        // A. Data Column Auto-sizing
         for (int i = 0; i < HEADERS.length; i++) {
             sheet.autoSizeColumn(i);
             int currentWidth = sheet.getColumnWidth(i);
             sheet.setColumnWidth(i, (int) (currentWidth * 1.2) + 1000); // Padding
         }
 
-        // B. Definiamo le dimensioni del grafico "Hardcoded" ma equilibrate.
-        // Non tocchiamo più le larghezze delle colonne sottostanti (Chart Start Col ecc).
-        // Usiamo un box di 15 colonne x 30 righe.
-        // Dato che hai ROW_HEIGHT a 26.3f (molto alta), 30 righe coprono una buona altezza verticale.
-        // Questo crea un "Canvas" approssimativamente quadrato/rettangolare standard.
-
+        // B. Chart Canvas
+        // Defines a 15-column x 25-row area for the chart.
         int chartCols = 15;
         int chartRows = 25;
 
         return new int[]{chartCols, chartRows};
     }
 
+    /**
+     * Generates the XDDF Scatter Chart.
+     */
     private void createMultiSeriesChart(XSSFSheet sheet, Map<PlantType, int[]> rangeMap, int anchorRow, int chartCols, int chartRows) {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
+        // Chart placement (to the right of the data table)
         int colStart = 7;
 
-        // Anchor Quadrato basato sui calcoli precedenti
+        // Anchor frame
         XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0,
                 colStart, anchorRow,
                 colStart + chartCols, anchorRow + chartRows
@@ -177,12 +215,12 @@ public class ExcelExporter extends BaseExporter {
         chart.setTitleText("Cultivation Map (By Species)");
         chart.setTitleOverlay(false); // Overlay Titolo
 
-        // Legenda in Overlay
+        // Legend Setup
         XDDFChartLegend legend = chart.getOrAddLegend();
         legend.setPosition(LegendPosition.TOP_RIGHT);
         legend.setOverlay(false);
 
-        // Assi
+        // Axis Setup
         XDDFValueAxis bottomAxis = chart.createValueAxis(AxisPosition.BOTTOM);
         bottomAxis.setTitle("X Position (m)");
         bottomAxis.setCrosses(AxisCrosses.AUTO_ZERO);
@@ -193,20 +231,23 @@ public class ExcelExporter extends BaseExporter {
 
         XDDFScatterChartData data = (XDDFScatterChartData) chart.createData(ChartTypes.SCATTER, bottomAxis, leftAxis);
 
-        // Aggiunta Serie
+        // Series Injection
         for (Map.Entry<PlantType, int[]> entry : rangeMap.entrySet()) {
             PlantType type = entry.getKey();
             int startRow = entry.getValue()[0];
             int endRow = entry.getValue()[1];
 
+            // Create Data Sources from Cell Ranges
             XDDFNumericalDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(startRow, endRow, 3, 3));
             XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(startRow, endRow, 4, 4));
 
+            // Add Series
             XDDFScatterChartData.Series series = (XDDFScatterChartData.Series) data.addSeries(xs, ys);
             series.setTitle(type.getLabel() + " " + type.name(), null);
             series.setMarkerStyle(MarkerStyle.CIRCLE);
             series.setMarkerSize((short) 5);
 
+            // Styling: No line connecting points (Scatter Plot behavior)
             XDDFShapeProperties properties = new XDDFShapeProperties();
             XDDFLineProperties lineProperties = new XDDFLineProperties();
             lineProperties.setFillProperties(new XDDFNoFillProperties());
@@ -217,7 +258,7 @@ public class ExcelExporter extends BaseExporter {
     }
 
     // ==================================================================================
-    // HELPER METHODS & INNER CLASSES
+    // HELPER METHODS
     // ==================================================================================
 
     private void createMetadataRow(XSSFSheet sheet, int rowIndex, String label, String value, CellStyle labelStyle, CellStyle valueStyle) {
@@ -247,8 +288,7 @@ public class ExcelExporter extends BaseExporter {
 
     private void writeChartDisclaimer(XSSFSheet sheet, int startRow, ExcelStyles styles) {
         int startCol = 7;
-        // --- RIGA 1: Avviso ---
-        // Recuperiamo la riga esistente (se c'è la tabella dati) o la creiamo (se siamo sotto)
+
         Row row1 = sheet.getRow(startRow);
         if (row1 == null) {
             row1 = sheet.createRow(startRow);
@@ -257,9 +297,8 @@ public class ExcelExporter extends BaseExporter {
 
         Cell cell1 = row1.createCell(startCol);
         cell1.setCellValue("⚠️ Graph might not be to scale.");
-        cell1.setCellStyle(styles.hint); // Usa lo stile hint che hai già
+        cell1.setCellStyle(styles.hint);
 
-        // --- RIGA 2: Istruzione ---
         Row row2 = sheet.getRow(startRow);
         if (row2 == null) {
             row2 = sheet.createRow(startRow);
@@ -272,8 +311,10 @@ public class ExcelExporter extends BaseExporter {
     }
 
     /**
-     * Inner Class per incapsulare la creazione degli stili.
-     * Mantiene il codice principale pulito.
+     * Static container for Workbook Styles.
+     * <p><strong>Design Pattern:</strong> Encapsulated Context.</p>
+     * Isolates the verbose creation of fonts, colors, and data formats from the main business logic.
+     * Instantiated once per export to ensure style reuse (POI limit optimization).
      */
     private static class ExcelStyles {
         final CellStyle center;
@@ -326,16 +367,16 @@ public class ExcelExporter extends BaseExporter {
             tableHeader.cloneStyleFrom(center);
             tableHeader.setFont(headerFont);
 
-            // 8. Hint (Stile per il disclaimer)
+            // 8. Hint
             hint = workbook.createCellStyle();
             hint.setAlignment(HorizontalAlignment.LEFT);
-            hint.setVerticalAlignment(VerticalAlignment.TOP); // Allineato in alto
-            hint.setWrapText(true); // FONDAMENTALE per il \n
+            hint.setVerticalAlignment(VerticalAlignment.TOP);
+            hint.setWrapText(true); // to \n
 
             Font hintFont = workbook.createFont();
             hintFont.setItalic(true);
-            hintFont.setFontHeightInPoints((short) 10); // Un po' più piccolo
-            hintFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex()); // Grigio discreto
+            hintFont.setFontHeightInPoints((short) 10);
+            hintFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
             hint.setFont(hintFont);
         }
     }

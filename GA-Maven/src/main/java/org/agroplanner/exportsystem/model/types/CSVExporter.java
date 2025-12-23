@@ -18,62 +18,70 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * <p><strong>Concrete Exporter: CSV (Comma Separated Values).</strong></p>
+ * Concrete implementation of the Export Strategy targeting <strong>Comma Separated Values (CSV)</strong>.
  *
- * <p>This strategy exports the solution in a plain text tabular format.
- * It leverages the <strong>Apache Commons CSV</strong> library for robust record handling.</p>
- *
- * <p><strong>File Structure:</strong>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li><strong>Header Section:</strong> Lines starting with '#' containing metadata (Domain, Fitness, etc.).</li>
- * <li><strong>Data Section:</strong> Standard CSV columns (ID, X, Y).</li>
+ * <li><strong>Hybrid Serialization:</strong> Combines raw text writing for metadata with a robust CSV engine
+ * (Apache Commons CSV) for tabular data. This ensures both flexibility and strict format compliance (escaping, quoting).</li>
+ * <li><strong>Interoperability:</strong> The output format is designed to be "Polyglot Friendly".
+ * Metadata lines start with {@code #}, a standard comment marker recognized by data analysis tools
+ * (like Python's {@code pandas}, R, or Gnuplot), allowing them to parse the data table while ignoring the context.</li>
+ * <li><strong>Data Lineage:</strong> Includes the original {@link PlantInventory} and Domain details in the header,
+ * making the file self-documenting (traceable).</li>
  * </ul>
- * </p>
  */
 public class CSVExporter extends BaseExporter {
 
-    /** Standard column headers for the data section. */
+    /**
+     * The schema definition for the data section.
+     */
     private static final String[] HEADERS = {"ID", "TYPE", "LABEL", "X", "Y", "RADIUS"};
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     protected String getExtension() {
         return ExportType.CSV.getExtension();
     }
 
     /**
-     * Writes the CSV file combining raw metadata writing and structured data writing.
+     * Executes the dual-phase writing process (Metadata Header + Data Body).
      *
-     * @param individual The solution to export.
-     * @param domain     The domain context.
-     * @param path       The target file path.
-     * @throws IOException If writing fails.
+     * @param individual The solution genotype to serialize.
+     * @param domain     The constraint context.
+     * @param inventory  The biological context (what was requested).
+     * @param path       The target file location.
+     * @throws IOException If file access fails.
      */
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // Configure the CSV Format (Standard comma separation, defined headers).
+        // Configuration: Standard CSV format with specific headers.
         CSVFormat format = CSVFormat.DEFAULT.builder()
                 .setHeader(HEADERS)
                 .build();
 
-        // Open a buffered writer. We use this directly for metadata, then wrap it in the CSVPrinter.
+        // Resource Management:
+        // We open a BufferedWriter first to handle the unstructured metadata section.
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
 
-            // --- METADATA HEADER (Manual Writing) ---
-            // Implementation Choice:
-            // We write metadata as comments ('#'). This allows humans to read context about the solution
-            // (e.g., "What fitness did this have?") while allowing most CSV parsers to skip these lines
-            // and read the data table correctly.
+            // --- PHASE 1: METADATA HEADER (Unstructured) ---
+            // Writing context information as comments (#).
 
-            writer.write("# Domain Info: " + domain.toString());
+            writer.write("# --------------------------------------------------");
+            writer.newLine();
+            writer.write("# AGROPLANNER EXPORT - RAW DATA");
+            writer.newLine();
+            writer.write("# Domain: " + domain.toString());
             writer.newLine();
 
-            // Write the "Shopping List" (What was requested)
+            // Traceability: Log the requested inventory vs the result
             writer.write("# Inventory Configuration:");
             writer.newLine();
-
             for (InventoryEntry entry : inventory.getEntries()) {
-                // Esempio output: # - TOMATO (🍅): 50 units, r=1.50
+                // # - TOMATO (🍅): 50 units, r=1.50
                 writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2fm",
                         entry.getType().name(),      // Nome
                         entry.getType().getLabel(),  // Emoji
@@ -83,18 +91,17 @@ public class CSVExporter extends BaseExporter {
                 writer.newLine();
             }
 
-            writer.write("# Total Plants: " + individual.getDimension());
+            // Solution Metrics
+            writer.write("# Total Plants Placed: " + individual.getDimension());
             writer.newLine();
-
-            writer.write(String.format(Locale.US, "# Fitness: %.6f", individual.getFitness()));
+            writer.write(String.format(Locale.US, "# Final Fitness: %.6f", individual.getFitness()));
             writer.newLine();
+            writer.write("# --------------------------------------------------");
+            writer.newLine(); // Blank line separation
 
-            // Visual separator before data
-            writer.newLine();
-            // ----------------------------------
-
-            // --- DATA TABLE (Library Writing) ---
-            // We attach the CSVPrinter to the *same* underlying writer to continue the file.
+            // --- PHASE 2: DATA TABLE (Structured) ---
+            // We wrap the existing writer in a CSVPrinter.
+            // Note: Closing the printer will close the writer, which is handled by the try-with-resources.
             try (CSVPrinter printer = new CSVPrinter(writer, format)) {
                 List<Point> points = individual.getChromosomes();
                 int index = 0;
@@ -102,11 +109,11 @@ public class CSVExporter extends BaseExporter {
                 for (Point point : points) {
                     printer.printRecord(
                             index,
-                            point.getType().name(),    // Per parsing (TOMATO)
-                            point.getType().getLabel(), // Per umani (🍅)
-                            point.getX(),
-                            point.getY(),
-                            point.getRadius()
+                            point.getType().name(),     // Machine-readable ID (e.g., TOMATO)
+                            point.getType().getLabel(), // Human-readable Icon (e.g., 🍅)
+                            point.getX(),               // Coordinate X
+                            point.getY(),               // Coordinate Y
+                            point.getRadius()           // Radius used
                     );
                     index++;
                 }

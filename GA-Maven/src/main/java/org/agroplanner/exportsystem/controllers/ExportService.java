@@ -17,27 +17,22 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * <p><strong>Service Layer for Data Export.</strong></p>
+ * Service component responsible for the business logic of data persistence.
  *
- * <p>This class acts as a facade between the Controller and the specific file generation logic.
- * It orchestrates the export process by delegating to the appropriate {@link BaseExporter} implementation
- * via the {@link ExporterFactory}.</p>
- *
- * <p><strong>Key Responsibilities:</strong></p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li><strong>Exception Translation:</strong> Catches low-level {@link java.io.IOException} and wraps them
- * into high-level {@link ExportException} to decouple the Controller from I/O details.</li>
- * <li><strong>Orchestration:</strong> Manages the lifecycle of the export operation (setup, write, close).</li>
+ * <li><strong>Pattern:</strong> Facade / Service Layer. It sits between the UI Controller and the complex
+ * Factory/Strategy logic, providing a simplified API for exporting data.</li>
+ * <li><strong>Responsibility:</strong> Handles Input Sanitization (Security), Lifecycle Management,
+ * and Error Handling (Exception Translation).</li>
+ * <li><strong>Statelessness:</strong> This class contains no mutable state, making it thread-safe and
+ * cheap to instantiate (default constructor).</li>
  * </ul>
- *
- * <p><strong>Instantiation Strategy:</strong></p>
- * <p>This service is <strong>stateless</strong>. It relies on the Java implicit default constructor.
- * No complex dependency injection or initialization is required.</p>
  */
 public class ExportService {
 
     /**
-     * Retrieves the list of supported export formats.
+     * Retrieves the catalog of supported export formats.
      * @return A list of all available {@link ExportType}s.
      */
     public List<ExportType> getAvailableExportTypes() {
@@ -45,26 +40,38 @@ public class ExportService {
     }
 
     /**
-     * Executes the export process with robust validation and error handling.
+     * Orchestrates the export workflow with rigorous validation and error handling.
      *
-     * @param solution The data to save.
-     * @param domain   The context.
-     * @param type     The selected format (CSV, Excel, etc.).
-     * @param filename The target filename (user input).
-     * @return The absolute path of the saved file.
-     * @throws InvalidInputException If the filename is invalid or malicious.
-     * @throws ExportException       If the writing process fails (e.g., disk full, permission denied).
+     * <p><strong>Security Strategy (Input Sanitization):</strong></p>
+     * Implements "Deep Protection" by validating the filename against a whitelist/blacklist regex.
+     * This prevents:
+     * <ul>
+     * <li><strong>Filesystem Corruption:</strong> Using reserved characters (e.g., {@code :}, {@code *}, {@code ?}).</li>
+     * <li><strong>Directory Traversal:</strong> Using {@code ../} or {@code /} to write outside the sandbox (though strict regex catches this).</li>
+     * </ul>
+     *
+     * <p><strong>Exception Translation:</strong></p>
+     * Catches low-level {@link IOException} (Checked) and re-throws high-level {@link ExportException} (Unchecked).
+     * This keeps the Controller clean from {@code try-catch} blocks related to disk I/O details.
+     *
+     * @param solution  The genotype/phenotype data to persist.
+     * @param domain    The geometric context.
+     * @param inventory The biological context.
+     * @param type      The desired output format.
+     * @param filename  The user-provided target name.
+     * @return The absolute path of the generated artifact.
+     * @throws InvalidInputException If inputs are null, empty, or contain illegal characters.
+     * @throws ExportException       If the underlying write operation fails (Disk full, Permission denied).
      */
     public String performExport(Individual solution, Domain domain, PlantInventory inventory, ExportType type, String filename) {
 
-        // --- DEEP PROTECTION: Input Sanitation ---
-        // Even if the View performs checks, the Service layer must defend itself.
+        // --- PHASE 1: DEEP PROTECTION (Validation) ---
+        // Even if the View performs checks, the Service layer acts as the final gatekeeper.
         if (filename == null || filename.isBlank()) {
             throw new InvalidInputException("Filename cannot be empty or null.");
         }
 
-        // Security Check: Prevent directory traversal or illegal characters.
-        // Regex matches strictly forbidden characters on Windows/Linux (< > : " / \ | ? *).
+        // Security Regex: Blocks common illegal filesystem characters (< > : " / \ | ? *).
         if (filename.matches(".*[<>:\"/\\\\|?*].*")) {
             throw new InvalidInputException("Filename contains illegal characters (< > : \" / \\ | ? *).");
         }
@@ -73,57 +80,57 @@ public class ExportService {
             throw new InvalidInputException("Cannot export a null solution.");
         }
         if (inventory == null) {
-            // Se l'inventario è null, gli exporter falliranno nel loop dei metadati
             throw new InvalidInputException("PlantInventory cannot be null.");
         }
         if (inventory.getTotalPopulationSize() == 0) {
-            // Opzionale: impedire export di report vuoti
             throw new InvalidInputException("Inventory is empty, nothing to report.");
         }
 
-        // --- EXECUTION & ERROR WRAPPING ---
+        // --- PHASE 2: EXECUTION & ERROR WRAPPING ---
         try {
-            // Get the specific strategy from the factory
+            // 1. Factory Dispatch: Get the correct strategy
             BaseExporter exporter = ExporterFactory.getInstance().createExporter(type);
 
-            // Execute the template method.
-            // If export() throws IOException, we catch it here.
+            // 2. Template Method Execution: Delegate logic to the exporter
             return exporter.export(solution, domain, inventory, filename);
 
         } catch (IOException e) {
             // --- EXCEPTION TRANSLATION ---
-            // Pattern: Wrap the low-level technical exception (IOException) into a high-level
-            // domain exception (ExportException). This decouples the caller from java.io details.
+            // Convert technical failure (IO) into domain failure (ExportException).
             throw new ExportException("Failed to save file to disk. Check permissions or disk space.", e);
 
         } catch (Exception e) {
-            // Safety Net: Catch unexpected bugs inside specific exporters.
+            // Safety Net: Catch runtime bugs inside specific exporter implementations.
             throw new ExportException("Unexpected error during export process: " + e.getMessage(), e);
         }
     }
 
     /**
-     * Checks if a file with the given name and type already exists in the export directory.
-     * Used by the Controller to trigger the Overwrite/Rename dialog.
+     * Pre-checks file existence to enable "Overwrite Confirmation" logic in the UI.
+     *
+     * <p><strong>Logic:</strong></p>
+     * Replicates the path resolution logic of {@link BaseExporter} to check the exact target location
+     * without actually opening/creating the file.
      *
      * @param type     The export format (determines the extension).
-     * @param filename The user-provided filename (without extension).
-     * @return true if the file exists, false otherwise.
+     * @param filename The raw user input.
+     * @return {@code true} if a file collision is detected, {@code false} otherwise.
      */
     public boolean checkFileExists(ExportType type, String filename) {
         if (filename == null || filename.isBlank()) return false;
 
-        // 1. Prendi l'estensione direttamente dall'Enum (veloce e pulito)
+        // 1. Resolve Extension
         String extension = type.getExtension();
 
-        // 2. Normalizza il nome
+        // 2. Normalize Filename
         if (!filename.toLowerCase().endsWith(extension)) {
             filename += extension;
         }
 
-        // 3. Usa la costante statica di BaseExporter per la cartella
+        // 3. Construct Path (using the shared constant)
         Path targetPath = Paths.get(BaseExporter.EXPORT_FOLDER, filename);
 
+        // 4. Check Existence
         return Files.exists(targetPath);
     }
 

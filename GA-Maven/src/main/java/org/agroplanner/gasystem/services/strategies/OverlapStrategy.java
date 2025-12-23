@@ -6,23 +6,32 @@ import org.agroplanner.shared.utils.DistanceCalculator;
 import java.util.List;
 
 /**
- * <p><strong>Strategy Interface for Collision Detection.</strong></p>
+ * Defines the contract for collision detection algorithms using the <strong>Strategy Pattern</strong>.
  *
- * <p>This interface defines the contract for algorithms responsible for quantifying geometric overlaps.
- * It implements the <strong>Strategy Pattern</strong>, allowing the {@code FitnessCalculator} to dynamically
- * switch between different implementations (e.g., O(N²) Brute Force vs. O(N) Spatial Hashing)
- * based on the problem size (population density).</p>
+ * <p><strong>Architecture & Performance:</strong></p>
+ * This interface decouples the <em>definition</em> of overlap calculation from its <em>implementation</em>.
+ * It enables <strong>Algorithmic Polymorphism</strong>, allowing the system to select the most efficient
+ * computational complexity (Time Complexity vs Space Complexity trade-off) at runtime.
+ * <ul>
+ * <li>For small $N$, a quadratic approach (O(N^2)) might be faster due to lower constant factors.</li>
+ * <li>For large $N$, a linear approach (O(N)) using spatial indexing is required to maintain scalability.</li>
+ * </ul>
  */
 public interface OverlapStrategy {
 
     /**
-     * Computes the total penalty resulting from overlapping points in the chromosome list.
+     * Quantifies the total geometric conflict within a set of points.
      *
-     * @param chromosomes        The list of geometric points (genes) to evaluate.
-     * @param overlapWeight      The scalar weight applied to the raw overlap magnitude.
-     * Higher weights make collisions more "expensive" for the evolution.
-     * @param distanceCalculator The utility used to compute Euclidean distances between points.
-     * @return The total accumulated penalty score (0.0 means no overlaps).
+     * <p><strong>Contract:</strong></p>
+     * Implementations must iterate through the population of points and identify pairs that violate
+     * the "hard sphere" constraint (distance < sum of radii). The severity of the violation is then
+     * scaled by the {@code overlapWeight}.
+     *
+     * @param chromosomes        The list of genes (Points) representing the candidate solution.
+     * @param overlapWeight      The penalty multiplier (Sensitivity). A high weight creates a steep
+     * fitness landscape gradient, forcing the solver to prioritize separation.
+     * @param distanceCalculator The service for Euclidean metric computation.
+     * @return A non-negative double representing the cumulative penalty. Returns {@code 0.0} if the configuration is valid (collision-free).
      */
     double calculateOverlap(
             List<Point> chromosomes,

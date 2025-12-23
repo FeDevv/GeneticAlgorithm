@@ -9,14 +9,17 @@ import java.time.Duration;
 import java.time.Instant;
 
 /**
- * <p><strong>UI Controller for the Evolutionary Subsystem.</strong></p>
+ * Controller component orchestrating the interactive evolutionary session.
  *
- * <p>This controller orchestrates the execution of the Genetic Algorithm in a user-interactive session.
- * Its primary responsibility is managing the <strong>"Retry Loop"</strong> strategy:</p>
+ * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li>It triggers the calculation via the {@link EvolutionService}.</li>
- * <li>It evaluates the success of the result (checking validity).</li>
- * <li>It decides whether to accept the solution, retry (if invalid), or abort (if attempts are exhausted).</li>
+ * <li><strong>Pattern:</strong> Session Controller. It manages the lifecycle of a specific computation request,
+ * handling user feedback, retries, and final result validation.</li>
+ * <li><strong>Stochastic Mitigation (Retry Loop):</strong> Genetic Algorithms are non-deterministic. A run might fail
+ * simply due to a bad random seed ("unlucky initialization"). This controller implements an automatic
+ * <em>Retry Strategy</em> to smooth out statistical variance before reporting failure to the user.</li>
+ * <li><strong>Fail-Fast Policy:</strong> While it retries on <em>Quality</em> failures (invalid solutions),
+ * it fails immediately on <em>System</em> failures (Timeouts), preventing UI freezes on computationally infeasible inputs.</li>
  * </ul>
  */
 public class EvolutionConsoleController {
@@ -29,18 +32,19 @@ public class EvolutionConsoleController {
     // ------------------- CONFIGURATION -------------------
 
     /**
-     * The maximum number of times the system will try to find a valid solution
-     * before declaring a critical failure.
+     * The persistence threshold.
+     * <p>Defines how many times the system attempts to find a valid solution.
+     * Value 3 is chosen as a trade-off between robustness (fixing bad seeds) and user latency.</p>
      */
     private static final int MAX_RETRY_ATTEMPTS = 3;
 
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Initializes the controller.
+     * Initializes the controller with required subsystems.
      *
-     * @param view    The abstraction of the UI.
-     * @param service The business logic engine.
+     * @param view    The IO handler.
+     * @param service The evolutionary engine.
      */
     public EvolutionConsoleController(EvolutionViewContract view, EvolutionService service) {
         this.view = view;
@@ -50,26 +54,24 @@ public class EvolutionConsoleController {
     // ------------------- FLOW LOGIC -------------------
 
     /**
-     * Runs the evolutionary session with automatic retries.
+     * Executes the evolutionary process with built-in fault tolerance.
      *
-     * <p><strong>Process Flow:</strong>
+     * <p><strong>Algorithm:</strong></p>
      * <ol>
-     * <li>Display Start Message.</li>
-     * <li><strong>Attempt Loop (Max 3):</strong>
+     * <li><strong>Execution:</strong> Invokes the Evolution Service.</li>
+     * <li><strong>Validation:</strong> Checks if the best individual found satisfies all hard constraints.</li>
+     * <li><strong>Branching:</strong>
      * <ul>
-     * <li>Execute Evolution Cycle (Heavy Computation).</li>
-     * <li>Check Validity (Constraints).</li>
-     * <li>If Valid -> Return Success.</li>
-     * <li>If Invalid -> Show Warning and Retry.</li>
+     * <li><em>Success:</em> Returns the solution immediately.</li>
+     * <li><em>Soft Failure (Invalid Solution):</em> Increments attempt counter and Retries (if attempts < Max).</li>
+     * <li><em>Hard Failure (Timeout):</em> Propagates exception immediately (No Retry).</li>
      * </ul>
      * </li>
-     * <li>If all attempts fail -> Throw Critical Exception.</li>
      * </ol>
-     * </p>
      *
      * @return The best valid {@link Individual} found.
-     * @throws EvolutionTimeoutException    If the calculation exceeds the time budget (Rethrown immediately).
-     * @throws MaxAttemptsExceededException If the system fails to find a valid solution after N attempts.
+     * @throws EvolutionTimeoutException    If the calculation exceeds the time budget. Not caught locally to enforce "Fail Fast".
+     * @throws MaxAttemptsExceededException If the system fails to converge to a valid solution after N attempts.
      */
     public Individual runEvolution() throws EvolutionTimeoutException, MaxAttemptsExceededException {
         view.showEvolutionStart();
@@ -82,54 +84,44 @@ public class EvolutionConsoleController {
             currentAttempt++;
             Instant start = Instant.now();
 
-            // EXECUTION: Delegate heavy lifting to the Service
-            // This blocks until the cycle finishes or timeouts.
+            // STEP 1: EXECUTION
+            // Delegate heavy lifting to the Service.
+            // This blocking call might throw EvolutionTimeoutException.
             lastSolution = service.executeEvolutionCycle();
-            // EXECUTION & TIMEOUT MANAGEMENT
-            // We purposefully do NOT catch EvolutionTimeoutException here.
-            // Logic:
-            // 1. If the Service enforces a timeout, it means the calculation is stuck.
-            // 2. We apply the "Fail Fast" principle: immediately bubble up the exception
-            //    to the MainController to abort the session and free resources.
-            // 3. Retrying locally (looping) after a timeout is usually futile and risks freezing the UI.
+
+            // Note on Timeout Handling:
+            // it is intentional to NOT catch EvolutionTimeoutException here.
+            // If the service times out, it indicates a resource exhaustion or excessive complexity.
+            // Retrying would likely result in another timeout, degrading UX.
+            // Therefore, we let the exception bubble up to abort the session.
 
             Instant end = Instant.now();
             double durationMs = Duration.between(start, end).toMillis();
             totalTimeMs += durationMs;
 
-            // VALIDATION: Check if the best solution found is actually valid.
-            // It might happen that the algorithm converged but couldn't solve all point positions.
+            // STEP 2: VALIDATION
+            // Even if the GA finished, the "Best" solution might still have minor overlaps
+            // or boundary violations if the penalty didn't drive fitness high enough.
             if (service.isValidSolution(lastSolution)) {
-                // SUCCESS: Valid solution found
+                // SUCCESS CASE:
                 view.showSuccess(currentAttempt, totalTimeMs / 1000.0);
                 return lastSolution;
             }
 
-            // FAILURE (Recoverable): Invalid solution.
-            // We warn the user and loop again (if attempts remain).
+            // STEP 3: RECOVERY (Soft Failure)
+            // The algorithm converged, but the solution is technically invalid.
+            // This might be due to a local optimum. We try again with a new random seed (implicit in next call).
             view.showRetryWarning(currentAttempt, MAX_RETRY_ATTEMPTS, durationMs / 1000.0);
 
         } while (currentAttempt < MAX_RETRY_ATTEMPTS);
 
 
         // ==================================================================================
-        // CRITICAL FAILURE HANDLING STRATEGY (Bubble-Up)
+        // STEP 4: CRITICAL FAILURE (Exhausted Strategy)
         // ==================================================================================
-        // Why do we throw exceptions here instead of handling them?
-        //
-        // 1. EXHAUSTED RECOVERY: The 'do-while' loop above IS the local recovery mechanism.
-        //    If we exit the loop, it means the algorithm failed to converge even after
-        //    MAX_RETRY_ATTEMPTS. The controller has done all it can.
-        //
-        // 2. FLOW CONTROL: By throwing the exception to the MainController, we trigger
-        //    a clean "Session Abort" and reset. If we caught it here, we would have to
-        //    return null/Optional, forcing the MainController to perform null-checks.
-        //    Exceptions provide a cleaner control flow for fatal errors.
-        // ==================================================================================
-
-        // CRITICAL FAILURE (Exhausted Attempts)
-        // If we exit the loop, it means we failed N times.
-        // We construct a detailed error report and abort the session.
+        // If we reach this point, the probabilistic recovery failed N times.
+        // We act as a Gateway: throwing a checked exception forces the MainController
+        // to handle the "Session Abort" flow cleanly.
         String failureDetails = String.format(
                 "Converge failed after %d attempts (%.2fs).%n   -> Best invalid fitness found: %.6f",
                 MAX_RETRY_ATTEMPTS,

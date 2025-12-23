@@ -6,52 +6,76 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * <p><strong>View Contract for the Export Subsystem.</strong></p>
+ * Defines the abstract contract for the Presentation Layer of the Data Export subsystem.
  *
- * <p>This interface defines the interactions required to perform a file export.
- * It abstracts the specific UI implementation (Console, GUI, etc.) from the Controller logic.</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> View Interface (Dependency Inversion). It decouples the {@link org.agroplanner.exportsystem.controllers.ExportConsoleController}
+ * from the specific input/output mechanism (CLI, Swing, Web).</li>
+ * <li><strong>Role:</strong> Manages the "Export Wizard" interaction flow, including format selection,
+ * filename entry, and critical decision-making (collision resolution).</li>
+ * </ul>
  */
 public interface ExportViewContract {
 
+    /**
+     * Renders the list of supported export formats to the user.
+     * @param types The list of available {@link ExportType}s from the model.
+     */
     void showAvailableExports(List<ExportType> types);
 
     /**
-     * Prompts the user to select an export format from a list of available options.
+     * Captures the user's preferred output format.
      *
-     * @param availableTypes The list of supported {@link ExportType}s to display.
-     * @return An {@link Optional} containing the selected type, or {@code Optional.empty()}
-     * if the user chooses to cancel/skip the export process.
+     * <p><strong>Flow Control:</strong></p>
+     * Returns an {@link Optional} to represent the "Exit/Cancel" scenario gracefully.
+     * If the user chooses to abort the wizard, this returns {@code empty()}, allowing the Controller
+     * to terminate the loop cleanly without using exceptions or null checks.
+     *
+     * @param availableTypes The list of valid options.
+     * @return The selected type, or {@code empty()} if cancelled.
      */
     Optional<ExportType> askForExportType(List<ExportType> availableTypes);
 
     /**
-     * Prompts the user to enter a name for the destination file.
-     * <p>
-     * <strong>Note:</strong> The user is expected to enter only the name (e.g., "results").
-     * The file extension is automatically handled by the specific Exporter.
-     * </p>
+     * Captures the desired filename for the export.
      *
-     * @return The string entered by the user.
+     * <p><strong>UX Contract:</strong></p>
+     * The view must inform the user that the file extension should be omitted,
+     * as it is handled automatically by the backend Strategy based on the selected format.
+     *
+     * @return The raw filename string entered by the user.
      */
     String askForFilename();
 
     /**
-     * Displays a success notification, informing the user where the file was saved.
+     * Displays visual confirmation of the successful persistence operation.
      *
-     * @param filePath The absolute path of the generated file.
+     * @param filePath The absolute file system path of the generated artifact.
      */
     void showSuccessMessage(String filePath);
 
     /**
-     * Displays an error message to the user.
-     * <p>
-     * Used for both validation errors (e.g., invalid characters in filename)
-     * and system errors (e.g., disk full, permission denied).
-     * </p>
+     * Renders error feedback to the user.
+     * Used for both validation errors (e.g., bad characters) and system exceptions (e.g., IO failure).
      *
-     * @param message The error details to display.
+     * @param message The descriptive error text.
      */
     void showErrorMessage(String message);
 
+    /**
+     * Handles file name collision scenarios (Data Safety).
+     *
+     * <p><strong>Protocol:</strong></p>
+     * Triggered when the Controller detects that the target file already exists.
+     * The View must present the user with a choice:
+     * <ul>
+     * <li><strong>True (Overwrite):</strong> The user explicitly authorizes data destruction/replacement.</li>
+     * <li><strong>False (Rename/Cancel):</strong> The user wants to preserve the existing file.</li>
+     * </ul>
+     *
+     * @param filename The name of the conflicting file.
+     * @return {@code true} to proceed with overwrite, {@code false} to abort/rename.
+     */
     boolean askOverwriteOrRename(String filename);
 }

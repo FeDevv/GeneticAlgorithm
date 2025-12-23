@@ -24,19 +24,25 @@ import java.util.Optional;
 import java.util.Scanner;
 
 /**
- * <p><strong>The Main UC Orchestrator.</strong></p>
+ * The <strong>UC Orchestrator</strong> (Main Controller).
  *
- * <p>This controller manages the high-level lifecycle of the UC.
- * It acts as a <strong>Mediator</strong> between the three main subsystems:</p>
+ * <p><strong>Architecture & Design:</strong></p>
+ * <ul>
+ * <li><strong>Pattern:</strong> Mediator. This class coordinates the interaction between four independent subsystems:
  * <ol>
- * <li><strong>Domain Subsystem:</strong> Definition of the geometric problem.</li>
- * <li><strong>Genetic Subsystem:</strong> Search for the optimal solution.</li>
- * <li><strong>Export Subsystem:</strong> Persistence of results.</li>
+ * <li><strong>Domain System:</strong> Geometry definition.</li>
+ * <li><strong>Inventory System:</strong> Biological requirements.</li>
+ * <li><strong>GA System:</strong> Optimization engine.</li>
+ * <li><strong>Export System:</strong> Result persistence.</li>
  * </ol>
- *
- * <p><strong>Resiliency Pattern:</strong> It implements a "Global Safety Net" (try-catch loop)
- * ensuring that exceptions in one session do not crash the entire JVM, allowing the user
- * to restart immediately.</p>
+ * None of these subsystems know about each other; they communicate exclusively through this controller, ensuring loose coupling.
+ * </li>
+ * <li><strong>Resiliency (Global Safety Net):</strong> Implements a high-level {@code try-catch} loop that wraps
+ * the entire user session. This guarantees that unhandled exceptions (like Timeouts or Input Errors)
+ * abort the current session gracefully rather than crashing the JVM.</li>
+ * <li><strong>Resource Ownership:</strong> Manages the lifecycle of shared infrastructure, specifically the
+ * {@link Scanner} attached to {@code System.in}, preventing "Stream Closed" errors common in CLI apps.</li>
+ * </ul>
  */
 public class OptimizerConsoleController {
 
@@ -46,6 +52,7 @@ public class OptimizerConsoleController {
     private final OptimizerViewContract optView;
 
     // ------------------- STATELESS SERVICES -------------------
+    // Pre-instantiated services that don't hold session state.
 
     private final DomainService domainService;
     private final ExportService exportService;
@@ -53,17 +60,19 @@ public class OptimizerConsoleController {
     // ------------------- CONSTRUCTOR -------------------
 
     /**
-     * Initializes the main controller and shared infrastructure.
+     * Bootstraps the application controller.
+     * <p>Initializes the shared input stream and the top-level view.</p>
      */
     public OptimizerConsoleController() {
-        // Shared Input Source (System.in)
-        // We open it once here and pass it down to all sub-controllers.
+        // Resource Management:
+        // We open System.in ONCE here and pass it down to all sub-controllers.
+        // This is crucial because closing a Scanner wrapper also closes the underlying stream.
         this.scanner = new Scanner(System.in);
 
         // Main View
         this.optView = new ConsoleOptimizerView(scanner);
 
-        // Service Initialization
+        // Core Services Setup
         this.domainService = new DomainService();
         this.exportService = new ExportService();
     }
@@ -71,39 +80,40 @@ public class OptimizerConsoleController {
     // ------------------- MAIN LOOP -------------------
 
     /**
-     * Starts the UC loop.
+     * Starts the main application loop.
+     *
+     * <p><strong>Lifecycle:</strong></p>
+     * Keeps the application alive across multiple problem-solving sessions until the user explicitly requests exit.
      */
     public void run() {
         optView.showWelcomeMessage();
 
-        // 1. Variabile di controllo del ciclo
         boolean isRunning = true;
 
         // --- SESSION LOOP ---
-        // Keeps the UC alive across multiple problem-solving sessions.
         while (isRunning) {
 
-            // GLOBAL SAFETY NET:
-            // Wraps the entire logic of a single session. If anything goes wrong inside
-            // (Domain creation, Evolution, Export), the exception bubbles up here,
-            // is logged, and the loop restarts cleanly.
+            // GLOBAL SAFETY NET
+            // Protects the loop from crashing. Any error resets the flow to the beginning of the loop.
             try {
 
                 optView.showNewSessionMessage();
 
                 // ====================================================
-                // PHASE 1: DOMAIN DEFINITION (Subsystem A)
+                // PHASE 1: DOMAIN DEFINITION (Geometry)
                 // ====================================================
 
+                // Manual Dependency Injection (Wiring):
+                // We inject the View and Service into the Controller.
                 DomainConsoleController domainController = new DomainConsoleController(
                         new ConsoleDomainView(scanner),
                         domainService
                 );
 
-                // Run the Domain Wizard
+                // Execution:
                 Optional<Domain> domainOpt = domainController.runDomainCreationWizard();
 
-                // Handle Exit Request
+                // Exit Guard: User cancelled domain creation
                 if (domainOpt.isEmpty()) {
                     optView.showExitMessage();
                     isRunning = false; // Breaks the while loop -> Application Shutdown
@@ -114,50 +124,47 @@ public class OptimizerConsoleController {
 
 
                 // ====================================================
-                // PHASE 2: PARAMETER CONFIGURATION
+                // PHASE 2: INVENTORY CONFIGURATION (Biology)
                 // ====================================================
 
-                // Logic: Calculate strict constraints based on the chosen domain.
+                // Logic Bridge: Domain Service calculates constraints for the Inventory.
                 double maxPhysRadius = domainService.calculateMaxValidRadius(problemDomain);
 
-                // 2. Istanziamo il Sottosistema Inventory (Controller + View)
-                // Nota: Passiamo lo stesso 'scanner' per non chiudere lo stream System.in
                 InventoryConsoleController inventoryController = new InventoryConsoleController(
                         new ConsoleInventoryView(scanner)
                 );
 
-                // 3. Deleghiamo il lavoro e riceviamo il Bean pronto
+                // Execution:
                 PlantInventory inventory = inventoryController.runInventoryWizard(maxPhysRadius);
 
                 // ====================================================
-                // PHASE 3: EVOLUTION (Subsystem B)
+                // PHASE 3: EVOLUTION (Optimization)
                 // ====================================================
 
-                // ⚠️ DEEP PROTECTION CHECKPOINT:
-                // Instantiating the EvolutionService triggers strict validation logic.
-                // If parameters (size, radius) are incoherent, an InvalidInputException is thrown here.
+                // ⚠️ DEEP PROTECTION: Service Instantiation
+                // This constructor validates that the Inventory physically fits in the Domain.
+                // Throws InvalidInputException if constraints are violated.
                 EvolutionService evolutionService = new EvolutionService(
                         problemDomain,
                         inventory
                 );
 
                 EvolutionConsoleController evolutionController = new EvolutionConsoleController(
-                        new ConsoleEvolutionView(), // View is stateless/simple here
+                        new ConsoleEvolutionView(), // Pure output view, no scanner needed here
                         evolutionService
                 );
 
-                // Run the Evolution Engine (Blocking call)
-                // Can throw MaxAttemptsExceededException or EvolutionTimeoutException
+                // Execution (Heavy Computation):
                 Individual bestSolution = evolutionController.runEvolution();
 
-                // Show Results
+                // Immediate Feedback:
                 optView.showSolutionValue(bestSolution.getFitness());
                 if (optView.askIfPrintChromosome()) {
                     optView.printSolutionDetails(bestSolution.toString());
                 }
 
                 // ====================================================
-                // PHASE 4: EXPORT (Subsystem C)
+                // PHASE 4: EXPORT
                 // ====================================================
 
                 ExportConsoleController exportController = new ExportConsoleController(
@@ -165,67 +172,44 @@ public class OptimizerConsoleController {
                         exportService
                 );
 
+                // Execution:
                 exportController.runExportWizard(bestSolution, problemDomain, inventory);
 
-                // --- 5. EXIT CHECK  ---
-                // Chiediamo se vuole ricominciare.
+                // ====================================================
+                // PHASE 5: TEARDOWN / RESTART
+                // ====================================================
+
                 boolean restart = optView.askForNewSession();
 
                 if (!restart) {
-                    // Se dice NO, mostriamo i saluti e rompiamo il ciclo infinito.
                     optView.showExitMessage();
                     isRunning = false;
                 }
-                // Se dice SÌ, il loop ricomincia da capo (showNewSessionMessage...)
-
-                // ====================================================
-                // ERROR HANDLING (Session Recovery)
-                // ====================================================
 
             } catch (MaxAttemptsExceededException e) {
-                // Scenario: Algorithm failed to converge after N retries.
+                // Recovery: Algorithm divergence.
                 optView.showSessionAborted(e.getMessage());
-                // Loop continues -> New Session
+                // Loop continues...
 
             } catch (InvalidInputException e) {
-                // Scenario: User entered valid numbers, but invalid logic (e.g. radius > domain size).
-                // Caught here thanks to Deep Protection in Service constructors.
+                // Recovery: Logical configuration error (e.g. Plants too big).
                 optView.showSessionAborted("Configuration Error: " + e.getMessage());
-                // Loop continues -> New Session
+                // Loop continues...
 
             } catch (EvolutionTimeoutException e) {
-                // Scenario: The calculation took too long.
+                // Recovery: Computation timeout.
                 optView.showSessionAborted("⏱️ TIME LIMIT REACHED: " + e.getMessage());
-                // Loop continues -> New Session
+                // Loop continues...
 
             } catch (Exception e) {
-                // Scenario: Unexpected Crash (NPE, OOM, etc.)
+                // Recovery: Unexpected Runtime Exception (The generic catch-all).
                 optView.showSessionAborted("Critical System Error: " + e);
                 //e.printStackTrace(); // Helpful for debugging
-                // Loop continues -> New Session
+                // Loop continues...
             }
         }
 
         // Cleanup
         scanner.close();
     }
-    // ==================================================================================
-    // ARCHITECTURAL NOTE: MANUAL DEPENDENCY INJECTION (WIRING)
-    // ==================================================================================
-    // Rationale for instantiating Views here and injecting them into Controllers:
-    //
-    // 1. DECOUPLING (Inversion of Control):
-    //    Controllers depend on 'View Interfaces' (e.g., DomainView), not concrete implementations.
-    //    This ensures the Business Logic is not hard-coded to the Console. We could swap
-    //    'ConsoleDomainView' with a 'JavaFXDomainView' without changing a single line of the Controller.
-    //
-    // 2. TESTABILITY:
-    //    By injecting the View from the outside, we can easily pass a "MockView" during Unit Tests.
-    //    This allows testing the Controller flow without blocking on real user input.
-    //
-    // 3. RESOURCE MANAGEMENT (The Scanner Issue):
-    //    We rely on a SINGLE shared 'Scanner' for System.in to prevent stream closure issues.
-    //    The MainController acts as the "Orchestrator" (Wiring), passing this shared resource
-    //    safely to the Views, keeping the Controllers clean of low-level I/O details.
-    // ==================================================================================
 }
