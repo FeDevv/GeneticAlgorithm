@@ -3,9 +3,12 @@ package org.agroplanner.persistence;
 import org.agroplanner.boot.model.PersistenceType;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Properties;
 
 /**
  * Singleton wrapper for the JDBC connection to the embedded H2 database.
@@ -19,10 +22,34 @@ public class DBConnection {
     private Connection activeConnection = null;
     private String connectionUrl = null;
 
-    // Default credentials for H2 Embedded
-    private static final String USER = "sa";
-    private static final String PASSWORD = "ISPW2025_2026";
-    private static final String DISK_URL = "jdbc:h2:./agri_db";
+    private static String dbUser;
+    private static String dbPassword;
+    private static String dbUrl;
+
+    static {
+        // search in classpath (src/main/res)
+        try (InputStream input = DBConnection.class.getClassLoader().getResourceAsStream("db.properties")) {
+
+            Properties prop = new Properties();
+
+            if (input == null) {
+                // default on error
+                System.err.println("WARNING: db.properties non trovato in resources. Uso credenziali di default.");
+                dbUser = "sa";
+                dbPassword = "ISPW2025_2026";
+                dbUrl = "jdbc:h2:./agri_db";
+            } else {
+                // normal behaviour
+                prop.load(input);
+                dbUser = prop.getProperty("db.user");
+                dbPassword = prop.getProperty("db.password");
+                dbUrl = prop.getProperty("db.url");
+            }
+
+        } catch (IOException e) {
+            throw new DataPersistenceException("Errore critico leggendo db.properties", e);
+        }
+    }
 
     private DBConnection() {
         // Enforce non-instantiability
@@ -54,7 +81,7 @@ public class DBConnection {
 
         try {
             if (activeConnection == null || activeConnection.isClosed()) {
-                activeConnection = DriverManager.getConnection(connectionUrl, USER, PASSWORD);
+                activeConnection = DriverManager.getConnection(connectionUrl, dbUser, dbPassword);
             }
         } catch (SQLException e) {
             throw new DataPersistenceException("Unable to establish connection to H2 Database.", e);
@@ -85,7 +112,7 @@ public class DBConnection {
 
         // 2. Set URL only if Database mode is requested
         if (type == PersistenceType.DATABASE) {
-            this.connectionUrl = DISK_URL;
+            this.connectionUrl = dbUrl;
         }
     }
 
