@@ -1,11 +1,10 @@
 package org.agroplanner.domainsystem.controllers;
 
-import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.domainsystem.model.DomainDefinition;
 import org.agroplanner.domainsystem.model.DomainType;
+import org.agroplanner.domainsystem.views.DomainViewContract;
 import org.agroplanner.shared.exceptions.DomainConstraintException;
 import org.agroplanner.shared.exceptions.InvalidInputException;
-import org.agroplanner.domainsystem.views.DomainViewContract;
 
 import java.util.Map;
 import java.util.Optional;

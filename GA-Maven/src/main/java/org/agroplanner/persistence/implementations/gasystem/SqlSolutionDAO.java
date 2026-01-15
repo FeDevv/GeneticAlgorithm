@@ -3,7 +3,6 @@ package org.agroplanner.persistence.implementations.gasystem;
 import org.agroplanner.access.model.User;
 import org.agroplanner.domainsystem.dao.DomainDAOContract;
 import org.agroplanner.domainsystem.model.DomainDefinition;
-import org.agroplanner.domainsystem.model.DomainType;
 import org.agroplanner.gasystem.dao.SolutionDAOContract;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.LoadedSession;
@@ -11,12 +10,12 @@ import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.gasystem.model.SolutionMetadata;
 import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.persistence.DBConnection;
-import org.agroplanner.persistence.implementations.domainsystem.SqlDomainDAO;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 
 import java.sql.*;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * JDBC implementation for storing Evolutionary Solutions.

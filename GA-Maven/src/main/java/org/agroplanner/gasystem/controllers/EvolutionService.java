@@ -1,18 +1,18 @@
 package org.agroplanner.gasystem.controllers;
 
+import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.model.GeneticConfig;
-import org.agroplanner.inventory.model.PlantInventory;
+import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.services.helpers.EvolutionUtils;
 import org.agroplanner.gasystem.services.helpers.PopulationFactory;
-import org.agroplanner.shared.exceptions.DomainConstraintException;
-import org.agroplanner.shared.exceptions.EvolutionTimeoutException;
-import org.agroplanner.shared.exceptions.InvalidInputException;
-import org.agroplanner.gasystem.model.Individual;
-import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.services.operators.Crossover;
 import org.agroplanner.gasystem.services.operators.FitnessCalculator;
 import org.agroplanner.gasystem.services.operators.Mutation;
 import org.agroplanner.gasystem.services.operators.Selection;
+import org.agroplanner.inventory.model.PlantInventory;
+import org.agroplanner.shared.exceptions.DomainConstraintException;
+import org.agroplanner.shared.exceptions.EvolutionTimeoutException;
+import org.agroplanner.shared.exceptions.InvalidInputException;
 
 import java.time.Duration;
 import java.time.Instant;

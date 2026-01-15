@@ -13,7 +13,11 @@ import org.agroplanner.shared.exceptions.InvalidInputException;
 import java.util.Optional;
 
 /**
- * Controller JavaFX per il Wizard di Esportazione.
+ * JavaFX Controller for the Export Wizard.
+ * <p>
+ * Handles user interaction for saving simulation results to external files.
+ * Includes security checks for Guest users and file overwrite protection.
+ * </p>
  */
 public class ExportJFXController {
 
@@ -27,15 +31,16 @@ public class ExportJFXController {
     // --- UI STATE ---
     private ToggleGroup formatToggleGroup;
 
-    // --- FXML FIELDS ---
+    // --- FXML INJECTIONS ---
     @FXML private VBox formatContainer;
     @FXML private TextField filenameField;
+    @FXML private TextField resultPathField; // New field to show full path
     @FXML private Label feedbackLabel;
     @FXML private Button exportButton;
     @FXML private VBox guestLockPanel;
 
     /**
-     * Inizializzazione chiamata dall'Orchestrator.
+     * Initializes the controller with context data.
      */
     public void init(ExportService service, Individual solution, Domain domain, PlantInventory inventory, boolean isDemoMode, Runnable onClose) {
         this.service = service;
@@ -46,7 +51,7 @@ public class ExportJFXController {
 
         setupFormats();
 
-        // Security Gate per Demo Mode
+        // Security Gate for Demo Mode
         if (isDemoMode) {
             disableInterfaceForGuest();
         }
@@ -57,79 +62,75 @@ public class ExportJFXController {
 
         for (ExportType type : service.getAvailableExportTypes()) {
             RadioButton rb = new RadioButton(type.toString() + " (" + type.getExtension() + ")");
-            rb.setUserData(type); // Salviamo l'enum nel bottone
+            rb.setUserData(type); // Store enum directly
             rb.setToggleGroup(formatToggleGroup);
             rb.setStyle("-fx-padding: 5;");
-
-            // Tooltip con descrizione
             rb.setTooltip(new Tooltip(type.getExportInfo()));
 
             formatContainer.getChildren().add(rb);
         }
 
-        // Seleziona il primo di default
+        // Select first by default
         if (!formatToggleGroup.getToggles().isEmpty()) {
             formatToggleGroup.getToggles().get(0).setSelected(true);
         }
     }
 
     private void disableInterfaceForGuest() {
-        // Overlay di blocco o disabilitazione controlli
         exportButton.setDisable(true);
         filenameField.setDisable(true);
         formatContainer.setDisable(true);
-
         feedbackLabel.setVisible(false);
-        guestLockPanel.setVisible(true); // Mostra il messaggio di blocco
-        // Spostiamo il pannello sopra (StackPane sarebbe meglio nel FXML, ma VBox va bene se gestito così)
-        // Nota: Nel FXML ho messo guestLockPanel in fondo, qui lo rendo visibile.
-        // Idealmente si userebbe uno StackPane per coprire tutto, ma seguiamo la semplicità richiesta.
+        guestLockPanel.setVisible(true);
     }
 
     @FXML
     private void handleExportAction() {
         feedbackLabel.setText("");
-        feedbackLabel.setStyle("-fx-text-fill: #d32f2f;"); // Reset rosso
+        resultPathField.clear();
+        resultPathField.setVisible(false);
 
-        // 1. Validazione Input
+        // 1. Validate Input
         String filename = filenameField.getText().trim();
         Toggle selectedToggle = formatToggleGroup.getSelectedToggle();
 
         if (selectedToggle == null) {
-            feedbackLabel.setText("Seleziona un formato.");
+            showError("Please select a format.");
             return;
         }
 
         if (filename.isEmpty()) {
-            feedbackLabel.setText("Inserisci un nome per il file.");
+            showError("Filename is required.");
             return;
         }
 
         ExportType selectedType = (ExportType) selectedToggle.getUserData();
 
-        // 2. Controllo Esistenza File (Overwrite Protection)
+        // 2. Overwrite Protection
         if (service.checkFileExists(selectedType, filename)) {
             boolean overwrite = showOverwriteDialog(filename + selectedType.getExtension());
-            if (!overwrite) {
-                return; // L'utente ha annullato
-            }
+            if (!overwrite) return; // User cancelled
         }
 
-        // 3. Esecuzione Export
+        // 3. Execute Export
         try {
             String savedPath = service.performExport(solution, domain, inventory, selectedType, filename);
 
-            // Successo
+            // Success UI Update
             feedbackLabel.setStyle("-fx-text-fill: green;");
-            feedbackLabel.setText("Salvato con successo in:\n" + savedPath);
+            feedbackLabel.setText("Export Successful!");
 
-            // Pulisci campo per evitare doppi salvataggi accidentali
+            // Show the full path in a copyable field
+            resultPathField.setVisible(true);
+            resultPathField.setText(savedPath);
+
+            // Clear input to prevent accidental double-save
             filenameField.clear();
 
         } catch (InvalidInputException | ExportException e) {
-            feedbackLabel.setText("Errore: " + e.getMessage());
+            showError("Error: " + e.getMessage());
         } catch (Exception e) {
-            feedbackLabel.setText("Errore Critico: " + e.getMessage());
+            showError("Critical Error: " + e.getMessage());
         }
     }
 
@@ -140,17 +141,19 @@ public class ExportJFXController {
         }
     }
 
-    /**
-     * Dialogo di conferma sovrascrittura (replica askOverwriteOrRename della CLI View).
-     */
+    private void showError(String msg) {
+        feedbackLabel.setStyle("-fx-text-fill: #d32f2f;");
+        feedbackLabel.setText(msg);
+    }
+
     private boolean showOverwriteDialog(String fullFilename) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Conflitto File");
-        alert.setHeaderText("Il file '" + fullFilename + "' esiste già.");
-        alert.setContentText("Vuoi sovrascriverlo?");
+        alert.setTitle("File Conflict");
+        alert.setHeaderText("File '" + fullFilename + "' already exists.");
+        alert.setContentText("Do you want to overwrite it?");
 
-        ButtonType buttonTypeOverwrite = new ButtonType("Sovrascrivi");
-        ButtonType buttonTypeCancel = new ButtonType("Annulla", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType buttonTypeOverwrite = new ButtonType("Overwrite");
+        ButtonType buttonTypeCancel = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
 
         alert.getButtonTypes().setAll(buttonTypeOverwrite, buttonTypeCancel);
 

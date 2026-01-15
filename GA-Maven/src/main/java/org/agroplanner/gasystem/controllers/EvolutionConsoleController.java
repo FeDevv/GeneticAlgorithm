@@ -1,9 +1,9 @@
 package org.agroplanner.gasystem.controllers;
 
-import org.agroplanner.shared.exceptions.EvolutionTimeoutException;
-import org.agroplanner.shared.exceptions.MaxAttemptsExceededException;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.views.EvolutionViewContract;
+import org.agroplanner.shared.exceptions.EvolutionTimeoutException;
+import org.agroplanner.shared.exceptions.MaxAttemptsExceededException;
 
 import java.time.Duration;
 import java.time.Instant;

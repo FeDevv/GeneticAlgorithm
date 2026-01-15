@@ -7,7 +7,6 @@ import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.LoadedSession;
 import org.agroplanner.gasystem.model.SolutionMetadata;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;

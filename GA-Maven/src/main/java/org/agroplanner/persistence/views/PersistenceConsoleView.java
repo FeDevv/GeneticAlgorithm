@@ -19,13 +19,19 @@ public class PersistenceConsoleView implements PersistenceViewContract {
         System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
     }
 
+    // Sostituisci il vecchio metodo askBoolean con questo:
     private boolean askBoolean() {
         while (true) {
             System.out.print("💾  Do you want to SAVE this solution to the database? [y/n]: ");
-            String input = scanner.next().trim();
+            // Uso nextLine per pulire tutto il buffer e trim per rimuovere spazi extra
+            String input = scanner.nextLine().trim();
+
             if (input.equalsIgnoreCase("y")) return true;
             if (input.equalsIgnoreCase("n")) return false;
-            System.out.println("  ❌ Invalid input. Type 'y' or 'n'.");
+
+            if (!input.isEmpty()) {
+                System.out.println("  ❌ Invalid input. Type 'y' or 'n'.");
+            }
         }
     }
 

@@ -3,9 +3,6 @@ package org.agroplanner.persistence.implementations.domainsystem;
 import org.agroplanner.domainsystem.dao.DomainDAOContract;
 import org.agroplanner.domainsystem.model.DomainDefinition;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Volatile implementation.
  * <p>

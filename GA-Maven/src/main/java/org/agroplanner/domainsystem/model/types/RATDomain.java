@@ -1,9 +1,9 @@
 package org.agroplanner.domainsystem.model.types;
 
-import org.agroplanner.shared.exceptions.DomainConstraintException;
+import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.Point;
-import org.agroplanner.domainsystem.model.Domain;
+import org.agroplanner.shared.exceptions.DomainConstraintException;
 
 import java.awt.geom.Rectangle2D;
 import java.util.List;

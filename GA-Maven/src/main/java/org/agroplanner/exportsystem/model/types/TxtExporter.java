@@ -1,12 +1,12 @@
 package org.agroplanner.exportsystem.model.types;
 
-import org.agroplanner.exportsystem.model.ExportType;
-import org.agroplanner.gasystem.model.Individual;
-import org.agroplanner.inventory.model.InventoryEntry;
-import org.agroplanner.inventory.model.PlantInventory;
-import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
+import org.agroplanner.exportsystem.model.ExportType;
+import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
+import org.agroplanner.inventory.model.InventoryEntry;
+import org.agroplanner.inventory.model.PlantInventory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -47,7 +47,6 @@ public class TxtExporter extends BaseExporter {
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // Use buffered writing for performance
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
 
             // --- SECTION 1: VISUAL HEADER ---
@@ -71,8 +70,6 @@ public class TxtExporter extends BaseExporter {
             writer.newLine();
 
             // Print the manifest (The "Recipe")
-            // Nota: Qui stampiamo il sommario per TIPO.
-            // Se InventoryEntry è stato aggiornato con i nomi, bene, altrimenti mostra i totali per tipo.
             for (InventoryEntry entry : inventory.getEntries()) {
                 String line = String.format(Locale.US, " - %s %s: %d units (r=%.2fm)",
                         entry.getType().getLabel(),
@@ -94,11 +91,9 @@ public class TxtExporter extends BaseExporter {
             writer.newLine();
             writer.newLine();
 
-            // --- SECTION 4: DATA PAYLOAD (AGGIORNATO) ---
+            // --- SECTION 4: DATA PAYLOAD ---
             writer.write("--- Plants (Coordinates) ---");
             writer.newLine();
-
-            // Aggiorniamo l'intestazione per riflettere le nuove colonne
             writer.write("Format: [ID] VARIETY NAME (TYPE) | X(m) | Y(m) | Radius(m)");
             writer.newLine();
             writer.write("---------------------------------------------------------------");
@@ -107,17 +102,14 @@ public class TxtExporter extends BaseExporter {
             int index = 0;
             for (Point p : individual.getChromosomes()) {
 
-                // Recuperiamo i nuovi dati "arricchiti"
                 String variety = (p.getVarietyName() != null) ? p.getVarietyName() : "Unknown";
                 String type = p.getType().name();
                 String icon = p.getType().getLabel();
 
-                // Formattazione Aggiornata:
-                // [001] 🍅 San Marzano...     (TOMATO  ) | X: 12.5000 | ...
                 String line = String.format(Locale.US, "[%03d] %s %-20s (%-9s) | X: %8.4f | Y: %8.4f | R: %.2f",
                         index++,
                         icon,
-                        truncate(variety, 20), // Tronchiamo per mantenere l'allineamento
+                        truncate(variety, 20),
                         type,
                         p.getX(),
                         p.getY(),
@@ -134,7 +126,6 @@ public class TxtExporter extends BaseExporter {
         }
     }
 
-    // Helper per mantenere la tabella ordinata (es. "Pomodoro San Marza..")
     private String truncate(String s, int len) {
         if (s == null) return "";
         if (s.length() > len) {

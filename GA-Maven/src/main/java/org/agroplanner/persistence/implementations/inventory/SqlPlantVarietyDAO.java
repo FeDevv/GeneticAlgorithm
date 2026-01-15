@@ -2,9 +2,9 @@ package org.agroplanner.persistence.implementations.inventory;
 
 import org.agroplanner.access.model.User;
 import org.agroplanner.inventory.dao.PlantVarietyDAOContract;
-import org.agroplanner.persistence.DBConnection;
 import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.inventory.model.PlantVarietySheet;
+import org.agroplanner.persistence.DBConnection;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 
 import java.sql.*;

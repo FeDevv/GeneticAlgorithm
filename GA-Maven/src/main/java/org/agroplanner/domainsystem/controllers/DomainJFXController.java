@@ -1,7 +1,10 @@
 package org.agroplanner.domainsystem.controllers;
 
 import javafx.fxml.FXML;
-import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import org.agroplanner.domainsystem.model.DomainDefinition;
 import org.agroplanner.domainsystem.model.DomainType;
@@ -13,45 +16,55 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * Controller JavaFX per la creazione del Dominio.
- * Gestisce la generazione dinamica del form in base al DomainType selezionato.
+ * JavaFX Controller for Geometric Domain Definition.
+ * <p>
+ * Implements a <strong>Metadata-Driven UI</strong> where input fields are generated
+ * dynamically based on the selected {@link DomainType}, ensuring scalability for new shapes.
+ * </p>
  */
 public class DomainJFXController {
 
     // --- DEPENDENCIES ---
     private DomainService service;
-    private Consumer<DomainDefinition> onDomainCreated; // Callback verso l'Orchestrator
+    private Consumer<DomainDefinition> onDomainCreated; // Callback to Orchestrator
 
-    // --- FXML FIELDS ---
+    // --- FXML INJECTIONS ---
     @FXML private ComboBox<DomainType> domainTypeCombo;
     @FXML private VBox dynamicFormContainer;
     @FXML private Label feedbackLabel;
     @FXML private Button createButton;
 
     // --- STATE ---
-    // Mappa per tenere traccia dei TextField generati dinamicamente (Nome Parametro -> Input Field)
+    // Maps parameter names (e.g., "width") to their generated input fields
     private final Map<String, TextField> activeInputFields = new HashMap<>();
 
     /**
-     * Inizializzazione chiamata dall'Orchestrator.
+     * Initializes the controller with required services.
+     *
+     * @param service         The domain logic provider.
+     * @param onDomainCreated Callback executed upon successful domain creation.
      */
     public void init(DomainService service, Consumer<DomainDefinition> onDomainCreated) {
         this.service = service;
         this.onDomainCreated = onDomainCreated;
 
-        // Popola la combobox usando il service (proprio come nel CLI)
+        // Populate combo box from service (SSOT - Single Source of Truth)
         domainTypeCombo.getItems().setAll(service.getAvailableDomainTypes());
     }
 
     // ==========================================
-    // UI DYNAMICS
+    // DYNAMIC FORM GENERATION
     // ==========================================
 
+    /**
+     * Handles the selection of a geometry type.
+     * Rebuilds the input form based on the type's required parameters.
+     */
     @FXML
     private void handleTypeSelection() {
         DomainType selectedType = domainTypeCombo.getValue();
 
-        // Pulisci il form precedente
+        // Reset Form State
         dynamicFormContainer.getChildren().clear();
         activeInputFields.clear();
         feedbackLabel.setText("");
@@ -63,8 +76,7 @@ public class DomainJFXController {
 
         createButton.setDisable(false);
 
-        // Generazione campi basata sui metadati (Type.getRequiredParameters)
-        // Questo sostituisce il loop "askForParameters" della CLI View
+        // Generate fields dynamically based on metadata
         for (String paramName : selectedType.getRequiredParameters()) {
             VBox fieldGroup = createFieldGroup(paramName);
             dynamicFormContainer.getChildren().add(fieldGroup);
@@ -72,19 +84,22 @@ public class DomainJFXController {
     }
 
     /**
-     * Helper per creare visualmente un blocco Label + TextField
+     * Helper to create a labeled input block visually.
+     *
+     * @param paramKey The internal parameter name (e.g., "radius").
+     * @return A VBox containing the Label and TextField.
      */
     private VBox createFieldGroup(String paramKey) {
         VBox box = new VBox(5);
 
-        // Capitalizza la prima lettera per l'etichetta (es. "radius" -> "Radius")
+        // Capitalize label (e.g., "radius" -> "Radius")
         String labelText = paramKey.substring(0, 1).toUpperCase() + paramKey.substring(1).toLowerCase();
         Label label = new Label(labelText + " (m):");
 
         TextField textField = new TextField();
-        textField.setPromptText("Inserisci valore numerico > 0");
+        textField.setPromptText("Enter value > 0");
 
-        // Salva il riferimento nella mappa per recuperarlo dopo
+        // Register field for later retrieval
         activeInputFields.put(paramKey, textField);
 
         box.getChildren().addAll(label, textField);
@@ -101,43 +116,47 @@ public class DomainJFXController {
         DomainType type = domainTypeCombo.getValue();
 
         try {
-            // 1. Raccogli e Converti i dati dai campi dinamici
+            // 1. Collect & Parse Data
             Map<String, Double> params = collectParameters();
 
-            // 2. Chiama il Service (Deep Protection Layer)
-            // Se i dati sono geometricamente impossibili, il service lancerà eccezione
+            // 2. Delegate to Service (Validation Layer)
+            // Throws exception if geometry is invalid
             service.createDomain(type, params);
 
-            // 3. Successo
+            // 3. Success Workflow
             feedbackLabel.setStyle("-fx-text-fill: green;");
-            feedbackLabel.setText("Dominio creato con successo!");
-            createButton.setDisable(true); // Evita doppi click
+            feedbackLabel.setText("Domain configured successfully!");
+            createButton.setDisable(true); // Prevent double submission
 
-            // Passa il risultato all'Orchestrator
+            // Notify Orchestrator
             if (onDomainCreated != null) {
                 onDomainCreated.accept(new DomainDefinition(type, params));
             }
 
         } catch (NumberFormatException e) {
             feedbackLabel.setStyle("-fx-text-fill: red;");
-            feedbackLabel.setText("Errore Input: Inserisci solo numeri validi (es. 10.5).");
+            feedbackLabel.setText("Input Error: Please enter valid numbers.");
         } catch (DomainConstraintException e) {
-            // Errori di logica geometrica (es. Rettangolo con area negativa)
+            // Semantic Errors (e.g., Rectangle with negative area)
             feedbackLabel.setStyle("-fx-text-fill: red;");
-            feedbackLabel.setText("Errore Geometria: " + e.getMessage());
+            feedbackLabel.setText("Geometry Error: " + e.getMessage());
         } catch (InvalidInputException e) {
-            // Errori di validazione (es. campi vuoti)
+            // Validation Errors (e.g., Empty fields)
             feedbackLabel.setStyle("-fx-text-fill: red;");
-            feedbackLabel.setText("Dati mancanti: " + e.getMessage());
+            feedbackLabel.setText("Missing Data: " + e.getMessage());
         } catch (Exception e) {
+            // Unexpected Errors
             feedbackLabel.setStyle("-fx-text-fill: red;");
-            feedbackLabel.setText("Errore Critico: " + e.getMessage());
+            feedbackLabel.setText("System Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
     /**
-     * Legge i valori dai TextField generati.
-     * Lancia NumberFormatException se l'input non è un double.
+     * Harvests values from the dynamically generated TextFields.
+     *
+     * @return A map of parameter names to double values.
+     * @throws NumberFormatException If any field contains non-numeric data or is empty.
      */
     private Map<String, Double> collectParameters() throws NumberFormatException {
         Map<String, Double> params = new HashMap<>();
@@ -145,9 +164,9 @@ public class DomainJFXController {
         for (Map.Entry<String, TextField> entry : activeInputFields.entrySet()) {
             String textVal = entry.getValue().getText().trim();
             if (textVal.isEmpty()) {
-                throw new NumberFormatException("Campo vuoto");
+                throw new NumberFormatException("Empty Field");
             }
-            // Sostituisce la virgola con punto per compatibilità locale
+            // Sanitize input (Comma to Dot)
             double val = Double.parseDouble(textVal.replace(",", "."));
             params.put(entry.getKey(), val);
         }

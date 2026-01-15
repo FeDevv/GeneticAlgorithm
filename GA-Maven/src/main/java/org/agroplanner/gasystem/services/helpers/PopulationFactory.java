@@ -3,10 +3,9 @@ package org.agroplanner.gasystem.services.helpers;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.model.GeneticConfig;
 import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.inventory.model.InventoryEntry;
 import org.agroplanner.inventory.model.PlantInventory;
-import org.agroplanner.gasystem.model.Point;
-import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.inventory.model.PlantVarietySheet;
 import org.agroplanner.shared.utils.RandomUtils;
 

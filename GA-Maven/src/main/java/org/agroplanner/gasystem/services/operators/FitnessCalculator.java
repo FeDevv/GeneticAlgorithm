@@ -1,8 +1,8 @@
 package org.agroplanner.gasystem.services.operators;
 
+import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.Point;
-import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.gasystem.services.strategies.OverlapQuadratic;
 import org.agroplanner.gasystem.services.strategies.OverlapSpatial;
 import org.agroplanner.gasystem.services.strategies.OverlapStrategy;

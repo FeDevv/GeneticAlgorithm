@@ -32,16 +32,19 @@
                                 <Insets left="40.0" right="40.0" />
                             </padding>
                             <children>
+                                <Label text="Enter your credentials" textFill="#666666"/>
                                 <TextField fx:id="loginUsernameField" promptText="Username" />
                                 <PasswordField fx:id="loginPasswordField" promptText="Password" />
-                                <Button fx:id="loginButton" defaultButton="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLoginAction" style="-fx-background-color: #2e7d32; -fx-text-fill: white;" text="Entra" />
+
+                                <Button fx:id="loginButton" defaultButton="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLoginAction" style="-fx-background-color: #2e7d32; -fx-text-fill: white;" text="Sign In" />
+
                                 <Label fx:id="loginStatusLabel" textFill="#d32f2f" />
                             </children>
                         </VBox>
                     </content>
                 </Tab>
 
-                <Tab text="Registrazione">
+                <Tab text="Registration">
                     <content>
                         <ScrollPane fitToWidth="true">
                             <content>
@@ -50,28 +53,35 @@
                                         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
                                     </padding>
                                     <children>
-                                        <Label text="Dati Personali" underline="true" />
-                                        <TextField fx:id="regFirstNameField" promptText="Nome" />
-                                        <TextField fx:id="regLastNameField" promptText="Cognome" />
-                                        <TextField fx:id="regEmailField" promptText="Email" />
-                                        <TextField fx:id="regPhoneField" promptText="Telefono" />
+                                        <Label text="Personal Details" underline="true">
+                                            <font><Font name="System Bold" size="12.0"/></font>
+                                        </Label>
+                                        <TextField fx:id="regFirstNameField" promptText="First Name" />
+                                        <TextField fx:id="regLastNameField" promptText="Last Name" />
+                                        <TextField fx:id="regEmailField" promptText="Email Address" />
+                                        <TextField fx:id="regPhoneField" promptText="Phone Number" />
 
-                                        <Separator prefWidth="200.0" />
+                                        <Separator prefWidth="200.0">
+                                            <padding><Insets top="10" bottom="10"/></padding>
+                                        </Separator>
 
-                                        <Label text="Account" underline="true" />
+                                        <Label text="Account Settings" underline="true">
+                                            <font><Font name="System Bold" size="12.0"/></font>
+                                        </Label>
                                         <TextField fx:id="regUsernameField" promptText="Username (min 3 chars)" />
                                         <PasswordField fx:id="regPasswordField" promptText="Password (min 4 chars)" />
 
-                                        <Label text="Ruolo Richiesto" />
+                                        <Label text="Requested Role" />
                                         <ComboBox fx:id="regRoleCombo" maxWidth="1.7976931348623157E308" />
 
-                                        <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleRegisterAction" text="Registra Utente" />
+                                        <Region prefHeight="10.0" /> <Button fx:id="regButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleRegisterAction" text="Create Account" />
                                         <Label fx:id="regStatusLabel" wrapText="true" textFill="#d32f2f"/>
                                     </children>
                                 </VBox>
                             </content>
                         </ScrollPane>
-                    </content>  </Tab>
+                    </content>
+                </Tab>
             </tabs>
         </TabPane>
     </center>

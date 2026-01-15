@@ -1,9 +1,10 @@
 package org.agroplanner.access.controllers;
 
-import javafx.application.Platform;
+import javafx.animation.PauseTransition;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.util.Duration;
 import org.agroplanner.access.model.CredentialsDTO;
 import org.agroplanner.access.model.Role;
 import org.agroplanner.access.model.User;
@@ -13,22 +14,29 @@ import org.agroplanner.shared.exceptions.InvalidInputException;
 import java.util.function.Consumer;
 
 /**
- * Controller JavaFX per il sottosistema Access.
- * Gestisce sia il Login che la Registrazione all'interno della stessa scena (tramite Tabs).
+ * JavaFX Controller for the Access Subsystem.
+ * <p>
+ * This controller acts as the <strong>Code-Behind</strong> for the Access View (FXML).
+ * It handles UI events, delegates business logic to the {@link AccessService},
+ * and communicates successful authentication back to the Orchestrator via callbacks.
+ * </p>
  */
 public class AccessJFXController {
 
     // --- DEPENDENCIES ---
+    /** Business logic provider (Logic Controller). */
     private AccessService service;
-    private Consumer<User> onAuthenticationSuccess; // Callback verso l'Orchestrator
 
-    // --- FXML FIELDS (Login) ---
+    /** Callback to notify the Orchestrator when a user logs in successfully. */
+    private Consumer<User> onAuthenticationSuccess;
+
+    // --- FXML INJECTIONS (Login Tab) ---
     @FXML private TextField loginUsernameField;
     @FXML private PasswordField loginPasswordField;
     @FXML private Label loginStatusLabel;
     @FXML private Button loginButton;
 
-    // --- FXML FIELDS (Registration) ---
+    // --- FXML INJECTIONS (Registration Tab) ---
     @FXML private TextField regFirstNameField;
     @FXML private TextField regLastNameField;
     @FXML private TextField regEmailField;
@@ -37,16 +45,23 @@ public class AccessJFXController {
     @FXML private PasswordField regPasswordField;
     @FXML private ComboBox<Role> regRoleCombo;
     @FXML private Label regStatusLabel;
+    @FXML private Button regButton;
 
     /**
-     * Metodo di inizializzazione chiamato dall'Orchestrator JFX
-     * per iniettare le dipendenze necessarie.
+     * Dependency Injection method called by the Orchestrator immediately after loading the FXML.
+     * <p>
+     * Since JavaFX controllers are instantiated by the {@code FXMLLoader}, we cannot use standard
+     * constructor injection.
+     * </p>
+     *
+     * @param service   The initialized business logic service.
+     * @param onSuccess The callback to execute upon successful login.
      */
     public void init(AccessService service, Consumer<User> onSuccess) {
         this.service = service;
         this.onAuthenticationSuccess = onSuccess;
 
-        // Inizializza la combo box dei ruoli
+        // Populate Role Combo Box
         regRoleCombo.getItems().setAll(Role.USER, Role.AGRONOMIST);
         regRoleCombo.getSelectionModel().selectFirst();
     }
@@ -55,6 +70,10 @@ public class AccessJFXController {
     // LOGIN LOGIC
     // ==========================================
 
+    /**
+     * Handles the "Sign In" button click.
+     * Captures input, calls the service, and provides visual feedback.
+     */
     @FXML
     private void handleLoginAction() {
         loginStatusLabel.setText("");
@@ -62,27 +81,30 @@ public class AccessJFXController {
         String p = loginPasswordField.getText();
 
         try {
-            // Chiamata diretta al Service (come nel controller CLI)
             User user = service.login(u, p);
 
             if (user != null) {
+                // UI Feedback: Success
                 loginStatusLabel.setStyle("-fx-text-fill: green;");
-                loginStatusLabel.setText("Benvenuto " + user.getFirstName() + "!");
-
-                // Disabilita controlli per evitare doppi click
+                loginStatusLabel.setText("Welcome back, " + user.getFirstName() + "!");
                 loginButton.setDisable(true);
 
-                // Notifica l'Orchestrator (ritarda leggermente per far vedere il messaggio)
-                Platform.runLater(() -> {
-                    try { Thread.sleep(500); } catch (Exception ignored){}
-                    onAuthenticationSuccess.accept(user);
+                PauseTransition delay = new PauseTransition(Duration.seconds(0.7));
+                delay.setOnFinished(event -> {
+                    if (onAuthenticationSuccess != null) {
+                        onAuthenticationSuccess.accept(user); // Notify Orchestrator
+                    }
                 });
+                delay.play();
+
             } else {
+                // UI Feedback: Failure
                 loginStatusLabel.setStyle("-fx-text-fill: red;");
-                loginStatusLabel.setText("Credenziali non valide.");
+                loginStatusLabel.setText("Invalid credentials.");
             }
         } catch (Exception e) {
-            loginStatusLabel.setText("Errore di sistema: " + e.getMessage());
+            loginStatusLabel.setText("System Error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -90,11 +112,15 @@ public class AccessJFXController {
     // REGISTRATION LOGIC
     // ==========================================
 
+    /**
+     * Handles the "Register" button click.
+     * Collects DTO data and determines the registration workflow based on the Role.
+     */
     @FXML
     private void handleRegisterAction() {
         regStatusLabel.setText("");
 
-        // Costruzione DTO dai campi
+        // Construct DTO from UI fields
         CredentialsDTO dto = new CredentialsDTO(
                 regUsernameField.getText(),
                 regPasswordField.getText(),
@@ -106,62 +132,86 @@ public class AccessJFXController {
         );
 
         if (dto.requestedRole == Role.AGRONOMIST) {
-            // Se Agronomo, avvia la simulazione asincrona
+            // Agronomists require a simulated external validation (Async)
             runAgronomistSimulation(dto);
         } else {
-            // Registrazione standard immediata
+            // Standard users are registered synchronously
             performRegistration(dto);
         }
     }
 
+    /**
+     * Executes the actual persistence call via the Service.
+     *
+     * @param dto The data to persist.
+     */
     private void performRegistration(CredentialsDTO dto) {
         try {
             service.register(dto);
-            showInfoAlert("Successo", "Registrazione completata! Ora puoi effettuare il login.");
+            showInfoAlert("Registration Successful", "Account created! You may now sign in.");
             clearRegistrationFields();
         } catch (InvalidInputException | DuplicateUserException e) {
+            // Domain errors (Validation/Duplication)
             regStatusLabel.setStyle("-fx-text-fill: red;");
             regStatusLabel.setText(e.getMessage());
         } catch (Exception e) {
-            regStatusLabel.setText("Errore DB: " + e.getMessage());
+            // Unexpected technical errors
+            regStatusLabel.setStyle("-fx-text-fill: red;");
+            regStatusLabel.setText("Database Error: " + e.getMessage());
         }
     }
 
     /**
-     * Replica la logica "showAgronomistValidationSequence" della CLI,
-     * ma usando un Task JavaFX per non bloccare l'interfaccia grafica.
+     * Simulates an asynchronous check with a National Register for Agronomists.
+     * <p>
+     * Uses a JavaFX {@link Task} to perform the "waiting" on a background thread
+     * so the UI remains responsive (loading animation).
+     * </p>
+     *
+     * @param dto The user data waiting for approval.
      */
     private void runAgronomistSimulation(CredentialsDTO dto) {
         regStatusLabel.setStyle("-fx-text-fill: orange;");
-        regStatusLabel.setText("Contattando il Registro Nazionale...");
+        regStatusLabel.setText("Contacting National Register...");
+        regButton.setDisable(true); // Disable button during process
 
         Task<Void> simulationTask = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                // Simula attesa di rete (come nel CLI)
+                // Simulate network latency (BACKGROUND THREAD)
                 for (int i = 0; i < 5; i++) {
                     Thread.sleep(500);
-                    updateMessage("Verifica in corso" + ".".repeat(i));
+                    updateMessage("Verifying License" + ".".repeat(i));
                 }
                 return null;
             }
         };
 
+        // Update label text
+        regStatusLabel.textProperty().bind(simulationTask.messageProperty());
+
         simulationTask.setOnSucceeded(e -> {
+            regStatusLabel.textProperty().unbind(); // Unbind before setting text manually
             regStatusLabel.setStyle("-fx-text-fill: green;");
-            regStatusLabel.setText("Licenza Verificata. Procedo.");
+            regStatusLabel.setText("License Verified. Proceeding...");
+
+            // Proceed to actual registration
             performRegistration(dto);
+            regButton.setDisable(false);
         });
 
         simulationTask.setOnFailed(e -> {
-            regStatusLabel.setText("Errore di connessione al registro.");
+            regStatusLabel.textProperty().unbind();
+            regStatusLabel.setStyle("-fx-text-fill: red;");
+            regStatusLabel.setText("Connection to Register failed.");
+            regButton.setDisable(false);
         });
 
-        // Avvia il task su un thread separato
+        // Start the background thread
         new Thread(simulationTask).start();
     }
 
-    // --- UTILS ---
+    // --- UTILITY METHODS ---
 
     private void clearRegistrationFields() {
         regUsernameField.clear();

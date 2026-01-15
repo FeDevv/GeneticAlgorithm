@@ -1,2 +1,0 @@
-1;admin;admin;ADMINISTRATOR;System;Admin;admin@agro.it;0000
-2;fede;182003;AGRONOMIST;federico;bonucci;ricobon03@gmail.com;3290433988

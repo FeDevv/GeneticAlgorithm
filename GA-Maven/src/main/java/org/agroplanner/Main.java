@@ -13,7 +13,3 @@ public class Main {
 
 }
 
-// controllare i titoli negli exporter
-
-
-

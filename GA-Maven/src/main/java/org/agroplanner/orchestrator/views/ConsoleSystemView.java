@@ -3,7 +3,6 @@ package org.agroplanner.orchestrator.views;
 import org.agroplanner.access.model.Role;
 import org.agroplanner.access.model.User;
 
-import java.util.Locale;
 import java.util.Scanner;
 
 /**

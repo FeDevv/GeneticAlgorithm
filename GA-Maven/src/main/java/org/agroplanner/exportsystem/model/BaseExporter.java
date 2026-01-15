@@ -1,7 +1,7 @@
 package org.agroplanner.exportsystem.model;
 
-import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.domainsystem.model.Domain;
+import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.inventory.model.PlantInventory;
 
 import java.io.IOException;

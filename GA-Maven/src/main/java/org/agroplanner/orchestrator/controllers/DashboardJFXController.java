@@ -6,6 +6,10 @@ import javafx.scene.control.Label;
 import org.agroplanner.access.model.Role;
 import org.agroplanner.access.model.User;
 
+/**
+ * Controller for the Main Dashboard.
+ * Serves as the central navigation hub.
+ */
 public class DashboardJFXController {
 
     private JFXOrchestrator orchestrator;
@@ -20,10 +24,10 @@ public class DashboardJFXController {
         userLabel.setText(user.getFullName());
         roleLabel.setText(user.getRole().getLabel());
 
-        // Nascondi gestione catalogo se non agronomo
+        // Hide Catalog Management for non-Agronomists
         if (user.getRole() != Role.AGRONOMIST) {
             catalogButton.setVisible(false);
-            catalogButton.setManaged(false); // Rimuove lo spazio occupato
+            catalogButton.setManaged(false); // Remove layout space
         }
     }
 

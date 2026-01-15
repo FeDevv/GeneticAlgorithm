@@ -4,7 +4,10 @@ import org.agroplanner.access.model.User;
 import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.inventory.model.PlantVarietySheet;
 
-import java.util.*;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Scanner;
 
 /**
  * CLI implementation of the Inventory View.

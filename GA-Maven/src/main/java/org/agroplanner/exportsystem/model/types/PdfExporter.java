@@ -9,14 +9,13 @@ import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
-import org.agroplanner.exportsystem.model.ExportType;
-import org.agroplanner.gasystem.model.Individual;
-import org.agroplanner.inventory.model.InventoryEntry;
-import org.agroplanner.inventory.model.PlantInventory;
-import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
-
+import org.agroplanner.exportsystem.model.ExportType;
+import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
+import org.agroplanner.inventory.model.InventoryEntry;
+import org.agroplanner.inventory.model.PlantInventory;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -39,11 +38,11 @@ public class PdfExporter extends BaseExporter {
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // 1. Infrastructure Setup (Low-Level)
+        // 1. Infrastructure Setup
         PdfWriter writer = new PdfWriter(path.toString());
         PdfDocument pdf = new PdfDocument(writer);
 
-        // 2. Document Composition (High-Level)
+        // 2. Document Composition
         try (Document document = new Document(pdf)) {
 
             // --- SECTION A: HEADER ---
@@ -52,7 +51,7 @@ public class PdfExporter extends BaseExporter {
                     .setBold()
                     .setTextAlignment(TextAlignment.CENTER));
 
-            document.add(new Paragraph("AgroPlanner v2.0 - Multi-Culture Engine")
+            document.add(new Paragraph("AgroPlanner v3.0 - Multi-Culture Engine")
                     .setFontSize(10)
                     .setItalic()
                     .setTextAlignment(TextAlignment.CENTER)
@@ -65,7 +64,7 @@ public class PdfExporter extends BaseExporter {
 
             document.add(new Paragraph("Domain Geometry: " + domain.toString()).setFontSize(11));
 
-            // Inventory Manifest
+            // Inventory
             document.add(new Paragraph("Requested Inventory:").setBold().setFontSize(11).setMarginTop(5));
 
             for (InventoryEntry item : inventory.getEntries()) {
@@ -81,7 +80,7 @@ public class PdfExporter extends BaseExporter {
                 );
             }
 
-            // --- SECTION C: RESULTS (KPIs) ---
+            // --- SECTION C: RESULTS ---
             document.add(new Paragraph(String.format(Locale.US, "Total Plants Placed: %d", individual.getDimension()))
                     .setMarginTop(5));
 
@@ -91,22 +90,20 @@ public class PdfExporter extends BaseExporter {
                     .setFontColor(com.itextpdf.kernel.colors.ColorConstants.BLUE)
                     .setMarginBottom(15));
 
-            // --- SECTION D: DATA TABLE (AGGIORNATA) ---
+            // --- SECTION D: DATA TABLE ---
             document.add(new Paragraph("Solution Coordinates")
                     .setFontSize(14)
                     .setBold()
                     .setMarginBottom(5));
 
             // Table Setup: 6 COLUMNS
-            // Ratios: ID(1) : Variety(4) : Type(2) : X(2) : Y(2) : Radius(2)
-            // Totale parti: 13. Variety ha molto spazio per il testo lungo.
             float[] columnWidths = {1, 4, 2, 2, 2, 2};
             Table table = new Table(UnitValue.createPercentArray(columnWidths));
             table.setWidth(UnitValue.createPercentValue(100));
 
             // Table Headers
             addHeaderCell(table, "ID");
-            addHeaderCell(table, "Variety Name"); // NEW COLUMN
+            addHeaderCell(table, "Variety Name");
             addHeaderCell(table, "Type");
             addHeaderCell(table, "X(m)");
             addHeaderCell(table, "Y(m)");
@@ -118,7 +115,7 @@ public class PdfExporter extends BaseExporter {
                 // 1. ID
                 table.addCell(createCellRight(String.valueOf(index++)));
 
-                // 2. Variety (Allineato a sinistra perché è testo)
+                // 2. Variety
                 String variety = (p.getVarietyName() != null) ? p.getVarietyName() : "Unknown";
                 table.addCell(createCellLeft(variety));
 
@@ -132,17 +129,16 @@ public class PdfExporter extends BaseExporter {
                 table.addCell(createCellRight(String.format(Locale.US, "%.2f", p.getRadius())));
             }
 
-            // Finalize
             document.add(table);
         }
     }
 
-    // ------------------- PRIVATE HELPERS (Layout DRY) -------------------
+    // ------------------- PRIVATE HELPERS -------------------
 
     private void addHeaderCell(Table table, String text) {
         table.addHeaderCell(new Cell()
                 .add(new Paragraph(text).setBold().setTextAlignment(TextAlignment.CENTER))
-                .setBackgroundColor(com.itextpdf.kernel.colors.ColorConstants.LIGHT_GRAY)); // Header grigio
+                .setBackgroundColor(com.itextpdf.kernel.colors.ColorConstants.LIGHT_GRAY));
     }
 
     private Cell createCellRight(String text) {

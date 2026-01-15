@@ -21,26 +21,31 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Controller JavaFX per la gestione dell'Inventario.
+ * JavaFX Controller for Inventory Management.
+ * <p>
+ * This controller serves dual purposes based on the initialization mode:
+ * <ul>
+ * <li><strong>Wizard Mode:</strong> Allows users to build an inventory for simulation.</li>
+ * <li><strong>Catalog Mode:</strong> Allows Agronomists to view and manage the database.</li>
+ * </ul>
+ * </p>
  */
 public class InventoryJFXController {
 
     // --- DEPENDENCIES ---
     private PlantVarietyDAOContract dao;
-    private CatalogService catalogService; // Per creare nuove varietà
+    private CatalogService catalogService;
     private Consumer<PlantInventory> onInventoryConfirmed;
     private User currentUser;
     private double maxDomainRadius;
-    private boolean isCatalogMode = false;
     private Runnable onBackToDashboard;
 
-    // --- STATE ---
-    // Usiamo una lista osservabile per la tabella
+    // --- STATE FLAGS ---
+    private boolean isCatalogMode = false;
     private final ObservableList<InventoryRow> tableData = FXCollections.observableArrayList();
-    // L'oggetto di dominio reale che stiamo costruendo
     private final PlantInventory buildingInventory = new PlantInventory();
 
-    // --- FXML FIELDS ---
+    // --- FXML INJECTIONS ---
     @FXML private ComboBox<PlantType> typeCombo;
     @FXML private ComboBox<PlantVarietySheet> varietyCombo;
     @FXML private Spinner<Integer> quantitySpinner;
@@ -48,13 +53,13 @@ public class InventoryJFXController {
     @FXML private Label feedbackLabel;
     @FXML private VBox agronomistPanel;
 
-    // Variety Details
+    // Variety Details Panel
     @FXML private VBox varietyDetailsBox;
     @FXML private Label detailNameLabel;
     @FXML private Label detailDistanceLabel;
     @FXML private Label detailAuthorLabel;
 
-    // Table
+    // Data Table
     @FXML private TableView<InventoryRow> inventoryTable;
     @FXML private TableColumn<InventoryRow, String> colName;
     @FXML private TableColumn<InventoryRow, String> colType;
@@ -63,12 +68,13 @@ public class InventoryJFXController {
     @FXML private TableColumn<InventoryRow, String> colAuthor;
     @FXML private Label totalCountLabel;
 
+    // Navigation Buttons
     @FXML private Button proceedButton;
     @FXML private Button cancelButton;
 
 
     /**
-     * Inizializzazione.
+     * Initializes the controller in "Wizard Mode" (Simulation Setup).
      */
     public void init(User user, double maxRadius, PlantVarietyDAOContract dao, Consumer<PlantInventory> onConfirm, Runnable onCancel) {
         this.currentUser = user;
@@ -81,59 +87,47 @@ public class InventoryJFXController {
         setupUI();
     }
 
+    /**
+     * Initializes the controller in "Catalog Mode" (Database Management).
+     */
     public void initCatalogMode(User user, PlantVarietyDAOContract dao, Runnable onBack) {
         this.isCatalogMode = true;
         this.currentUser = user;
-        this.maxDomainRadius = 99999.0; // Raggio infinito per il catalogo
+        this.maxDomainRadius = 99999.0; // Virtually infinite for catalog viewing
         this.dao = dao;
         this.catalogService = new CatalogService(dao);
         this.onBackToDashboard = onBack;
 
-        setupUI(); // Usa il setup esistente
-
-        // TRASFORMAZIONE UI
-        quantitySpinner.setVisible(false);
-        addButton.setVisible(false);
-        totalCountLabel.setVisible(false);
-
-        cancelButton.setVisible(false);
-
-        // Rinomina bottone e colonna per adattarli al contesto
-        proceedButton.setText("Torna alla Dashboard");
-        proceedButton.setDisable(false);
-
-        // Riutilizziamo la colonna Quantità per mostrare l'Autore
-        colAuthor.setText("Autore");
-        colAuthor.setCellValueFactory(cell -> new SimpleStringProperty(
-                cell.getValue().sheet.getAuthor() != null ? cell.getValue().sheet.getAuthor().getUsername() : "-"
-        ));
-        colAuthor.setVisible(true);
+        setupUI();
+        transformUiForCatalogMode();
     }
 
     private void setupUI() {
-        // 1. Setup ComboBox Types
+        // 1. Populate Types
         typeCombo.getItems().setAll(PlantType.values());
 
-        // 2. Setup Spinner (min 1, max 1000, default 10)
+        // 2. Configure Spinner (min 1, max 1000, default 10)
         quantitySpinner.setValueFactory(new SpinnerValueFactory.IntegerSpinnerValueFactory(1, 1000, 10));
 
-        // 3. Setup Table Columns
+        // 3. Bind Table Columns
         colName.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().sheet.getVarietyName()));
         colType.setCellValueFactory(cell -> new SimpleStringProperty(cell.getValue().sheet.getType().getLabel()));
         colRadius.setCellValueFactory(cell -> new SimpleStringProperty(String.format("%.2f", cell.getValue().sheet.getMinDistance())));
         colQty.setCellValueFactory(cell -> new SimpleIntegerProperty(cell.getValue().qty).asObject());
+
+        // Author column is displayed only when data is available or in Catalog Mode
         colAuthor.setCellValueFactory(cell -> new SimpleStringProperty(
                 cell.getValue().sheet.getAuthor() != null ? cell.getValue().sheet.getAuthor().getUsername() : "-"
         ));
 
         inventoryTable.setItems(tableData);
 
-        // 4. Agronomist features
+        // 4. Enable Agronomist Features if applicable
         if (currentUser.getRole() == Role.AGRONOMIST) {
             agronomistPanel.setVisible(true);
         }
 
-        // 5. Converter per mostrare il nome della varietà nella ComboBox invece del toString()
+        // 5. Custom StringConverter for ComboBox to display names properly
         varietyCombo.setConverter(new StringConverter<>() {
             @Override
             public String toString(PlantVarietySheet object) {
@@ -144,8 +138,24 @@ public class InventoryJFXController {
         });
     }
 
+    private void transformUiForCatalogMode() {
+        // Hide simulation-specific controls
+        quantitySpinner.setVisible(false);
+        addButton.setVisible(false);
+        totalCountLabel.setVisible(false);
+        cancelButton.setVisible(false);
+
+        // Re-purpose Navigation Button
+        proceedButton.setText("Back to Dashboard");
+        proceedButton.setDisable(false);
+
+        // Ensure Author column is visible and clearly labeled
+        colAuthor.setText("Author");
+        colAuthor.setVisible(true);
+    }
+
     // ==========================================
-    // SELECTION FLOW
+    // SELECTION LOGIC
     // ==========================================
 
     @FXML
@@ -153,7 +163,7 @@ public class InventoryJFXController {
         PlantType selectedType = typeCombo.getValue();
         if (selectedType == null) return;
 
-        // Reset flow
+        // Reset UI state
         varietyCombo.getItems().clear();
         varietyCombo.setDisable(true);
         addButton.setDisable(true);
@@ -163,18 +173,18 @@ public class InventoryJFXController {
         List<PlantVarietySheet> varieties = dao.findByType(selectedType);
 
         if (varieties.isEmpty()) {
-            feedbackLabel.setText("Nessuna varietà trovata per questa categoria.");
+            feedbackLabel.setText("No varieties found for this category.");
         } else {
             varietyCombo.getItems().setAll(varieties);
             varietyCombo.setDisable(false);
             feedbackLabel.setText("");
         }
 
+        // In Catalog Mode, auto-populate table with filtered results
         if (isCatalogMode && !varieties.isEmpty()) {
             tableData.clear();
             for (PlantVarietySheet p : varieties) {
-                // Usiamo 0 come quantità fittizia
-                tableData.add(new InventoryRow(p, 0));
+                tableData.add(new InventoryRow(p, 0)); // 0 qty for display
             }
         }
     }
@@ -188,17 +198,17 @@ public class InventoryJFXController {
             return;
         }
 
-        // Show Details
+        // Display Details
         varietyDetailsBox.setVisible(true);
         detailNameLabel.setText(selected.getVarietyName());
-        detailDistanceLabel.setText(String.format("Distanza: %.2f m", selected.getMinDistance()));
-        String authName = (selected.getAuthor() != null) ? selected.getAuthor().getFullName() : "Sconosciuto";
-        detailAuthorLabel.setText("Autore: " + authName);
+        detailDistanceLabel.setText(String.format("Min Distance: %.2f m", selected.getMinDistance()));
+        String authName = (selected.getAuthor() != null) ? selected.getAuthor().getFullName() : "Unknown";
+        detailAuthorLabel.setText("Author: " + authName);
 
-        // Constraint Check (Domain Radius)
+        // Constraint Validation (Domain Radius)
         if (selected.getMinDistance() > maxDomainRadius) {
             feedbackLabel.setStyle("-fx-text-fill: red;");
-            feedbackLabel.setText("ATTENZIONE: Questa pianta è troppo grande per il dominio (Max " + maxDomainRadius + "m).");
+            feedbackLabel.setText("WARNING: Plant too large for this domain (Max " + maxDomainRadius + "m).");
             addButton.setDisable(true);
         } else {
             feedbackLabel.setText("");
@@ -207,7 +217,7 @@ public class InventoryJFXController {
     }
 
     // ==========================================
-    // ADD & CONFIRM LOGIC
+    // INVENTORY BUILDING LOGIC
     // ==========================================
 
     @FXML
@@ -218,21 +228,21 @@ public class InventoryJFXController {
         // 1. Update Domain Model
         buildingInventory.addEntry(sheet, qty);
 
-        // 2. Update UI Model
+        // 2. Update UI Table
         tableData.add(new InventoryRow(sheet, qty));
 
-        // 3. Update Totals
+        // 3. Update Summary
         updateSummary();
 
-        // 4. Feedback
+        // 4. User Feedback
         feedbackLabel.setStyle("-fx-text-fill: green;");
-        feedbackLabel.setText("Aggiunto " + qty + " x " + sheet.getVarietyName());
+        feedbackLabel.setText("Added " + qty + " x " + sheet.getVarietyName());
         proceedButton.setDisable(false);
     }
 
     private void updateSummary() {
         int total = tableData.stream().mapToInt(r -> r.qty).sum();
-        totalCountLabel.setText("Totale Piante: " + total);
+        totalCountLabel.setText("Total Plants: " + total);
     }
 
     @FXML
@@ -240,42 +250,36 @@ public class InventoryJFXController {
         if (isCatalogMode) {
             if (onBackToDashboard != null) onBackToDashboard.run();
         } else {
-            // Il codice vecchio:
             if (onInventoryConfirmed != null) onInventoryConfirmed.accept(buildingInventory);
         }
     }
 
     @FXML
     private void handleCancelAction() {
-        // Usa la variabile condivisa
-        if (onBackToDashboard != null) {
-            onBackToDashboard.run();
-        }
+        if (onBackToDashboard != null) onBackToDashboard.run();
     }
 
     // ==========================================
-    // AGRONOMIST: CREATE NEW
+    // AGRONOMIST FEATURES (CREATE NEW)
     // ==========================================
 
     @FXML
     private void handleCreateNewVarietyAction() {
         Dialog<PlantVarietySheet> dialog = new Dialog<>();
-        dialog.setTitle("Nuova Varietà");
-        dialog.setHeaderText("Crea una nuova scheda tecnica");
+        dialog.setTitle("New Plant Variety");
+        dialog.setHeaderText("Create a new technical sheet");
 
-        // Pulsanti
-        ButtonType createButtonType = new ButtonType("Salva", ButtonBar.ButtonData.OK_DONE);
+        // Buttons
+        ButtonType createButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(createButtonType, ButtonType.CANCEL);
 
-        // Layout Form (GridPane)
+        // Layout (GridPane)
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
 
-        // --- DEFINIZIONE CAMPI ---
-
-        // 1. Tipo (Pre-selezionato se possibile)
+        // --- FORM FIELDS ---
         ComboBox<PlantType> typeDialogCombo = new ComboBox<>(FXCollections.observableArrayList(PlantType.values()));
         if (typeCombo.getValue() != null) {
             typeDialogCombo.setValue(typeCombo.getValue());
@@ -283,45 +287,37 @@ public class InventoryJFXController {
             typeDialogCombo.getSelectionModel().selectFirst();
         }
 
-        // 2. Nome
         TextField nameField = new TextField();
-        nameField.setPromptText("Es. Mela Fuji");
+        nameField.setPromptText("e.g., Fuji Apple");
 
-        // 3. Distanza
         TextField distanceField = new TextField();
-        distanceField.setPromptText("Raggio in metri (es. 2.5)");
+        distanceField.setPromptText("Radius in meters (e.g., 2.5)");
 
-        // 4. Periodo Semina
         TextField sowingField = new TextField();
-        sowingField.setPromptText("Es. Marzo - Aprile");
+        sowingField.setPromptText("e.g., March - April");
 
-        // 5. Note
         TextField notesField = new TextField();
-        notesField.setPromptText("Note tecniche opzionali");
+        notesField.setPromptText("Optional technical notes");
 
-        // --- POSIZIONAMENTO NELLA GRIGLIA (Colonna, Riga) ---
-        grid.add(new Label("Categoria:"), 0, 0);
+        // --- GRID PLACEMENT ---
+        grid.add(new Label("Category:"), 0, 0);
         grid.add(typeDialogCombo, 1, 0);
-
-        grid.add(new Label("Nome Varietà:"), 0, 1);
+        grid.add(new Label("Variety Name:"), 0, 1);
         grid.add(nameField, 1, 1);
-
-        grid.add(new Label("Distanza Min (m):"), 0, 2);
+        grid.add(new Label("Min Distance (m):"), 0, 2);
         grid.add(distanceField, 1, 2);
-
-        grid.add(new Label("Periodo Semina:"), 0, 3);
+        grid.add(new Label("Sowing Period:"), 0, 3);
         grid.add(sowingField, 1, 3);
-
-        grid.add(new Label("Note:"), 0, 4);
+        grid.add(new Label("Notes:"), 0, 4);
         grid.add(notesField, 1, 4);
 
         dialog.getDialogPane().setContent(grid);
 
-        // --- CONVERSIONE RISULTATO ---
+        // --- RESULT CONVERTER ---
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == createButtonType) {
                 try {
-                    // Validazione minima: controlliamo che nome e distanza non siano vuoti
+                    // Minimal Validation
                     if (nameField.getText().trim().isEmpty() || distanceField.getText().trim().isEmpty()) {
                         return null;
                     }
@@ -330,7 +326,7 @@ public class InventoryJFXController {
                     s.setVarietyName(nameField.getText().trim());
                     s.setType(typeDialogCombo.getValue());
 
-                    // FIX: Sostituiamo la virgola col punto per evitare errori se l'utente scrive "2,5"
+                    // Sanitization: Replace comma with dot for international compatibility
                     String distanceStr = distanceField.getText().replace(",", ".");
                     s.setMinDistance(Double.parseDouble(distanceStr));
 
@@ -340,36 +336,32 @@ public class InventoryJFXController {
 
                     return s;
                 } catch (NumberFormatException e) {
-                    // Se la distanza non è un numero valido
-                    return null;
+                    return null; // Invalid number format
                 }
             }
             return null;
         });
 
-        // Mostra il Dialog e gestisci il risultato
+        // Show Dialog & Handle Result
         dialog.showAndWait().ifPresent(newSheet -> {
             boolean saved = catalogService.registerNewVariety(newSheet);
 
             if (saved) {
                 feedbackLabel.setStyle("-fx-text-fill: green;");
-                feedbackLabel.setText("Nuova varietà '" + newSheet.getVarietyName() + "' salvata nel DB!");
+                feedbackLabel.setText("Success! '" + newSheet.getVarietyName() + "' added to Catalog.");
 
-                // Refresh intelligente:
-                // Se la categoria della nuova pianta corrisponde a quella attualmente visualizzata nel filtro,
-                // ricarichiamo la lista.
-                // Questo aggiorna sia la ComboBox (in simulazione) sia la Tabella (in catalogo).
+                // Auto-refresh logic: if the new item matches current filter, reload.
                 if (typeCombo.getValue() == newSheet.getType()) {
                     handleTypeSelection();
                 }
             } else {
                 feedbackLabel.setStyle("-fx-text-fill: red;");
-                feedbackLabel.setText("Errore salvataggio: controlla i dati.");
+                feedbackLabel.setText("Save Failed: Check your data.");
             }
         });
     }
 
-    // --- INNER CLASS FOR TABLE ---
+    // --- INNER CLASS FOR TABLE DATA MODEL ---
     public static class InventoryRow {
         PlantVarietySheet sheet;
         int qty;

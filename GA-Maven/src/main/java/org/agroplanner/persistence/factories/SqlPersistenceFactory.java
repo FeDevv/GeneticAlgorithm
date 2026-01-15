@@ -1,12 +1,12 @@
 package org.agroplanner.persistence.factories;
 
-import org.agroplanner.domainsystem.dao.DomainDAOContract;
-import org.agroplanner.persistence.implementations.access.SqlUserDAO;
 import org.agroplanner.access.dao.UserDAOContract;
+import org.agroplanner.domainsystem.dao.DomainDAOContract;
 import org.agroplanner.gasystem.dao.SolutionDAOContract;
+import org.agroplanner.inventory.dao.PlantVarietyDAOContract;
+import org.agroplanner.persistence.implementations.access.SqlUserDAO;
 import org.agroplanner.persistence.implementations.domainsystem.SqlDomainDAO;
 import org.agroplanner.persistence.implementations.gasystem.SqlSolutionDAO;
-import org.agroplanner.inventory.dao.PlantVarietyDAOContract;
 import org.agroplanner.persistence.implementations.inventory.SqlPlantVarietyDAO;
 
 public class SqlPersistenceFactory extends AgroPersistenceFactory {

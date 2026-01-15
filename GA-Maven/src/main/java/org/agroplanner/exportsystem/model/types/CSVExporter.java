@@ -1,20 +1,16 @@
 package org.agroplanner.exportsystem.model.types;
 
-import org.agroplanner.exportsystem.model.ExportType;
-import org.agroplanner.inventory.model.InventoryEntry;
-import org.agroplanner.inventory.model.PlantInventory;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
-import org.agroplanner.gasystem.model.Individual;
-import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
+import org.agroplanner.exportsystem.model.ExportType;
+import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
+import org.agroplanner.inventory.model.PlantInventory;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Locale;
 
 /**
@@ -51,8 +47,6 @@ public class CSVExporter extends BaseExporter {
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
 
             // --- SECTION 1: METADATA BLOCK ---
-            // Scriviamo Etichetta;Valore così Excel li mette in Colonna A e Colonna B
-
             writer.write("METADATA_KEY;VALUE");
             writer.newLine();
 
@@ -60,7 +54,7 @@ public class CSVExporter extends BaseExporter {
             writer.write("Domain Geometry;" + domain.toString());
             writer.newLine();
 
-            // 2. Fitness (Formatto US per avere il punto)
+            // 2. Fitness
             writer.write(String.format(Locale.US, "Final Fitness Score;%.6f", individual.getFitness()));
             writer.newLine();
 
@@ -68,12 +62,11 @@ public class CSVExporter extends BaseExporter {
             writer.write("Total Plants Placed;" + individual.getDimension());
             writer.newLine();
 
-            // 4. Timestamp (Optional but useful)
+            // 4. Timestamp
             writer.write("Export Timestamp;" + java.time.LocalDateTime.now());
             writer.newLine();
 
             // --- SEPARATOR ---
-            // Lasciamo una riga vuota per staccare visivamente i dati
             writer.newLine();
 
             // --- SECTION 2: DATA TABLE HEADER ---
@@ -87,7 +80,7 @@ public class CSVExporter extends BaseExporter {
                 // Data Preparation
                 String varietyName = (p.getVarietyName() != null) ? p.getVarietyName() : "Unknown";
 
-                // Sanitization: Rimuoviamo il separatore ';' dal nome se presente
+                // Sanitization: remoce ';' from name
                 varietyName = varietyName.replace(";", " ");
 
                 // Formatting

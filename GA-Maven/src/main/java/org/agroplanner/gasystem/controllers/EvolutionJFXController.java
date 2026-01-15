@@ -25,8 +25,11 @@ import java.awt.geom.Rectangle2D;
 import java.util.function.Consumer;
 
 /**
- * Controller JavaFX per il sistema evolutivo.
- * Gestisce sia la simulazione (Task asincroni) che la visualizzazione di sessioni caricate.
+ * JavaFX Controller for the Evolutionary Simulation.
+ * <p>
+ * Handles the running of the Genetic Algorithm (via background Tasks),
+ * real-time visualization on Canvas, and persistence operations.
+ * </p>
  */
 public class EvolutionJFXController {
 
@@ -34,83 +37,87 @@ public class EvolutionJFXController {
     private EvolutionService service;
     private Domain domain;
     private DomainDefinition domainDefinition;
-    private Consumer<Individual> onEvolutionComplete;
     private AgroPersistenceFactory factory;
     private User currentUser;
-    private boolean isDemoMode;
-    private PlantInventory currentInventory;
+
+    // Callbacks
+    private Consumer<Individual> onEvolutionComplete;
     private Runnable onExitCallback;
 
     // --- STATE ---
     private Individual bestSolution;
+    private boolean isDemoMode;
     private static final int MAX_ATTEMPTS = 3;
 
-    // --- FXML ---
+    // --- FXML INJECTIONS ---
     @FXML private TextArea consoleArea;
     @FXML private ProgressBar progressBar;
     @FXML private Label fitnessLabel;
+
+    // Buttons
     @FXML private Button startButton;
     @FXML private Button saveButton;
     @FXML private Button exportButton;
 
-    // Tabella Dettagli (Nuova)
+    // Detail Table
     @FXML private TableView<PointViewModel> pointsTable;
     @FXML private TableColumn<PointViewModel, String> colPtName;
     @FXML private TableColumn<PointViewModel, Number> colPtX;
     @FXML private TableColumn<PointViewModel, Number> colPtY;
 
+    // Visualization Area
     @FXML private Label placeholderLabel;
     @FXML private StackPane canvasContainer;
     @FXML private Canvas plantCanvas;
 
     /**
-     * Metodo di inizializzazione principale.
+     * Initializes the controller. This method handles two scenarios:
+     * 1. New Simulation: Sets up the UI for running the algorithm.
+     * 2. Loaded Session: Sets up the UI for viewing an existing solution (Read-Only).
      */
-    public void init(EvolutionService service, Domain domain, PlantInventory inventory, DomainDefinition domainDef, Consumer<Individual> onExportRequested,
-                     AgroPersistenceFactory factory, User user, boolean isDemoMode, Individual loadedSolution, Runnable onExit) {
+    public void init(EvolutionService service, Domain domain, PlantInventory inventory, DomainDefinition domainDef,
+                     Consumer<Individual> onExportRequested, AgroPersistenceFactory factory,
+                     User user, boolean isDemoMode, Individual loadedSolution, Runnable onExit) {
+
         this.service = service;
         this.domain = domain;
-        this.currentInventory = inventory;
         this.domainDefinition = domainDef;
         this.onEvolutionComplete = onExportRequested;
-
         this.factory = factory;
         this.currentUser = user;
         this.isDemoMode = isDemoMode;
         this.onExitCallback = onExit;
 
-        // Configura le colonne della tabella
+        // Configure Table Columns
         setupTable();
 
-        // Rende il canvas responsive
+        // Bind Canvas size to Container size for responsiveness
         plantCanvas.widthProperty().bind(canvasContainer.widthProperty());
         plantCanvas.heightProperty().bind(canvasContainer.heightProperty());
 
-        // Ridisegna se la finestra viene ridimensionata
+        // Redraw on resize
         canvasContainer.widthProperty().addListener(o -> redrawCurrentSolution());
         canvasContainer.heightProperty().addListener(o -> redrawCurrentSolution());
 
-        // LOGICA DUAL MODE
+        // DUAL MODE LOGIC
         if (loadedSolution != null) {
-            // --- MODALITÀ VISUALIZZAZIONE (Caricato da DB) ---
+            // --- VIEW MODE (Loaded from DB) ---
             this.bestSolution = loadedSolution;
-
-            // 1. Aggiorna Grafico, Tabella e UI
             updateUIWithSolution(bestSolution);
 
-            // 2. Nascondi controlli di simulazione e salvataggio
+            // Hide simulation controls
             startButton.setVisible(false);
             progressBar.setVisible(false);
             saveButton.setVisible(false);
 
-            // 3. Abilita subito Export
+            // Enable Export immediately
             exportButton.setDisable(false);
 
         } else {
-            // --- MODALITÀ CALCOLO (Nuova sessione) ---
+            // --- CALCULATION MODE (New Session) ---
             startButton.setVisible(true);
             saveButton.setVisible(true);
-            saveButton.setDisable(true);
+            saveButton.setDisable(true); // Disabled until run
             exportButton.setDisable(true);
             placeholderLabel.setVisible(true);
         }
@@ -121,7 +128,7 @@ public class EvolutionJFXController {
         colPtX.setCellValueFactory(cell -> new SimpleDoubleProperty(cell.getValue().x));
         colPtY.setCellValueFactory(cell -> new SimpleDoubleProperty(cell.getValue().y));
 
-        // Formattazione numeri a 2 decimali
+        // Format numbers to 2 decimals
         colPtX.setCellFactory(tc -> new javafx.scene.control.TableCell<>() {
             @Override protected void updateItem(Number item, boolean empty) {
                 super.updateItem(item, empty);
@@ -137,17 +144,17 @@ public class EvolutionJFXController {
     }
 
     /**
-     * Aggiorna tutta l'interfaccia (Grafico + Tabella) con una soluzione data.
+     * Updates the entire UI (Graph + Table + Labels) with a given solution.
      */
     private void updateUIWithSolution(Individual solution) {
-        // 1. Disegna i punti
+        // 1. Draw Canvas
         drawSimplePoints(solution);
 
-        // 2. Aggiorna Label e nasconde il placeholder
+        // 2. Update Labels
         placeholderLabel.setVisible(false);
         fitnessLabel.setText(String.format("%.6f", solution.getFitness()));
 
-        // 3. Popola la tabella
+        // 3. Populate Table
         ObservableList<PointViewModel> list = FXCollections.observableArrayList();
         for (Point p : solution.getChromosomes()) {
             list.add(new PointViewModel(p.getVarietyName(), p.getX(), p.getY()));
@@ -158,14 +165,17 @@ public class EvolutionJFXController {
 
     @FXML
     private void handleRunEvolution() {
+        // Lock UI
         startButton.setDisable(true);
         saveButton.setDisable(true);
         exportButton.setDisable(true);
         progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
         consoleArea.clear();
 
+        // Start Background Task
         EvolutionTask task = new EvolutionTask();
 
+        // Redirect task messages to Console TextArea
         task.messageProperty().addListener((obs, oldMsg, newMsg) -> {
             consoleArea.appendText(newMsg + "\n");
         });
@@ -173,22 +183,29 @@ public class EvolutionJFXController {
         task.setOnSucceeded(e -> {
             this.bestSolution = task.getValue();
             progressBar.setProgress(1.0);
+
             startButton.setDisable(false);
-            startButton.setText("Riavvia");
+            startButton.setText("Restart");
 
-            // Aggiorna UI completa (Grafico + Tabella)
+            // Update UI
             updateUIWithSolution(bestSolution);
-            consoleArea.appendText("✅ Simulazione completata con successo.\n");
+            consoleArea.appendText("✅ Simulation completed successfully.\n");
 
+            // Enable post-processing actions
             saveButton.setDisable(false);
-            exportButton.setDisable(true);
+            exportButton.setDisable(true); // Export enabled after save or explicit logic?
+            // Usually allow export if save isn't mandatory,
+            // but disabling Save ensures data isn't lost.
+            // Let's keep logic: User must save to DB? No, enable Export.
+            exportButton.setDisable(false); // Fix: allow export without saving to DB (optional)
         });
 
         task.setOnFailed(e -> {
             progressBar.setProgress(0);
             startButton.setDisable(false);
-            consoleArea.appendText("⛔ ERRORE: " + task.getException().getMessage() + "\n");
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Simulazione Fallita: " + task.getException().getMessage());
+            consoleArea.appendText("⛔ ERROR: " + task.getException().getMessage() + "\n");
+
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Simulation Failed: " + task.getException().getMessage());
             alert.showAndWait();
         });
 
@@ -199,6 +216,7 @@ public class EvolutionJFXController {
     private void handleSaveAction() {
         if (bestSolution == null) return;
 
+        // Use the static utility from Persistence Controller
         PersistenceJFXController.runSaveWorkflow(
                 factory.getSolutionDAO(),
                 bestSolution,
@@ -206,9 +224,9 @@ public class EvolutionJFXController {
                 isDemoMode,
                 this.domainDefinition,
                 () -> {
-                    exportButton.setDisable(false);
+                    // UI Callback on success
                     saveButton.setDisable(true);
-                    saveButton.setText("Salvato ✅");
+                    saveButton.setText("Saved ✅");
                 }
         );
     }
@@ -228,13 +246,13 @@ public class EvolutionJFXController {
     }
 
     // =========================================================
-    // LOGICA ASINCRONA (Task)
+    // ASYNC TASK
     // =========================================================
 
     private class EvolutionTask extends Task<Individual> {
         @Override
         protected Individual call() throws Exception {
-            updateMessage("🧬 Inizializzazione Algoritmo Genetico...");
+            updateMessage("🧬 Initializing Genetic Algorithm...");
 
             int currentAttempt = 0;
             Individual lastResult = null;
@@ -242,26 +260,27 @@ public class EvolutionJFXController {
             do {
                 currentAttempt++;
                 long start = System.currentTimeMillis();
-                updateMessage(String.format("🔄 Tentativo %d di %d in corso...", currentAttempt, MAX_ATTEMPTS));
+                updateMessage(String.format("🔄 Attempt %d of %d running...", currentAttempt, MAX_ATTEMPTS));
 
+                // BLOCKING CALL to Service
                 lastResult = service.executeEvolutionCycle();
                 long duration = System.currentTimeMillis() - start;
 
                 if (service.isValidSolution(lastResult)) {
-                    updateMessage(String.format("✅ Soluzione valida trovata in %.2fs", duration / 1000.0));
+                    updateMessage(String.format("✅ Valid solution found in %.2fs", duration / 1000.0));
                     return lastResult;
                 }
 
-                updateMessage(String.format("⚠️ Convergenza su soluzione invalida (Score: %.4f). Riprovo...", lastResult.getFitness()));
+                updateMessage(String.format("⚠️ Converged on invalid solution (Score: %.4f). Retrying...", lastResult.getFitness()));
 
             } while (currentAttempt < MAX_ATTEMPTS);
 
-            throw new MaxAttemptsExceededException("Impossibile trovare una soluzione valida dopo " + MAX_ATTEMPTS + " tentativi.");
+            throw new MaxAttemptsExceededException("Could not find a valid solution after " + MAX_ATTEMPTS + " attempts.");
         }
     }
 
     // =========================================================
-    // VISUALIZZAZIONE GRAFICA
+    // GRAPHICS
     // =========================================================
 
     private void redrawCurrentSolution() {
@@ -279,30 +298,30 @@ public class EvolutionJFXController {
         if (w < 10 || h < 10) return;
 
         Rectangle2D bounds = domain.getBoundingBox();
-        double domainX = bounds.getX();
-        double domainY = bounds.getY();
         double domainW = bounds.getWidth();
         double domainH = bounds.getHeight();
 
+        // Calculate Scale to fit domain in canvas with margin
         double margin = 30;
         double availW = w - (margin * 2);
         double availH = h - (margin * 2);
-
         double scale = Math.min(availW / domainW, availH / domainH);
 
+        // Calculate Offset to center the drawing
         double offsetX = margin + (availW - (domainW * scale)) / 2.0;
         double offsetY = margin + (availH - (domainH * scale)) / 2.0;
 
-        // Bordo Dominio
+        // Draw Domain Boundary
         gc.setStroke(Color.web("#e0e0e0"));
         gc.setLineWidth(1.0);
         gc.strokeRect(offsetX, offsetY, domainW * scale, domainH * scale);
 
-        // Punti
+        // Draw Points
         double dotRadius = 3.0;
         for (Point p : solution.getChromosomes()) {
-            double normalizedX = p.getX() - domainX;
-            double normalizedY = p.getY() - domainY;
+            // Normalize point coordinates relative to domain origin
+            double normalizedX = p.getX() - bounds.getX();
+            double normalizedY = p.getY() - bounds.getY();
 
             double screenX = offsetX + (normalizedX * scale);
             double screenY = offsetY + (normalizedY * scale);
@@ -317,7 +336,7 @@ public class EvolutionJFXController {
     }
 
     // =========================================================
-    // INNER CLASS PER LA TABELLA
+    // INNER CLASS FOR TABLE VIEW MODEL
     // =========================================================
     public static class PointViewModel {
         String name;
@@ -326,5 +345,8 @@ public class EvolutionJFXController {
         public PointViewModel(String name, double x, double y) {
             this.name = name; this.x = x; this.y = y;
         }
+        public String getName() { return name; }
+        public double getX() { return x; }
+        public double getY() { return y; }
     }
 }

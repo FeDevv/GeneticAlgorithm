@@ -1,9 +1,9 @@
 package org.agroplanner.gasystem.services.operators;
 
-import org.agroplanner.gasystem.model.Individual;
-import org.agroplanner.inventory.model.PlantType;
-import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.domainsystem.model.Domain;
+import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
+import org.agroplanner.inventory.model.PlantType;
 import org.agroplanner.shared.utils.RandomUtils;
 
 /**

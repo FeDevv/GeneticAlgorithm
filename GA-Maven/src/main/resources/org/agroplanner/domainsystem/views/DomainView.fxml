@@ -13,12 +13,12 @@
                 <Insets bottom="20.0" top="20.0" />
             </padding>
             <children>
-                <Text text="Definizione Dominio">
+                <Text text="Domain Definition">
                     <font>
                         <Font name="System Bold" size="22.0" />
                     </font>
                 </Text>
-                <Label text="Configura la geometria del campo di lavoro" textFill="#757575" />
+                <Label text="Configure the field geometry for the simulation" textFill="#757575" />
             </children>
         </VBox>
     </top>
@@ -30,19 +30,19 @@
             <children>
                 <VBox spacing="5.0">
                     <children>
-                        <Label text="Seleziona Forma:" style="-fx-font-weight: bold;" />
-                        <ComboBox fx:id="domainTypeCombo" maxWidth="1.7976931348623157E308" onAction="#handleTypeSelection" promptText="Scegli una geometria..." />
+                        <Label text="Select Shape:" style="-fx-font-weight: bold;" />
+                        <ComboBox fx:id="domainTypeCombo" maxWidth="1.7976931348623157E308" onAction="#handleTypeSelection" promptText="Choose geometry..." />
                     </children>
                 </VBox>
 
                 <Separator />
 
-                <Label text="Parametri:" style="-fx-font-weight: bold;" />
+                <Label text="Parameters:" style="-fx-font-weight: bold;" />
                 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
                     <content>
                         <VBox fx:id="dynamicFormContainer" spacing="15.0">
                             <children>
-                                <Label text="Seleziona un tipo per vedere i parametri." textFill="#9e9e9e" style="-fx-font-style: italic;" />
+                                <Label text="Select a shape type to view parameters." textFill="#9e9e9e" style="-fx-font-style: italic;" />
                             </children>
                         </VBox>
                     </content>
@@ -57,7 +57,7 @@
             </padding>
             <children>
                 <Label fx:id="feedbackLabel" textFill="#d32f2f" wrapText="true" />
-                <Button fx:id="createButton" defaultButton="true" disable="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleCreateAction" style="-fx-background-color: #1976d2; -fx-text-fill: white;" text="Crea Dominio" />
+                <Button fx:id="createButton" defaultButton="true" disable="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleCreateAction" style="-fx-background-color: #1976d2; -fx-text-fill: white;" text="Create Domain" />
             </children>
         </VBox>
     </bottom>

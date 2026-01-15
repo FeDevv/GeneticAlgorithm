@@ -6,7 +6,6 @@ import org.agroplanner.gasystem.dao.SolutionDAOContract;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.LoadedSession;
 import org.agroplanner.gasystem.model.SolutionMetadata;
-import org.agroplanner.orchestrator.views.SystemViewContract;
 import org.agroplanner.persistence.views.PersistenceViewContract;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 

@@ -32,29 +32,32 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Orchestrator Runtime per l'ambiente JavaFX.
- * Gestisce il ciclo di vita delle finestre e la transizione tra le scene (Router).
+ * JavaFX Runtime Orchestrator.
+ * <p>
+ * Acts as the application Router and Dependency Injection container for the GUI mode.
+ * It manages the primary Stage and transitions between different Views (Scenes).
+ * </p>
  */
 public class JFXOrchestrator extends Application {
 
-    // --- STATIC CONTEXT (Per passare dati dal SystemOrchestrator) ---
+    // --- STATIC CONTEXT (Passed from Composition Root) ---
     private static AgroPersistenceFactory factory;
     private static DomainService domainService;
     private static ExportService exportService;
 
-    // --- STATE ---
+    // --- SESSION STATE ---
     private Stage primaryStage;
     private User currentUser;
     private boolean isDemoMode;
 
     /**
-     * Entry point statico chiamato dal SystemOrchestrator.
+     * Static entry point invoked by SystemOrchestrator.
      */
     public static void launchApp(AgroPersistenceFactory f, DomainService d, ExportService e) {
         factory = f;
         domainService = d;
         exportService = e;
-        launch(); // Avvia il thread JavaFX
+        launch(); // Starts JavaFX Thread
     }
 
     @Override
@@ -64,14 +67,14 @@ public class JFXOrchestrator extends Application {
 
         primaryStage.setTitle("AgroPlanner System v3.0");
 
-        // Gestione chiusura corretta
+        // Graceful Shutdown
         primaryStage.setOnCloseRequest(e -> {
             Platform.exit();
             System.exit(0);
         });
 
         if (isDemoMode) {
-            // Login automatico guest
+            // Auto-login as Guest
             this.currentUser = User.createGuestUser();
             goToDashboard();
         } else {
@@ -82,13 +85,13 @@ public class JFXOrchestrator extends Application {
     }
 
     // ==========================================
-    // NAVIGATION: MAIN SCREENS
+    // NAVIGATION: CORE
     // ==========================================
 
     public void logout() {
         this.currentUser = null;
         if (isDemoMode) {
-            Platform.exit(); // In demo mode logout chiude l'app
+            Platform.exit(); // Demo mode exit closes the app
         } else {
             goToLogin();
         }
@@ -100,7 +103,7 @@ public class JFXOrchestrator extends Application {
             Parent root = loader.load();
 
             AccessJFXController controller = loader.getController();
-            // Dependency Injection & Callback
+            // Inject Service & Success Callback
             controller.init(new AccessService(factory.getUserDAO()), authenticatedUser -> {
                 this.currentUser = authenticatedUser;
                 goToDashboard();
@@ -109,8 +112,7 @@ public class JFXOrchestrator extends Application {
             primaryStage.setScene(new Scene(root));
             primaryStage.centerOnScreen();
         } catch (IOException e) {
-            e.printStackTrace();
-            showFatalError("Impossibile caricare Login View", e);
+            showFatalError("Failed to load Login View", e);
         }
     }
 
@@ -125,7 +127,7 @@ public class JFXOrchestrator extends Application {
             primaryStage.setScene(new Scene(root));
             primaryStage.centerOnScreen();
         } catch (IOException e) {
-            showFatalError("Impossibile caricare Dashboard", e);
+            showFatalError("Failed to load Dashboard", e);
         }
     }
 
@@ -137,7 +139,7 @@ public class JFXOrchestrator extends Application {
         goToDomainDefinition();
     }
 
-    // STEP 1: Domain
+    // STEP 1: Domain Definition
     private void goToDomainDefinition() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/agroplanner/domainsystem/views/DomainView.fxml"));
@@ -145,20 +147,19 @@ public class JFXOrchestrator extends Application {
 
             DomainJFXController controller = loader.getController();
             controller.init(domainService, domainDef -> {
-                // Qui abbiamo la definizione creata dall'utente.
+                // Instantiate Domain Model
                 Domain domain = domainService.createDomain(domainDef.getType(), domainDef.getParameters());
-
-                // PASSIAMO ENTRAMBI AL PROSSIMO STEP
+                // Proceed to next step
                 goToInventory(domain, domainDef);
             });
 
             primaryStage.setScene(new Scene(root));
         } catch (IOException e) {
-            showFatalError("Errore caricamento Domain View", e);
+            showFatalError("Error loading Domain View", e);
         }
     }
 
-    // STEP 2: Inventory
+    // STEP 2: Inventory Selection
     private void goToInventory(Domain domain, DomainDefinition def) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/agroplanner/inventory/views/InventoryView.fxml"));
@@ -168,27 +169,26 @@ public class JFXOrchestrator extends Application {
             double maxRadius = domainService.calculateMaxValidRadius(domain);
 
             controller.init(currentUser, maxRadius, factory.getPlantDAO(),
-                    // Callback Conferma:
-                    // Grazie alle "Closure" di Java, 'def' è ancora visibile qui dentro!
+                    // On Confirm: Go to Evolution
                     inventory -> goToEvolution(domain, inventory, def, null),
-
-                    // Callback Annulla:
-                    () -> goToDashboard()
+                    // On Cancel: Back to Dashboard
+                    this::goToDashboard
             );
 
             primaryStage.setScene(new Scene(root));
         } catch (IOException e) {
-            showFatalError("Errore caricamento Inventory View", e);
+            showFatalError("Error loading Inventory View", e);
         }
     }
 
-    // STEP 3: Evolution
+    // STEP 3: Evolutionary Simulation
     private void goToEvolution(Domain domain, PlantInventory inventory, DomainDefinition def, Individual loadedSolution) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/agroplanner/gasystem/views/EvolutionView.fxml"));
             Parent root = loader.load();
             EvolutionJFXController controller = loader.getController();
 
+            // Only create service if running a new simulation
             EvolutionService evoService = (loadedSolution == null) ? new EvolutionService(domain, inventory) : null;
 
             controller.init(
@@ -196,35 +196,35 @@ public class JFXOrchestrator extends Application {
                     domain,
                     inventory,
                     def,
+                    // On Export Requested
                     solution -> goToExport(solution, domain, inventory),
                     factory,
                     currentUser,
                     isDemoMode,
                     loadedSolution,
-                    () -> goToDashboard() // <--- ULTIMO PARAMETRO: TORNA ALLA DASHBOARD
+                    // On Exit
+                    this::goToDashboard
             );
 
             primaryStage.setScene(new Scene(root));
         } catch (IOException e) {
-            showFatalError("Errore caricamento Evolution View", e);
+            showFatalError("Error loading Evolution View", e);
         }
     }
 
-    // STEP 4: Export
+    // STEP 4: Export Wizard
     private void goToExport(Individual solution, Domain domain, PlantInventory inventory) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/agroplanner/exportsystem/views/ExportView.fxml"));
             Parent root = loader.load();
 
             ExportJFXController controller = loader.getController();
-
-            // Passiamo l'ultimo parametro: () -> goToDashboard()
-            controller.init(exportService, solution, domain, inventory, isDemoMode, () -> goToDashboard());
+            controller.init(exportService, solution, domain, inventory, isDemoMode, this::goToDashboard);
 
             primaryStage.setScene(new Scene(root));
 
         } catch (IOException e) {
-            showFatalError("Errore Export View", e);
+            showFatalError("Error loading Export View", e);
         }
     }
 
@@ -237,40 +237,33 @@ public class JFXOrchestrator extends Application {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/org/agroplanner/persistence/views/LoadSessionView.fxml"));
             Parent root = loader.load();
 
-            // Creiamo un nuovo Stage (Modale)
+            // Create Modal Stage
             Stage loadStage = new Stage();
             loadStage.initModality(Modality.APPLICATION_MODAL);
-            loadStage.setTitle("Carica Sessione");
+            loadStage.setTitle("Load Session");
 
             PersistenceJFXController controller = loader.getController();
 
             controller.initLoad(loadStage, factory.getSolutionDAO(), currentUser, loadedSession -> {
-                // CALLBACK: Sessione caricata con successo dal DB
+                // Session Loaded Callback
                 try {
-                    // A. Recuperiamo i dati grezzi
+                    // Reconstruct Data Models
                     Individual solution = loadedSession.getSolution();
                     var def = loadedSession.getDomainDefinition();
-
-                    // B. Ricostruiamo il DOMINIO (Terreno)
                     Domain domain = domainService.createDomain(def.getType(), def.getParameters());
 
-                    // C. Ricostruiamo l'INVENTARIO (Piante)
-                    // 1. Estraiamo tutti gli ID delle varietà usate nella soluzione (senza duplicati)
+                    // Reconstruct Inventory from stored IDs
                     Set<Integer> varietyIds = solution.getChromosomes().stream()
                             .map(Point::getVarietyId)
                             .collect(Collectors.toSet());
-
-                    // 2. Chiediamo al DAO di darci le schede tecniche di questi ID
                     List<PlantVarietySheet> usedVarieties = factory.getPlantDAO().findAllByIds(varietyIds);
-
-                    // 3. Usiamo il metodo statico per ricostruire l'oggetto Inventory completo
                     PlantInventory reconstructedInventory = PlantInventory.fromSolution(solution, usedVarieties);
 
-                    // D. Navighiamo verso la visualizzazione (Evolution View in modalità Read-Only)
+                    // Navigate to View Mode
                     goToEvolution(domain, reconstructedInventory, def, solution);
 
                 } catch (Exception e) {
-                    showFatalError("Errore durante la ricostruzione della sessione", e);
+                    showFatalError("Failed to reconstruct session data", e);
                 }
             });
 
@@ -278,12 +271,12 @@ public class JFXOrchestrator extends Application {
             loadStage.showAndWait();
 
         } catch (IOException e) {
-            showFatalError("Errore caricamento Load View", e);
+            showFatalError("Error loading Load View", e);
         }
     }
 
     // ==========================================
-    // FLOW: CATALOG
+    // FLOW: CATALOG MANAGEMENT
     // ==========================================
 
     public void startCatalogFlow() {
@@ -292,20 +285,16 @@ public class JFXOrchestrator extends Application {
             Parent root = loader.load();
 
             InventoryJFXController controller = loader.getController();
-
-            // CHIAMA IL NUOVO INIT
-            controller.initCatalogMode(currentUser, factory.getPlantDAO(), () -> {
-                goToDashboard(); // Callback per tornare indietro
-            });
+            // Init in Catalog Mode
+            controller.initCatalogMode(currentUser, factory.getPlantDAO(), this::goToDashboard);
 
             primaryStage.setScene(new Scene(root));
         } catch (IOException e) {
-            e.printStackTrace(); // O usa il tuo showFatalError
+            showFatalError("Error loading Catalog View", e);
         }
     }
 
     private void showFatalError(String msg, Exception e) {
-        System.err.println(msg);
-        e.printStackTrace();
+        System.err.println("CRITICAL UI ERROR: " + msg);
     }
 }

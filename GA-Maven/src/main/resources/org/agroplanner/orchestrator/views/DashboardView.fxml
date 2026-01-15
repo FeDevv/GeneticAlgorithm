@@ -19,10 +19,10 @@
                 </Label>
                 <HBox spacing="10.0">
                     <children>
-                        <Label text="Utente:" textFill="#c8e6c9" />
+                        <Label text="User:" textFill="#c8e6c9" />
                         <Label fx:id="userLabel" text="-" textFill="WHITE" style="-fx-font-weight: bold;" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Label fx:id="roleLabel" text="[RUOLO]" textFill="#a5d6a7" />
+                        <Label fx:id="roleLabel" text="[ROLE]" textFill="#a5d6a7" />
                     </children>
                 </HBox>
             </children>
@@ -35,12 +35,12 @@
                 <Insets bottom="40.0" left="100.0" right="100.0" top="40.0" />
             </padding>
             <children>
-                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleNewSession" prefHeight="50.0" style="-fx-font-size: 16px;" text="🚀 Nuova Ottimizzazione" />
-                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLoadSession" prefHeight="50.0" style="-fx-font-size: 16px;" text="📂 Carica Sessione" />
+                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleNewSession" prefHeight="50.0" style="-fx-font-size: 16px;" text="🚀 Start Optimization" />
+                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLoadSession" prefHeight="50.0" style="-fx-font-size: 16px;" text="📂 Load Session" />
 
                 <Separator prefWidth="200.0" />
 
-                <Button fx:id="catalogButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleCatalog" prefHeight="40.0" text="Gestione Catalogo (Agronomo)" />
+                <Button fx:id="catalogButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleCatalog" prefHeight="40.0" text="Catalog Management (Agronomist)" />
             </children>
         </VBox>
     </center>
@@ -51,7 +51,7 @@
                 <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
             </padding>
             <children>
-                <Button mnemonicParsing="false" onAction="#handleLogout" style="-fx-background-color: #d32f2f; -fx-text-fill: white;" text="Disconnetti" />
+                <Button mnemonicParsing="false" onAction="#handleLogout" style="-fx-background-color: #d32f2f; -fx-text-fill: white;" text="Logout" />
             </children>
         </HBox>
     </bottom>

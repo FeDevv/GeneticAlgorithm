@@ -4,13 +4,15 @@ import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
 import org.agroplanner.exportsystem.model.ExportType;
 import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.inventory.model.InventoryEntry;
 import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.inventory.model.PlantType;
-import org.agroplanner.gasystem.model.Point;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
-import org.apache.poi.xddf.usermodel.*;
+import org.apache.poi.xddf.usermodel.XDDFLineProperties;
+import org.apache.poi.xddf.usermodel.XDDFNoFillProperties;
+import org.apache.poi.xddf.usermodel.XDDFShapeProperties;
 import org.apache.poi.xddf.usermodel.chart.*;
 import org.apache.poi.xssf.usermodel.*;
 
@@ -18,7 +20,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -41,12 +46,10 @@ import java.util.stream.Collectors;
  */
 public class ExcelExporter extends BaseExporter {
 
-    // UPDATE: Aggiunte le colonne VAR_ID e VARIETY_NAME
     private static final String[] HEADERS = {
             "ID", "VAR_ID", "VARIETY_NAME", "TYPE", "LABEL", "X(m)", "Y(m)", "RADIUS(m)"
     };
 
-    // Costanti per gli indici delle colonne (Fondamentali per il grafico)
     private static final int COL_X = 5;
     private static final int COL_Y = 6;
 
@@ -78,8 +81,7 @@ public class ExcelExporter extends BaseExporter {
         try (XSSFWorkbook workbook = new XSSFWorkbook()) {
             XSSFSheet sheet = workbook.createSheet("Optimization Plan");
 
-            // 1. Style Initialization (Separation of Concerns)
-            // Pre-allocate styles to avoid creating duplicates in the loop (POI Best Practice).
+            // 1. Style Initialization
             ExcelStyles styles = new ExcelStyles(workbook);
 
             int rowIndex = 0;
@@ -92,7 +94,6 @@ public class ExcelExporter extends BaseExporter {
             rowIndex = writeHeader(sheet, rowIndex, styles);
 
             // 4. Data Population & Range Tracking
-            // We need to know exactly which rows contain "TOMATO", which contain "CORN", etc., for the chart.
             Map<PlantType, int[]> rangeMap = writeDataRows(sheet, rowIndex, individual, styles);
 
             // 5. Layout Engine
@@ -101,7 +102,7 @@ public class ExcelExporter extends BaseExporter {
             int chartCols = chartDimensions[0];
             int chartRows = chartDimensions[1];
 
-            // 6. Chart Generation (XDDF)
+            // 6. Chart Generation
             createMultiSeriesChart(sheet, rangeMap, headerRowIndex, chartCols, chartRows);
 
             // UX hints near the chart
@@ -116,7 +117,7 @@ public class ExcelExporter extends BaseExporter {
     }
 
     // ==================================================================================
-    // LOGIC METHODS (Private step-by-step methods)
+    // LOGIC METHODS
     // ==================================================================================
 
     private int writeMetadata(XSSFSheet sheet, int rowIndex, Domain domain, PlantInventory inventory, Individual individual, ExcelStyles styles) {
@@ -132,7 +133,7 @@ public class ExcelExporter extends BaseExporter {
         createMetadataRow(sheet, rowIndex++, "Total Plants:", String.valueOf(inventory.getTotalPopulationSize()), styles.header, styles.left);
         createMetadataRow(sheet, rowIndex++, "Fitness:", String.format(Locale.US, "%.6f", individual.getFitness()), styles.header, styles.left);
 
-        return rowIndex + 1; // +1 for spacer row
+        return rowIndex + 1; // +1 for spacer
     }
 
     private int writeHeader(XSSFSheet sheet, int rowIndex, ExcelStyles styles) {
@@ -156,7 +157,7 @@ public class ExcelExporter extends BaseExporter {
         Map<PlantType, int[]> rangeMap = new EnumMap<>(PlantType.class);
         int idCounter = 1;
 
-        // Ordiniamo l'inserimento per Tipo
+        // ordeer by type
         for (Map.Entry<PlantType, List<Point>> entry : groupedPoints.entrySet()) {
             PlantType type = entry.getKey();
             List<Point> pointsOfType = entry.getValue();
@@ -171,27 +172,26 @@ public class ExcelExporter extends BaseExporter {
 
                 String varietyName = (p.getVarietyName() != null) ? p.getVarietyName() : "Unknown";
 
-                // Mapping aggiornato alle 8 colonne
-                createStyledCell(row, 0, idCounter++, styles.center);           // ID
-                createStyledCell(row, 1, p.getVarietyId(), styles.center);      // VAR_ID (NEW)
-                createStyledCell(row, 2, varietyName, styles.left);             // VAR_NAME (NEW)
-                createStyledCell(row, 3, p.getType().name(), styles.center);    // TYPE
-                createStyledCell(row, 4, p.getType().getLabel(), styles.emoji); // LABEL
+                createStyledCell(row, 0, idCounter++, styles.center);
+                createStyledCell(row, 1, p.getVarietyId(), styles.center);
+                createStyledCell(row, 2, varietyName, styles.left);
+                createStyledCell(row, 3, p.getType().name(), styles.center);
+                createStyledCell(row, 4, p.getType().getLabel(), styles.emoji);
 
-                // Use double precision for coordinates
-                createStyledCell(row, COL_X, p.getX(), styles.decimal);         // X
-                createStyledCell(row, COL_Y, p.getY(), styles.decimal);         // Y
-                createStyledCell(row, 7, p.getRadius(), styles.radius);         // R
+                // double for coordinates
+                createStyledCell(row, COL_X, p.getX(), styles.decimal);
+                createStyledCell(row, COL_Y, p.getY(), styles.decimal);
+                createStyledCell(row, 7, p.getRadius(), styles.radius);
             }
 
-            // Track the range [start, end] for this plant type
+            // Track the range [start, end]
             rangeMap.put(type, new int[]{startRow, rowIndex - 1});
         }
         return rangeMap;
     }
 
     private int[] setupLayoutAndCanvas(XSSFSheet sheet) {
-        // A. Data Column Auto-sizing
+        // A. Data Column
         for (int i = 0; i < HEADERS.length; i++) {
             sheet.autoSizeColumn(i);
             int currentWidth = sheet.getColumnWidth(i);
@@ -199,7 +199,6 @@ public class ExcelExporter extends BaseExporter {
         }
 
         // B. Chart Canvas
-        // Defines a 15-column x 25-row area for the chart.
         int chartCols = 15;
         int chartRows = 25;
 
@@ -213,8 +212,7 @@ public class ExcelExporter extends BaseExporter {
     private void createMultiSeriesChart(XSSFSheet sheet, Map<PlantType, int[]> rangeMap, int anchorRow, int chartCols, int chartRows) {
         XSSFDrawing drawing = sheet.createDrawingPatriarch();
 
-        // Chart placement (to the right of the data table)
-        // Spostiamo il grafico a destra della tabella che ora ha 8 colonne (0-7), quindi inizia alla 9 (col index 8)
+        // Chart placement
         int colStart = HEADERS.length + 1;
 
         // Anchor frame
@@ -225,7 +223,7 @@ public class ExcelExporter extends BaseExporter {
 
         XSSFChart chart = drawing.createChart(anchor);
         chart.setTitleText("Cultivation Map (By Species)");
-        chart.setTitleOverlay(false); // Overlay Titolo
+        chart.setTitleOverlay(false);
 
         // Legend Setup
         XDDFChartLegend legend = chart.getOrAddLegend();
@@ -250,7 +248,6 @@ public class ExcelExporter extends BaseExporter {
             int endRow = entry.getValue()[1];
 
             // Create Data Sources from Cell Ranges
-            // FIX: Ora puntano alle costanti COL_X (5) e COL_Y (6)
             XDDFNumericalDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(startRow, endRow, COL_X, COL_X));
             XDDFNumericalDataSource<Double> ys = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(startRow, endRow, COL_Y, COL_Y));
 
@@ -305,7 +302,7 @@ public class ExcelExporter extends BaseExporter {
         Row row1 = sheet.getRow(startRow);
         if (row1 == null) {
             row1 = sheet.createRow(startRow);
-            row1.setHeightInPoints(ROW_HEIGHT); // Altezza standard
+            row1.setHeightInPoints(ROW_HEIGHT);
         }
 
         Cell cell1 = row1.createCell(startCol);
@@ -319,7 +316,7 @@ public class ExcelExporter extends BaseExporter {
         }
 
         Cell cell2 = row2.createCell(startCol+1);
-        cell2.setCellValue("👉 Pinch/Drag corner to resize."); // Testo più breve
+        cell2.setCellValue("👉 Pinch/Drag corner to resize.");
         cell2.setCellStyle(styles.hint);
     }
 
@@ -384,7 +381,7 @@ public class ExcelExporter extends BaseExporter {
             hint = workbook.createCellStyle();
             hint.setAlignment(HorizontalAlignment.LEFT);
             hint.setVerticalAlignment(VerticalAlignment.TOP);
-            hint.setWrapText(true); // to \n
+            hint.setWrapText(true);
 
             Font hintFont = workbook.createFont();
             hintFont.setItalic(true);

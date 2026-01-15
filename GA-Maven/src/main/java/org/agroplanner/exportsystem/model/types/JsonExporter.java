@@ -2,10 +2,10 @@ package org.agroplanner.exportsystem.model.types;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import org.agroplanner.exportsystem.model.ExportType;
-import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.exportsystem.model.BaseExporter;
+import org.agroplanner.exportsystem.model.ExportType;
+import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.inventory.model.InventoryEntry;
 import org.agroplanner.inventory.model.PlantInventory;
@@ -51,7 +51,7 @@ public class JsonExporter extends BaseExporter {
         result.put("fitness", individual.getFitness());
         result.put("total_plants", individual.getDimension());
 
-        // Serialize Points (Now with Variety Data!)
+        // Serialize Points
         List<Map<String, Object>> plantsList = serializeSolutionPoints(individual.getChromosomes());
         result.put("plants", plantsList);
 
@@ -92,7 +92,7 @@ public class JsonExporter extends BaseExporter {
         for (Point p : points) {
             Map<String, Object> map = new LinkedHashMap<>();
 
-            // NEW FIELDS: Variety Info (snake_case per standard JSON)
+            // Variety Info
             map.put("variety_id", p.getVarietyId());
             map.put("variety_name", p.getVarietyName());
 
