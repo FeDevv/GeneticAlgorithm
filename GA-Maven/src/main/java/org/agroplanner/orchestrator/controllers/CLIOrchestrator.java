@@ -79,49 +79,84 @@ public class CLIOrchestrator {
 
         while (appRunning) {
             try {
-                // A. AUTHENTICATION
-                if (currentUser == null) {
-                    if (isDemoMode) {
-                        systemView.showDemoModeActive();
-                        this.currentUser = factory.getUserDAO().findByUsername("guest_demo");
-                        if (this.currentUser == null) this.currentUser = User.createGuestUser();
-                    } else {
-                        this.currentUser = runAccessModule();
-                        if (this.currentUser == null) {
-                            appRunning = false;
-                            continue;
-                        }
-                    }
+                // 1. Auth phase
+                if (!ensureUserIsLoggedIn()) {
+                    appRunning = false;
+                    continue;
                 }
 
-                // B. DASHBOARD LOOP
-                boolean insideDashboard = true;
-                while (insideDashboard) {
-                    int choice = systemView.askMainDashboardChoice(currentUser);
+                // 2. OP phase
+                runDashboardLoop();
 
-                    switch (choice) {
-                        case 1: runOptimizationSession(); break;
-                        case 2: runLoadSequence(); break;
-                        case 3: runCatalogManagement(); break;
-                        case 0:
-                            performLogout();
-                            insideDashboard = false;
-                            if (isDemoMode) appRunning = false;
-                            break;
-                        default:
-                            systemView.showUnknownCommand();
-                    }
+                // 3. specific Exit for demo
+                if (isDemoMode && currentUser == null) {
+                    appRunning = false;
                 }
+
             } catch (Exception e) {
-                // Global Safety Net
-                String errorMsg = (e.getMessage() != null) ? e.getMessage() : "Unknown Internal Error";
-                systemView.showSessionAborted("Critical System Failure: " + errorMsg);
-                currentUser = null; // Reset session on critical error
+                handleGlobalError(e);
             }
         }
 
         systemView.showExitMessage();
         scanner.close();
+    }
+
+    // HELPER METHODS
+
+    /**
+     * Handles the login or guest user creation logic.
+     * Returns true if the user is logged in and ready, false if they want to log out.
+     */
+    private boolean ensureUserIsLoggedIn() {
+        if (currentUser != null) return true;
+
+        if (isDemoMode) {
+            systemView.showDemoModeActive();
+            this.currentUser = factory.getUserDAO().findByUsername("guest_demo");
+            if (this.currentUser == null) {
+                this.currentUser = User.createGuestUser();
+            }
+            return true;
+        } else {
+            this.currentUser = runAccessModule();
+            return this.currentUser != null;
+        }
+    }
+
+    /**
+     * Dashboard Loop and switch case
+     */
+    private void runDashboardLoop() {
+        boolean insideDashboard = true;
+
+        while (insideDashboard && currentUser != null) {
+            int choice = systemView.askMainDashboardChoice(currentUser);
+
+            switch (choice) {
+                case 1:
+                    runOptimizationSession();
+                    break;
+                case 2:
+                    runLoadSequence();
+                    break;
+                case 3:
+                    runCatalogManagement();
+                    break;
+                case 0:
+                    performLogout();
+                    insideDashboard = false;
+                    break;
+                default:
+                    systemView.showUnknownCommand();
+            }
+        }
+    }
+
+    private void handleGlobalError(Exception e) {
+        String errorMsg = (e.getMessage() != null) ? e.getMessage() : "Unknown Internal Error";
+        systemView.showSessionAborted("Critical System Failure: " + errorMsg);
+        currentUser = null;
     }
 
     // --- SUB-MODULES ---

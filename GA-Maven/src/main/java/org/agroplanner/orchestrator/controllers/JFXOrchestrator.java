@@ -18,6 +18,7 @@ import org.agroplanner.exportsystem.controllers.ExportJFXController;
 import org.agroplanner.exportsystem.controllers.ExportService;
 import org.agroplanner.gasystem.controllers.EvolutionJFXController;
 import org.agroplanner.gasystem.controllers.EvolutionService;
+import org.agroplanner.gasystem.model.EvolutionContext;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.inventory.controller.InventoryJFXController;
@@ -192,19 +193,19 @@ public class JFXOrchestrator extends Application {
             // Only create service if running a new simulation
             EvolutionService evoService = (loadedSolution == null) ? new EvolutionService(domain, inventory) : null;
 
-            controller.init(
+            EvolutionContext context = new EvolutionContext(
                     evoService,
                     domain,
                     def,
-                    // On Export Requested
-                    solution -> goToExport(solution, domain, inventory),
                     factory,
                     currentUser,
                     isDemoMode,
                     loadedSolution,
-                    // On Exit
+                    solution -> goToExport(solution, domain, inventory),
                     this::goToDashboard
             );
+
+            controller.init(context);
 
             primaryStage.setScene(new Scene(root));
         } catch (IOException e) {

@@ -14,6 +14,7 @@ import javafx.scene.paint.Color;
 import org.agroplanner.access.model.User;
 import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.domainsystem.model.DomainDefinition;
+import org.agroplanner.gasystem.model.EvolutionContext;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.Point;
 import javafx.scene.control.ProgressIndicator;
@@ -75,18 +76,16 @@ public class EvolutionJFXController {
      * 1. New Simulation: Sets up the UI for running the algorithm.
      * 2. Loaded Session: Sets up the UI for viewing an existing solution (Read-Only).
      */
-    public void init(EvolutionService service, Domain domain, DomainDefinition domainDef,
-                     Consumer<Individual> onExportRequested, AgroPersistenceFactory factory,
-                     User user, boolean isDemoMode, Individual loadedSolution, Runnable onExit) {
+    public void init(EvolutionContext ctx) {
 
-        this.service = service;
-        this.domain = domain;
-        this.domainDefinition = domainDef;
-        this.onEvolutionComplete = onExportRequested;
-        this.factory = factory;
-        this.currentUser = user;
-        this.isDemoMode = isDemoMode;
-        this.onExitCallback = onExit;
+        this.service = ctx.service();
+        this.domain = ctx.domain();
+        this.domainDefinition = ctx.domainDef();
+        this.onEvolutionComplete = ctx.onExportRequested();
+        this.factory = ctx.factory();
+        this.currentUser = ctx.user();
+        this.isDemoMode = ctx.isDemoMode();
+        this.onExitCallback = ctx.onExit();
 
         // Configure Table Columns
         setupTable();
@@ -100,9 +99,9 @@ public class EvolutionJFXController {
         canvasContainer.heightProperty().addListener(o -> redrawCurrentSolution());
 
         // DUAL MODE LOGIC
-        if (loadedSolution != null) {
-            // --- VIEW MODE (Loaded from DB) ---
-            this.bestSolution = loadedSolution;
+        if (ctx.loadedSolution() != null) {
+            // --- VIEW MODE ---
+            this.bestSolution = ctx.loadedSolution();
             updateUIWithSolution(bestSolution);
 
             // Hide simulation controls
@@ -114,10 +113,10 @@ public class EvolutionJFXController {
             exportButton.setDisable(false);
 
         } else {
-            // --- CALCULATION MODE (New Session) ---
+            // --- CALCULATION MODE ---
             startButton.setVisible(true);
             saveButton.setVisible(true);
-            saveButton.setDisable(true); // Disabled until run
+            saveButton.setDisable(true);
             exportButton.setDisable(true);
             placeholderLabel.setVisible(true);
         }

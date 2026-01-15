@@ -265,100 +265,105 @@ public class InventoryJFXController {
 
     @FXML
     private void handleCreateNewVarietyAction() {
+        // 1. Setup Dialog
         Dialog<PlantVarietySheet> dialog = new Dialog<>();
         dialog.setTitle("New Plant Variety");
         dialog.setHeaderText("Create a new technical sheet");
 
-        // Buttons
-        ButtonType createButtonType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(createButtonType, ButtonType.CANCEL);
+        ButtonType createBtnType = new ButtonType("Save", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(createBtnType, ButtonType.CANCEL);
 
-        // Layout (GridPane)
+        // 2. Build UI
+        VarietyFormContext form = createFormContext();
+        dialog.getDialogPane().setContent(form.layout());
+
+        dialog.setResultConverter(btn -> {
+            if (btn == createBtnType) {
+                return convertFormToSheet(form);
+            }
+            return null;
+        });
+
+        // 4. Result management
+        dialog.showAndWait().ifPresent(this::saveAndGiveFeedback);
+    }
+
+    // helpers
+
+    private VarietyFormContext createFormContext() {
         GridPane grid = new GridPane();
         grid.setHgap(10);
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
 
-        // --- FORM FIELDS ---
-        ComboBox<PlantType> typeDialogCombo = new ComboBox<>(FXCollections.observableArrayList(PlantType.values()));
-        if (typeCombo.getValue() != null) {
-            typeDialogCombo.setValue(typeCombo.getValue());
-        } else {
-            typeDialogCombo.getSelectionModel().selectFirst();
-        }
+        // Components
+        ComboBox<PlantType> typeBox = new ComboBox<>(FXCollections.observableArrayList(PlantType.values()));
 
-        TextField nameField = new TextField();
-        nameField.setPromptText("e.g., Fuji Apple");
+        if (typeCombo.getValue() != null) typeBox.setValue(typeCombo.getValue());
+        else typeBox.getSelectionModel().selectFirst();
 
-        TextField distanceField = new TextField();
-        distanceField.setPromptText("Radius in meters (e.g., 2.5)");
+        TextField name = new TextField();
+        name.setPromptText("e.g., Fuji Apple");
 
-        TextField sowingField = new TextField();
-        sowingField.setPromptText("e.g., March - April");
+        TextField dist = new TextField();
+        dist.setPromptText("Radius in meters (e.g., 2.5)");
 
-        TextField notesField = new TextField();
-        notesField.setPromptText("Optional technical notes");
+        TextField sowing = new TextField();
+        sowing.setPromptText("e.g., March - April");
 
-        // --- GRID PLACEMENT ---
-        grid.add(new Label("Category:"), 0, 0);
-        grid.add(typeDialogCombo, 1, 0);
-        grid.add(new Label("Variety Name:"), 0, 1);
-        grid.add(nameField, 1, 1);
-        grid.add(new Label("Min Distance (m):"), 0, 2);
-        grid.add(distanceField, 1, 2);
-        grid.add(new Label("Sowing Period:"), 0, 3);
-        grid.add(sowingField, 1, 3);
-        grid.add(new Label("Notes:"), 0, 4);
-        grid.add(notesField, 1, 4);
+        TextField notes = new TextField();
+        notes.setPromptText("Optional technical notes");
 
-        dialog.getDialogPane().setContent(grid);
+        // Layout
+        grid.add(new Label("Category:"), 0, 0);       grid.add(typeBox, 1, 0);
+        grid.add(new Label("Variety Name:"), 0, 1);   grid.add(name, 1, 1);
+        grid.add(new Label("Min Distance (m):"), 0, 2); grid.add(dist, 1, 2);
+        grid.add(new Label("Sowing Period:"), 0, 3);  grid.add(sowing, 1, 3);
+        grid.add(new Label("Notes:"), 0, 4);          grid.add(notes, 1, 4);
 
-        // --- RESULT CONVERTER ---
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == createButtonType) {
-                try {
-                    // Minimal Validation
-                    if (nameField.getText().trim().isEmpty() || distanceField.getText().trim().isEmpty()) {
-                        return null;
-                    }
+        return new VarietyFormContext(typeBox, name, dist, sowing, notes, grid);
+    }
 
-                    PlantVarietySheet s = new PlantVarietySheet();
-                    s.setVarietyName(nameField.getText().trim());
-                    s.setType(typeDialogCombo.getValue());
+    private PlantVarietySheet convertFormToSheet(VarietyFormContext form) {
+        try {
+            String name = form.nameField().getText().trim();
+            String distStr = form.distanceField().getText().trim();
 
-                    // Sanitization: Replace comma with dot for international compatibility
-                    String distanceStr = distanceField.getText().replace(",", ".");
-                    s.setMinDistance(Double.parseDouble(distanceStr));
-
-                    s.setSowingPeriod(sowingField.getText().trim());
-                    s.setNotes(notesField.getText().trim());
-                    s.setAuthor(currentUser);
-
-                    return s;
-                } catch (NumberFormatException _) {
-                    return null; // Invalid number format
-                }
+            if (name.isEmpty() || distStr.isEmpty()) {
+                return null;
             }
+
+            PlantVarietySheet s = new PlantVarietySheet();
+            s.setVarietyName(name);
+            s.setType(form.typeCombo().getValue());
+
+            s.setMinDistance(Double.parseDouble(distStr.replace(",", ".")));
+
+            s.setSowingPeriod(form.sowingField().getText().trim());
+            s.setNotes(form.notesField().getText().trim());
+            s.setAuthor(currentUser);
+
+            return s;
+        } catch (NumberFormatException e) {
             return null;
-        });
+        }
+    }
 
-        // Show Dialog & Handle Result
-        dialog.showAndWait().ifPresent(newSheet -> {
-            boolean saved = catalogService.registerNewVariety(newSheet);
+    private void saveAndGiveFeedback(PlantVarietySheet newSheet) {
+        boolean saved = catalogService.registerNewVariety(newSheet);
 
-            if (saved) {
-                feedbackLabel.setStyle("-fx-text-fill: green;");
-                feedbackLabel.setText("Success! '" + newSheet.getVarietyName() + "' added to Catalog.");
+        if (saved) {
+            feedbackLabel.setStyle("-fx-text-fill: green;");
+            feedbackLabel.setText("Success! '" + newSheet.getVarietyName() + "' added to Catalog.");
 
-                // Auto-refresh logic: if the new item matches current filter, reload.
-                if (typeCombo.getValue() == newSheet.getType()) {
-                    handleTypeSelection();
-                }
-            } else {
-                feedbackLabel.setStyle("-fx-text-fill: red;");
-                feedbackLabel.setText("Save Failed: Check your data.");
+            // Auto-refresh logic
+            if (typeCombo.getValue() == newSheet.getType()) {
+                handleTypeSelection();
             }
-        });
+        } else {
+            feedbackLabel.setStyle("-fx-text-fill: red;");
+            feedbackLabel.setText("Save Failed: Check your data.");
+        }
     }
 
     // --- INNER CLASS FOR TABLE DATA MODEL ---
@@ -371,4 +376,13 @@ public class InventoryJFXController {
             this.qty = qty;
         }
     }
+
+    private record VarietyFormContext(
+            ComboBox<PlantType> typeCombo,
+            TextField nameField,
+            TextField distanceField,
+            TextField sowingField,
+            TextField notesField,
+            GridPane layout
+    ) {}
 }

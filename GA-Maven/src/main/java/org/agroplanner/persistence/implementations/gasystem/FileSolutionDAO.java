@@ -119,59 +119,84 @@ public class FileSolutionDAO implements SolutionDAOContract {
         return list;
     }
 
+    private static class ParsingContext {
+        List<Point> points = new ArrayList<>();
+        double fitness = 0.0;
+        DomainType type = DomainType.RECTANGLE;
+        Map<String, Double> params = new HashMap<>();
+    }
+
     @Override
     public Optional<LoadedSession> loadSolution(int solutionId) {
+        // search file
+        Optional<File> targetOpt = findFileById(solutionId);
+        if (targetOpt.isEmpty()) return Optional.empty();
+
+        // parse content
+        try {
+            return Optional.of(parseSessionFromFile(targetOpt.get()));
+        } catch (IOException e) {
+            throw new DataPersistenceException("Error reading solution file: " + solutionId, e);
+        }
+    }
+
+    /**
+     * Responsibilirt --> find correct file
+     */
+    private Optional<File> findFileById(int solutionId) {
         File folder = new File(DIR_PATH);
         File[] files = folder.listFiles();
+
         if (files == null) return Optional.empty();
 
-        // search file using stream
-        Optional<File> targetOpt = java.util.Arrays.stream(files)
+        return java.util.Arrays.stream(files)
                 .filter(f -> f.getName().hashCode() == solutionId)
                 .findFirst();
+    }
 
-        if (targetOpt.isEmpty()) return Optional.empty();
-        File target = targetOpt.get();
-
-        List<Point> points = new ArrayList<>();
-        double loadedFitness = 0.0;
-        DomainType docType = DomainType.RECTANGLE; // Default
-        Map<String, Double> docParams = new HashMap<>();
-
+    /**
+     * responsibilty --> open and read file
+     */
+    private LoadedSession parseSessionFromFile(File target) throws IOException {
+        ParsingContext ctx = new ParsingContext();
         try (BufferedReader br = new BufferedReader(new FileReader(target))) {
             String line;
-
             while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue; // Skip empty lines
-
-                if (line.startsWith("#")) {
-                    // --- METADATA SECTION ---
-                    if (line.startsWith("# Final Fitness:")) {
-                        loadedFitness = parseFitness(line);
-                    }
-                    else if (line.startsWith("# DomainType:")) {
-                        docType = parseDomainType(line);
-                    }
-                    else if (line.startsWith("# DomainParams:")) {
-                        docParams = stringToMap(line.split(":")[1].trim());
-                    }
-                }
-                else if (!line.startsWith("VARIETY_ID")) {
-                    // --- DATA SECTION ---
-                    Point p = parsePointFromLine(line);
-                    if (p != null) {
-                        points.add(p);
-                    }
-                }
+                processLine(line.trim(), ctx);
             }
+        }
 
-            Individual ind = new Individual(points, loadedFitness);
-            DomainDefinition def = new DomainDefinition(docType, docParams);
-            return Optional.of(new LoadedSession(ind, def));
+        Individual ind = new Individual(ctx.points, ctx.fitness);
+        DomainDefinition def = new DomainDefinition(ctx.type, ctx.params);
+        return new LoadedSession(ind, def);
+    }
 
-        } catch (Exception e) {
-            throw new DataPersistenceException("Error reading solution file: " + target.getName(), e);
+    /**
+     * Responsibility --> decide if row is metadata or data
+     */
+    private void processLine(String line, ParsingContext ctx) {
+        if (line.isEmpty()) return;
+
+        if (line.startsWith("#")) {
+            processMetadata(line, ctx);
+        } else if (!line.startsWith("VARIETY_ID")) {
+            Point p = parsePointFromLine(line);
+            if (p != null) ctx.points.add(p);
+        }
+    }
+
+    /**
+     * Responsibility --> update context following metadata
+     */
+    private void processMetadata(String line, ParsingContext ctx) {
+        if (line.startsWith("# Final Fitness:")) {
+            ctx.fitness = parseFitness(line);
+        }
+        else if (line.startsWith("# DomainType:")) {
+            ctx.type = parseDomainType(line);
+        }
+        else if (line.startsWith("# DomainParams:")) {
+            ctx.params = stringToMap(line.split(":")[1].trim());
         }
     }
 
@@ -180,7 +205,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
         try {
             return DomainType.valueOf(line.split(":")[1].trim());
         } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException _) {
-            return DomainType.RECTANGLE; // Fallback sicuro
+            return DomainType.RECTANGLE;
         }
     }
 
