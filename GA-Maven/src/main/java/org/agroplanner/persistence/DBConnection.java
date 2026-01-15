@@ -1,6 +1,7 @@
 package org.agroplanner.persistence;
 
 import org.agroplanner.boot.model.PersistenceType;
+import org.agroplanner.persistence.implementations.gasystem.SqlSolutionDAO;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 
 import java.io.IOException;
@@ -9,6 +10,8 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Singleton wrapper for the JDBC connection to the embedded H2 database.
@@ -21,6 +24,8 @@ public class DBConnection {
 
     private Connection activeConnection = null;
     private String connectionUrl = null;
+    private static final Logger LOGGER = Logger.getLogger(DBConnection.class.getName());
+
 
     private static String dbUser;
     private static String dbPassword;
@@ -34,7 +39,7 @@ public class DBConnection {
 
             if (input == null) {
                 // default on error
-                System.err.println("WARNING: db.properties non trovato in resources. Uso credenziali di default.");
+                LOGGER.log(Level.WARNING, "WARNING: db.properties not found in resources. Using default credentials.");
                 dbUser = "sa";
                 dbPassword = "ISPW2025_2026";
                 dbUrl = "jdbc:h2:./agri_db";
