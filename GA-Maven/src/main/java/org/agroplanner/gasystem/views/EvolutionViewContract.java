@@ -1,5 +1,7 @@
 package org.agroplanner.gasystem.views;
 
+import org.agroplanner.gasystem.model.Individual;
+
 /**
  * Defines the abstract contract for the presentation layer of the Evolutionary Subsystem.
  *
@@ -14,35 +16,19 @@ package org.agroplanner.gasystem.views;
  */
 public interface EvolutionViewContract {
 
-    /**
-     * Signals the initiation of the computationally intensive evolutionary cycle.
-     * <p>
-     * <strong>UX Purpose:</strong> Sets user expectations regarding processing time.
-     * Since the thread might block for several seconds/minutes, an immediate visual cue is required.
-     * </p>
-     */
     void showEvolutionStart();
 
-    /**
-     * Renders a notification regarding a transient failure and subsequent recovery attempt.
-     *
-     * <p><strong>Stochastic Visibility:</strong></p>
-     * Genetic Algorithms are probabilistic. Sometimes a run fails to converge due to a "bad seed".
-     * This method makes the <strong>Auto-Recovery Mechanism</strong> transparent to the user, explaining
-     * why the process is taking longer than usual (i.e., "Attempt 1 failed, trying Attempt 2...").
-     *
-     * @param currentAttempt       The 1-based index of the failed attempt.
-     * @param maxAttempts          The total retry budget.
-     * @param lastExecutionTimeSec The duration of the failed run (performance metric).
-     */
     void showRetryWarning(int currentAttempt, int maxAttempts, double lastExecutionTimeSec);
 
-    /**
-     * Displays visual confirmation of a successful convergence to a valid solution.
-     *
-     * @param attempt          The attempt index that succeeded.
-     * @param executionTimeSec The cumulative wall-clock time required to find the solution.
-     */
     void showSuccess(int attempt, double executionTimeSec);
 
+    // --- NUOVI METODI (Spostati da SystemView) ---
+
+    /** Chiede all'utente se vuole vedere il fenotipo dettagliato (Tabella). */
+    boolean askIfPrintDetails();
+
+    /** Stampa la tabella formattata. */
+    void printDetailedReport(Individual individual);
+
+    void showSolutionValue(double fitness, int totalPlants);
 }

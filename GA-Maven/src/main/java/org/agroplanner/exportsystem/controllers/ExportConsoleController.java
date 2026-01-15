@@ -12,14 +12,11 @@ import java.util.Optional;
 
 /**
  * Controller component managing the interactive "Export Wizard" session.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> Wizard Controller. It guides the user through a multi-step process
- * (Format Selection &rarr; Filename Entry &rarr; Overwrite Check &rarr; Persist), ensuring data integrity at each step.</li>
- * <li><strong>Responsibility:</strong> Orchestrates the interaction between the User (View) and the File System (Service).
- * It acts as an error barrier, catching exceptions locally to allow retries without losing the calculated solution.</li>
- * </ul>
+ * <p>
+ * This class orchestrates the export workflow, mediating between the user (View)
+ * and the file system operations (Service), ensuring data integrity and handling
+ * overwrite conflicts gracefully.
+ * </p>
  */
 public class ExportConsoleController {
 
@@ -27,7 +24,7 @@ public class ExportConsoleController {
     private final ExportService service;
 
     /**
-     * Initializes the controller with required dependencies.
+     * Initializes the controller with the necessary view and service dependencies.
      *
      * @param view    The UI handler for prompts and feedback.
      * @param service The business logic handler for file operations.
@@ -39,23 +36,24 @@ public class ExportConsoleController {
 
     /**
      * Launches the interactive export session.
+     * <p>
+     * Implements a stateful <strong>Recovery Loop</strong>: user input errors or system failures
+     * trigger a retry mechanism, allowing the user to correct parameters (e.g., filename)
+     * without losing the current session context.
+     * </p>
      *
-     * <p><strong>Workflow (Recovery Loop):</strong></p>
-     * Implements a stateful loop that persists until either a successful export occurs or the user explicitly cancels.
-     * <ol>
-     * <li><strong>Format Selection:</strong> Prompt user for file type (CSV, Excel, etc.).</li>
-     * <li><strong>Filename Entry:</strong> Prompt user for target name.</li>
-     * <li><strong>Collision Detection:</strong> Check if file exists. If so, ask user to Overwrite or Rename.</li>
-     * <li><strong>Execution:</strong> Attempt write operation via Service.</li>
-     * <li><strong>Error Handling:</strong> Catch exceptions (Invalid Name, Disk Error) and display feedback,
-     * allowing the user to try again immediately.</li>
-     * </ol>
-     *
-     * @param solution  The computed solution to save.
-     * @param domain    The geometric context.
-     * @param inventory The biological context (metadata).
+     * @param solution   The computed solution (Genotype/Phenotype) to save.
+     * @param domain     The geometric context of the simulation.
+     * @param inventory  The biological metadata (Inventory).
+     * @param isDemoMode Flag indicating if the user is in restricted Guest mode.
      */
-    public void runExportWizard(Individual solution, Domain domain, PlantInventory inventory) {
+    public void runExportWizard(Individual solution, Domain domain, PlantInventory inventory, boolean isDemoMode) {
+
+        // 1. SECURITY GATE
+        if (isDemoMode) {
+            view.showGuestExportRestricted();
+            return;
+        }
 
         // --- INTERACTION LOOP ---
         // Keeps the user inside the wizard until success or cancellation.
@@ -89,7 +87,7 @@ public class ExportConsoleController {
             // STEP 4: Execution & Recovery
             try {
                 // Delegate heavy lifting to Service layer.
-                // We pass the full INVENTORY so the exporter can write rich metadata headers.
+                // passing the full INVENTORY so the exporter can write rich metadata headers.
                 String savedPath = service.performExport(solution, domain, inventory, selectedType.get(), filename);
 
                 // Success State: Show feedback and break the loop.

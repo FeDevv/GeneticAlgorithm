@@ -31,6 +31,9 @@ import java.util.Locale;
  * </li>
  * </ul>
  */
+/**
+ * Concrete implementation of the Export Strategy targeting <strong>Plain Text (.txt)</strong>.
+ */
 public class TxtExporter extends BaseExporter {
 
     @Override
@@ -40,12 +43,6 @@ public class TxtExporter extends BaseExporter {
 
     /**
      * Generates a formatted textual summary of the optimization session.
-     *
-     * @param individual The solution phenotype.
-     * @param domain     The problem constraints.
-     * @param inventory  The biological inputs.
-     * @param path       The output destination.
-     * @throws IOException If file writing fails.
      */
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
@@ -74,13 +71,14 @@ public class TxtExporter extends BaseExporter {
             writer.newLine();
 
             // Print the manifest (The "Recipe")
+            // Nota: Qui stampiamo il sommario per TIPO.
+            // Se InventoryEntry è stato aggiornato con i nomi, bene, altrimenti mostra i totali per tipo.
             for (InventoryEntry entry : inventory.getEntries()) {
-                // e.g. " - 🍅 TOMATO: 50 units (r=1.50m)"
                 String line = String.format(Locale.US, " - %s %s: %d units (r=%.2fm)",
-                        entry.getType().getLabel(),  // Visual Icon
-                        entry.getType().name(),      // Code Name
-                        entry.getQuantity(),         // Count
-                        entry.getRadius());          // Size
+                        entry.getType().getLabel(),
+                        entry.getType().name(),
+                        entry.getQuantity(),
+                        entry.getRadius());
 
                 writer.write(line);
                 writer.newLine();
@@ -92,24 +90,35 @@ public class TxtExporter extends BaseExporter {
             writer.newLine();
             writer.write("Total Plants Placed: " + inventory.getTotalPopulationSize());
             writer.newLine();
-            // High precision for fitness analysis
             writer.write(String.format(Locale.US, "Final Optimization Score (Fitness): %.6f", individual.getFitness()));
             writer.newLine();
             writer.newLine();
 
-            // --- SECTION 4: DATA PAYLOAD ---
+            // --- SECTION 4: DATA PAYLOAD (AGGIORNATO) ---
             writer.write("--- Plants (Coordinates) ---");
             writer.newLine();
-            writer.write("Format: [ID] TYPE | X(m) | Y(m) | Radius(m)");
+
+            // Aggiorniamo l'intestazione per riflettere le nuove colonne
+            writer.write("Format: [ID] VARIETY NAME (TYPE) | X(m) | Y(m) | Radius(m)");
+            writer.newLine();
+            writer.write("---------------------------------------------------------------");
             writer.newLine();
 
             int index = 0;
             for (Point p : individual.getChromosomes()) {
-                // Row Format: [0] 🍅 TOMATO | X: 10.5000 | Y: 5.2300 | R: 1.50
-                String line = String.format(Locale.US, "[%03d] %s %-10s | X: %8.4f | Y: %8.4f | R: %.2f",
+
+                // Recuperiamo i nuovi dati "arricchiti"
+                String variety = (p.getVarietyName() != null) ? p.getVarietyName() : "Unknown";
+                String type = p.getType().name();
+                String icon = p.getType().getLabel();
+
+                // Formattazione Aggiornata:
+                // [001] 🍅 San Marzano...     (TOMATO  ) | X: 12.5000 | ...
+                String line = String.format(Locale.US, "[%03d] %s %-20s (%-9s) | X: %8.4f | Y: %8.4f | R: %.2f",
                         index++,
-                        p.getType().getLabel(),
-                        p.getType().name(),
+                        icon,
+                        truncate(variety, 20), // Tronchiamo per mantenere l'allineamento
+                        type,
                         p.getX(),
                         p.getY(),
                         p.getRadius());
@@ -119,9 +128,18 @@ public class TxtExporter extends BaseExporter {
             }
 
             // Footer
-            writer.write("----------------------------");
+            writer.write("---------------------------------------------------------------");
             writer.newLine();
             writer.write("End of Report.");
         }
+    }
+
+    // Helper per mantenere la tabella ordinata (es. "Pomodoro San Marza..")
+    private String truncate(String s, int len) {
+        if (s == null) return "";
+        if (s.length() > len) {
+            return s.substring(0, len - 2) + "..";
+        }
+        return s;
     }
 }

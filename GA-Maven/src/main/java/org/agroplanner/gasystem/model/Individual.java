@@ -3,6 +3,7 @@ package org.agroplanner.gasystem.model;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Represents a single candidate solution within the evolutionary population.
@@ -142,17 +143,11 @@ public class Individual {
         return new Individual(this.chromosomes, this.fitness);
     }
 
-    /**
-     * Serializes the individual's state to a string format.
-     * Used for debug logging and final result export.
-     */
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\n");
-        for (Point p : chromosomes) {
-            sb.append(p.toString()).append("\n");
-        }
-        return sb.toString();
+        // Versione pulita per i log: Fitness e numero di geni.
+        // L'hash code (es. 10e92f8f) è inutile per l'utente, via.
+        return String.format(Locale.US, "INDIVIDUAL [Fitness: %.6f | Genes: %d]",
+                fitness, chromosomes.size());
     }
 }

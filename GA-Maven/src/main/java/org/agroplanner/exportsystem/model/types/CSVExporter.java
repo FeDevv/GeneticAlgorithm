@@ -18,105 +18,91 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Concrete implementation of the Export Strategy targeting <strong>Comma Separated Values (CSV)</strong>.
+ * Concrete implementation of the Export Strategy targeting <strong>Comma-Separated Values (.csv)</strong>.
  *
  * <p><strong>Architecture & Design:</strong></p>
  * <ul>
- * <li><strong>Hybrid Serialization:</strong> Combines raw text writing for metadata with a robust CSV engine
- * (Apache Commons CSV) for tabular data. This ensures both flexibility and strict format compliance (escaping, quoting).</li>
- * <li><strong>Interoperability:</strong> The output format is designed to be "Polyglot Friendly".
- * Metadata lines start with {@code #}, a standard comment marker recognized by data analysis tools
- * (like Python's {@code pandas}, R, or Gnuplot), allowing them to parse the data table while ignoring the context.</li>
- * <li><strong>Data Lineage:</strong> Includes the original {@link PlantInventory} and Domain details in the header,
- * making the file self-documenting (traceable).</li>
+ * <li><strong>Goal:</strong> Hybrid Readability. Designed to be primarily imported into spreadsheets (Excel),
+ * providing both the raw data and the context metadata in a single file.</li>
+ * <li><strong>Structure:</strong>
+ * <ol>
+ * <li><strong>Metadata Block:</strong> Rows starting with specific keys (Domain, Fitness, etc.) to give context.</li>
+ * <li><strong>Separator:</strong> An empty row to visually detach headers from data.</li>
+ * <li><strong>Data Table:</strong> The actual solution dataset.</li>
+ * </ol>
+ * </li>
+ * <li><strong>Localization Strategy:</strong> Uses <strong>Semicolon (;)</strong> as delimiter and dots (.) for decimals
+ * to ensure perfect compatibility with European Excel versions.</li>
  * </ul>
  */
 public class CSVExporter extends BaseExporter {
 
-    /**
-     * The schema definition for the data section.
-     */
-    private static final String[] HEADERS = {"ID", "TYPE", "LABEL", "X", "Y", "RADIUS"};
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
     protected String getExtension() {
         return ExportType.CSV.getExtension();
     }
 
     /**
-     * Executes the dual-phase writing process (Metadata Header + Data Body).
-     *
-     * @param individual The solution genotype to serialize.
-     * @param domain     The constraint context.
-     * @param inventory  The biological context (what was requested).
-     * @param path       The target file location.
-     * @throws IOException If file access fails.
+     * Serializes the solution into a structured CSV with a metadata header.
      */
     @Override
     protected void performExport(Individual individual, Domain domain, PlantInventory inventory, Path path) throws IOException {
 
-        // Configuration: Standard CSV format with specific headers.
-        CSVFormat format = CSVFormat.DEFAULT.builder()
-                .setHeader(HEADERS)
-                .build();
-
-        // Resource Management:
-        // We open a BufferedWriter first to handle the unstructured metadata section.
         try (BufferedWriter writer = Files.newBufferedWriter(path)) {
 
-            // --- PHASE 1: METADATA HEADER (Unstructured) ---
-            // Writing context information as comments (#).
+            // --- SECTION 1: METADATA BLOCK ---
+            // Scriviamo Etichetta;Valore così Excel li mette in Colonna A e Colonna B
 
-            writer.write("# --------------------------------------------------");
-            writer.newLine();
-            writer.write("# AGROPLANNER EXPORT - RAW DATA");
-            writer.newLine();
-            writer.write("# Domain: " + domain.toString());
+            writer.write("METADATA_KEY;VALUE");
             writer.newLine();
 
-            // Traceability: Log the requested inventory vs the result
-            writer.write("# Inventory Configuration:");
+            // 1. Domain
+            writer.write("Domain Geometry;" + domain.toString());
             writer.newLine();
-            for (InventoryEntry entry : inventory.getEntries()) {
-                // # - TOMATO (🍅): 50 units, r=1.50
-                writer.write(String.format(Locale.US, "# - %s (%s): %d units, r=%.2fm",
-                        entry.getType().name(),      // Nome
-                        entry.getType().getLabel(),  // Emoji
-                        entry.getQuantity(),         // Quantità
-                        entry.getRadius()));         // Raggio specificato per questa riga
 
+            // 2. Fitness (Formatto US per avere il punto)
+            writer.write(String.format(Locale.US, "Final Fitness Score;%.6f", individual.getFitness()));
+            writer.newLine();
+
+            // 3. Count
+            writer.write("Total Plants Placed;" + individual.getDimension());
+            writer.newLine();
+
+            // 4. Timestamp (Optional but useful)
+            writer.write("Export Timestamp;" + java.time.LocalDateTime.now());
+            writer.newLine();
+
+            // --- SEPARATOR ---
+            // Lasciamo una riga vuota per staccare visivamente i dati
+            writer.newLine();
+
+            // --- SECTION 2: DATA TABLE HEADER ---
+            writer.write("ID;VARIETY_ID;VARIETY_NAME;PLANT_TYPE;COORD_X;COORD_Y;RADIUS");
+            writer.newLine();
+
+            // --- SECTION 3: DATA ROWS ---
+            int id = 0;
+            for (Point p : individual.getChromosomes()) {
+
+                // Data Preparation
+                String varietyName = (p.getVarietyName() != null) ? p.getVarietyName() : "Unknown";
+
+                // Sanitization: Rimuoviamo il separatore ';' dal nome se presente
+                varietyName = varietyName.replace(";", " ");
+
+                // Formatting
+                String line = String.format(Locale.US, "%d;%d;%s;%s;%.4f;%.4f;%.4f",
+                        id++,
+                        p.getVarietyId(),
+                        varietyName,
+                        p.getType().name(),
+                        p.getX(),
+                        p.getY(),
+                        p.getRadius()
+                );
+
+                writer.write(line);
                 writer.newLine();
-            }
-
-            // Solution Metrics
-            writer.write("# Total Plants Placed: " + individual.getDimension());
-            writer.newLine();
-            writer.write(String.format(Locale.US, "# Final Fitness: %.6f", individual.getFitness()));
-            writer.newLine();
-            writer.write("# --------------------------------------------------");
-            writer.newLine(); // Blank line separation
-
-            // --- PHASE 2: DATA TABLE (Structured) ---
-            // We wrap the existing writer in a CSVPrinter.
-            // Note: Closing the printer will close the writer, which is handled by the try-with-resources.
-            try (CSVPrinter printer = new CSVPrinter(writer, format)) {
-                List<Point> points = individual.getChromosomes();
-                int index = 0;
-
-                for (Point point : points) {
-                    printer.printRecord(
-                            index,
-                            point.getType().name(),     // Machine-readable ID (e.g., TOMATO)
-                            point.getType().getLabel(), // Human-readable Icon (e.g., 🍅)
-                            point.getX(),               // Coordinate X
-                            point.getY(),               // Coordinate Y
-                            point.getRadius()           // Radius used
-                    );
-                    index++;
-                }
             }
         }
     }

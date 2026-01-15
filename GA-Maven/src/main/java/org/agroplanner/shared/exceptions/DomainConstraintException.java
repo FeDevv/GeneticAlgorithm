@@ -1,41 +1,25 @@
 package org.agroplanner.shared.exceptions;
 
 /**
- * Indicates that a requested operation or instantiation violates the physical or geometric
- * invariants of a Domain Entity.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Domain Integrity:</strong> This exception serves as the primary enforcement mechanism for
- * <em>Class Invariants</em> within the Domain Model. It ensures that no Domain Object (POJO)
- * can ever exist in an inconsistent or physically impossible state.</li>
- * <li><strong>Deep Protection:</strong> Typically thrown by constructors or factory methods immediately
- * upon detecting invalid geometric relationships preventing the propagation of corrupt state
- * to the Calculation Engine.</li>
- * </ul>
- *
- * @see TerrainExceptions
+ * Thrown when an operation results in a state that violates the business rules
+ * or physical constraints of a domain entity.
  */
-public class DomainConstraintException extends TerrainExceptions {
+public class DomainConstraintException extends AgroPlannerException {
 
     /**
-     * Constructs an exception for a specific parameter validation failure, enforcing a standardized message format.
+     * Initializes the exception with a formatted message describing the invalid parameter.
      *
-     * @param paramName The name of the parameter that violated the constraint.
-     * @param reason    The specific rule that was broken (e.g., "must be strictly positive").
+     * @param paramName The name of the parameter violating the constraint.
+     * @param reason    The specific reason for the violation.
      */
     public DomainConstraintException(String paramName, String reason) {
         super(String.format("Invalid parameter '%s': %s", paramName, reason));
     }
 
     /**
-     * Constructs an exception for complex or relational constraint violations.
+     * Initializes the exception with a general violation message.
      *
-     * <p><strong>Use Case:</strong></p>
-     * Used for <em>Cross-Field Validation</em> where the validity of one parameter depends on another
-     * (e.g., ensuring an Inner Radius is strictly smaller than an Outer Radius).
-     *
-     * @param message The detailed description of the constraint violation.
+     * @param message The detail message.
      */
     public DomainConstraintException(String message) {
         super(message);

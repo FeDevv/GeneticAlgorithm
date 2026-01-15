@@ -22,7 +22,8 @@ public enum PlantType {
     CARROT(4, "CARROT", "🥕"),
     WHEAT(5, "WHEAT", "🌾"),
     ZUCCHINI(6, "ZUCCHINI", "🥒"),
-    PUMPKIN(7, "PUMPKIN", "🎃");
+    PUMPKIN(7, "PUMPKIN", "🎃"),
+    GENERIC(99, "GENERIC", "🌱");
 
     /**
      * The internal unique numeric identifier used for persistence and logic mapping.
@@ -63,7 +64,7 @@ public enum PlantType {
      * <p><strong>Implementation Note:</strong></p>
      * Utilizes the Stream API to filter the enum constants. Returns an {@link Optional} container
      * to explicitly handle the case where an invalid ID is provided, enforcing null-safety
-     * at the API level (Defensive Programming).
+     * at the API level.
      *
      * @param id The numeric identifier to search for.
      * @return An {@code Optional<PlantType>} containing the matching constant, or empty if not found.

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane prefHeight="500.0" prefWidth="700.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.agroplanner.orchestrator.controllers.DashboardJFXController">
+    <top>
+        <VBox spacing="5.0" style="-fx-background-color: #2e7d32;" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
+            <children>
+                <Label text="AgroPlanner Dashboard" textFill="WHITE">
+                    <font>
+                        <Font name="System Bold" size="24.0" />
+                    </font>
+                </Label>
+                <HBox spacing="10.0">
+                    <children>
+                        <Label text="Utente:" textFill="#c8e6c9" />
+                        <Label fx:id="userLabel" text="-" textFill="WHITE" style="-fx-font-weight: bold;" />
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Label fx:id="roleLabel" text="[RUOLO]" textFill="#a5d6a7" />
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </top>
+
+    <center>
+        <VBox alignment="CENTER" spacing="20.0" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="40.0" left="100.0" right="100.0" top="40.0" />
+            </padding>
+            <children>
+                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleNewSession" prefHeight="50.0" style="-fx-font-size: 16px;" text="🚀 Nuova Ottimizzazione" />
+                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLoadSession" prefHeight="50.0" style="-fx-font-size: 16px;" text="📂 Carica Sessione" />
+
+                <Separator prefWidth="200.0" />
+
+                <Button fx:id="catalogButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleCatalog" prefHeight="40.0" text="Gestione Catalogo (Agronomo)" />
+            </children>
+        </VBox>
+    </center>
+
+    <bottom>
+        <HBox alignment="CENTER_RIGHT" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+            </padding>
+            <children>
+                <Button mnemonicParsing="false" onAction="#handleLogout" style="-fx-background-color: #d32f2f; -fx-text-fill: white;" text="Disconnetti" />
+            </children>
+        </HBox>
+    </bottom>
+</BorderPane>

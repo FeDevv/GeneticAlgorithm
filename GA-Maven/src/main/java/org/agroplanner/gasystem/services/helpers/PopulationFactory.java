@@ -7,6 +7,7 @@ import org.agroplanner.inventory.model.InventoryEntry;
 import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.gasystem.model.Point;
 import org.agroplanner.inventory.model.PlantType;
+import org.agroplanner.inventory.model.PlantVarietySheet;
 import org.agroplanner.shared.utils.RandomUtils;
 
 import java.awt.geom.Rectangle2D;
@@ -28,39 +29,16 @@ import java.util.List;
  */
 public class PopulationFactory {
 
-    // ------------------- DEPENDENCIES -------------------
-
-    /** Defines the spatial boundaries for generation. */
     private final Domain domain;
-
-    /** Defines the "Recipe" (ingredients) that every individual must contain. */
     private final PlantInventory inventory;
 
-    // ------------------- CONSTRUCTOR -------------------
-
-    /**
-     * Constructs the factory with the simulation context.
-     *
-     * @param domain    The geometric constraints.
-     * @param inventory The biological constraints.
-     */
     public PopulationFactory(Domain domain, PlantInventory inventory) {
         this.domain = domain;
         this.inventory = inventory;
     }
 
-    // ------------------- FACTORY METHODS -------------------
-
-    /**
-     * Manufactures the initial population pool (Generation 0).
-     *
-     * <p><strong>Performance Note:</strong></p>
-     * This operation is O(P×G), where P is the population size and G is the genome length.
-     * It pre-allocates memory to avoid resizing overhead during the loop.
-     *
-     * @return A list of completely random, yet structurally valid, {@link Individual}s.
-     */
     public List<Individual> createFirstGeneration() {
+        // Ottimizzazione memoria: Size pre-calcolata
         List<Individual> firstGen = new ArrayList<>(GeneticConfig.POPULATION_SIZE);
         for (int i = 0; i < GeneticConfig.POPULATION_SIZE; i++) {
             firstGen.add(buildRandomIndividual());
@@ -68,46 +46,42 @@ public class PopulationFactory {
         return firstGen;
     }
 
-    /**
-     * Assembles a single individual by "unrolling" the high-level inventory configuration into a flat gene sequence.
-     *
-     * <p><strong>Genotypic Alignment (Crucial Logic):</strong></p>
-     * After generating the random points, the method performs a {@code genes.sort(...)} based on Plant Type.
-     * <br>
-     * This ensures <strong>Homology</strong>: the gene at index i will represent the same species across
-     * ALL individuals in the population.
-     *
-     * <br>
-     * <em>Why?</em> This allows standard Crossover operators to swap genetic material without violating the
-     * Inventory constraints (e.g., swapping a Tomato slot with another Tomato slot preserves the total count of Tomatoes).
-     *
-     * @return A new random Individual.
-     */
     private Individual buildRandomIndividual() {
-        // Pre-allocate list size to prevent array copying during expansion.
         List<Point> genes = new ArrayList<>(inventory.getTotalPopulationSize());
-
-        // Geometric Heuristic: Fetch the sampling limit once (MBR).
         Rectangle2D limits = domain.getBoundingBox();
 
-        // 1. Unrolling Phase: Convert "Batch" (InventoryEntry) -> "Atoms" (Points)
+        // 1. Unrolling Phase: Batch -> Atoms
         for (InventoryEntry entry : inventory.getEntries()) {
 
+            // Dati Generici
             int quantity = entry.getQuantity();
-            double radius = entry.getRadius();
-            PlantType type = entry.getType();
 
-            // Expand the batch into individual genes
+            // Dati Specifici (Estratti dallo Sheet)
+            PlantVarietySheet sheet = entry.getVarietySheet();
+            double radius = sheet.getMinDistance(); // Usiamo quello dello sheet per coerenza
+            int varId = sheet.getId();
+            String varName = sheet.getVarietyName();
+
             for (int i = 0; i < quantity; i++) {
-                // Stochastic Generation: Place the point somewhere in the bounding box.
-                genes.add(RandomUtils.insideBoxGenerator(limits, radius, type));
+                // FIX: Delega a RandomUtils.
+                // Ora usiamo ThreadLocalRandom (thread-safe e veloce) invece di Math.random (synchronized).
+                Point p = RandomUtils.insideBoxGenerator(
+                        limits,
+                        radius,
+                        sheet.getType(),
+                        varId,
+                        varName
+                );
+
+                genes.add(p);
             }
         }
 
-        // 2. Alignment Phase: Enforce structural consistency.
-        // the solution is SORTED to ensure that Index N always corresponds to the same PlantType
-        // across the entire population (Homologous Chromosomes).
-        genes.sort(Comparator.comparing(Point::getType));
+        // 2. Alignment Phase (HOMOLOGY ENFORCEMENT)
+        // Ordiniamo per Tipo E POI per ID Varietà.
+        // Questo garantisce che se ho [Pomodoro A, Pomodoro B], l'ordine sia sempre A, B in tutti gli individui.
+        genes.sort(Comparator.comparing(Point::getType)
+                .thenComparingInt(Point::getVarietyId));
 
         return new Individual(genes);
     }

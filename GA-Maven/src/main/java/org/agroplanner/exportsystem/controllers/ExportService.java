@@ -17,17 +17,11 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Service component responsible for the business logic of data persistence.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> Facade / Service Layer. It sits between the UI Controller and the complex
- * Factory/Strategy logic, providing a simplified API for exporting data.</li>
- * <li><strong>Responsibility:</strong> Handles Input Sanitization (Security), Lifecycle Management,
- * and Error Handling (Exception Translation).</li>
- * <li><strong>Statelessness:</strong> This class contains no mutable state, making it thread-safe and
- * cheap to instantiate (default constructor).</li>
- * </ul>
+ * Service component responsible for the business logic of data export operations.
+ * <p>
+ * This Facade handles input sanitization, lifecycle management of the export strategies,
+ * and translation of low-level I/O exceptions into domain-specific exceptions.
+ * </p>
  */
 public class ExportService {
 

@@ -54,7 +54,7 @@ public abstract class BaseExporter {
             Files.createDirectories(path.getParent());
         }
 
-        // 3. Execution (The Hook)
+        // 3. Execution
         // Delegates the format-specific writing logic to the concrete implementation.
         performExport(individual, domain, inventory, path);
 
@@ -75,8 +75,6 @@ public abstract class BaseExporter {
         String extension = getExtension();
 
         // Extension Normalization:
-        // If the user forgot the extension (e.g., "report"), we append it ("report.csv").
-        // We use case-insensitive check to be user-friendly.
         if (!filename.toLowerCase().endsWith(extension)) {
             filename += extension;
         }

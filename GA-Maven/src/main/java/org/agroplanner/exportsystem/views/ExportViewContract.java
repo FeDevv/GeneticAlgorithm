@@ -78,4 +78,7 @@ public interface ExportViewContract {
      * @return {@code true} to proceed with overwrite, {@code false} to abort/rename.
      */
     boolean askOverwriteOrRename(String filename);
+
+    /** Shows warning for guests : cannot export if not registered */
+    void showGuestExportRestricted();
 }

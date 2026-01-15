@@ -1,7 +1,14 @@
 package org.agroplanner.gasystem.views;
 
 
+import org.agroplanner.gasystem.model.Individual;
+import org.agroplanner.gasystem.model.Point;
+
+import java.util.List;
 import java.util.Locale;
+import java.util.Scanner;
+
+import static org.apache.commons.lang3.StringUtils.truncate;
 
 /**
  * Concrete implementation of the Evolutionary View targeting the Command Line Interface (CLI).
@@ -25,67 +32,122 @@ import java.util.Locale;
 @SuppressWarnings("java:S106")
 public class ConsoleEvolutionView implements EvolutionViewContract {
 
-    // ------------------- HELPER METHODS -------------------
+    private final Scanner scanner;
 
     /**
-     * Prints a visual delimiter to organize the output sections.
+     * Constructs the view with the shared input scanner.
+     * @param scanner The input source (System.in).
      */
+    public ConsoleEvolutionView(Scanner scanner) {
+        this.scanner = scanner;
+    }
+
+    // ------------------- HELPER METHODS -------------------
+
     private void printSingleSeparator() {
-        System.out.println("──────────────────────────────────────────────────────────");
+        System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
     }
 
     // ------------------- STATUS UPDATES -------------------
 
-    /**
-     * {@inheritDoc}
-     * <p><strong>Visual Feedback:</strong>
-     * Uses a specific icon (🧬) and a separator to mark the beginning of a heavy computational block.
-     * </p>
-     */
     @Override
     public void showEvolutionStart() {
         System.out.println("\n");
+        // ASCII ART: EVOLUTION ENGINE
+        System.out.println("███████╗██╗   ██╗ ██████╗ ██╗     ██╗   ██╗████████╗██╗ ██████╗ ███╗   ██╗");
+        System.out.println("██╔════╝██║   ██║██╔═══██╗██║     ██║   ██║╚══██╔══╝██║██╔═══██╗████╗  ██║");
+        System.out.println("█████╗  ██║   ██║██║   ██║██║     ██║   ██║   ██║   ██║██║   ██║██╔██╗ ██║");
+        System.out.println("██╔══╝  ╚██╗ ██╔╝██║   ██║██║     ██║   ██║   ██║   ██║██║   ██║██║╚██╗██║");
+        System.out.println("███████╗ ╚████╔╝ ╚██████╔╝███████╗╚██████╔╝   ██║   ██║╚██████╔╝██║ ╚████║");
+        System.out.println("╚══════╝  ╚═══╝   ╚═════╝ ╚══════╝ ╚═════╝    ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝");
+        System.out.println("                          Genetic Algorithm Engine                            ");
         printSingleSeparator();
-        System.out.println(" 🧬  EVOLUTION ENGINE STARTED");
-        System.out.println("     Processing generations... Please wait.");
+        System.out.println(" 🧬  PROCESSING GENERATIONS... PLEASE WAIT.");
         printSingleSeparator();
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * <p><strong>Feedback Logic:</strong></p>
-     * Differentiates between a "Soft Retry" (trying again) and a "Hard Stop" (max attempts reached).
-     * Uses {@code printf} with {@code Locale.US} to ensure time formatting is consistent (e.g., "1.50 sec" vs "1,50 sec").
-     */
     @Override
     public void showRetryWarning(int currentAttempt, int maxAttempts, double lastExecutionTimeSec) {
-        // Nessun separatore qui per mantenere il log compatto se ci sono molti retry
-        System.out.println("\n⚠️  CONVERGENCE ISSUE DETECTED");
-        System.out.printf("   Attempt %d of %d failed to find a perfect solution.%n", currentAttempt, maxAttempts);
+        System.out.println("\n ⚠️  CONVERGENCE ISSUE DETECTED");
+        System.out.printf(Locale.US, "    Attempt %d of %d failed to find a valid solution (Time: %.2fs).%n",
+                currentAttempt, maxAttempts, lastExecutionTimeSec);
 
         if (currentAttempt < maxAttempts) {
-            // Soft Failure: System is recovering.
-            System.out.printf(Locale.US, "   🔄 Retrying... (Est. time: ~%.2f sec)%n", lastExecutionTimeSec);
+            System.out.println("    🔄 Restarting simulation with new random seed...");
         } else {
-            // Hard Failure: System is giving up.
-            System.out.println("   🛑 Max attempts reached. Returning best available result.");
+            System.out.println("    🛑 Max attempts reached. Returning best effort result.");
+        }
+    }
+
+    @Override
+    public void showSuccess(int attempt, double executionTimeSec) {
+        System.out.println("\n\n🏆 OPTIMIZATION COMPLETE!");
+        System.out.println("\n ✅ VALID SOLUTION FOUND!");
+        // Output tabellare pulito
+        System.out.printf("    • Attempts Needed : %d%n", attempt);
+        System.out.printf(Locale.US, "    • Total CPU Time  : %.2f seconds%n", executionTimeSec);
+        printSingleSeparator();
+    }
+
+    @Override
+    public boolean askIfPrintDetails() {
+        System.out.println();
+        System.out.println("⚠️  NOTE: Detailed output contains a row for every single plant.");
+
+        while (true) {
+            System.out.print("👁️  View detailed chromosome data? [y/n]: ");
+            String input = scanner.next().trim();
+            if (input.equalsIgnoreCase("y")) return true;
+            if (input.equalsIgnoreCase("n")) return false;
+            System.out.println("  ❌ Invalid input.");
         }
     }
 
     /**
-     * {@inheritDoc}
-     * <p><strong>Visual Feedback:</strong>
-     * Highlights the success state clearly (✅) and provides a tabular summary of the performance metrics.
-     * </p>
+     * Now responsible for BOTH formatting AND printing the detailed table.
      */
     @Override
-    public void showSuccess(int attempt, double executionTimeSec) {
-        System.out.println("\n✅ VALID SOLUTION FOUND!");
-        // Allineamento tabellare semplice
-        System.out.printf("   Attempt       : #%d%n", attempt);
-        System.out.printf(Locale.US, "   Execution Time: %.2f seconds%n", executionTimeSec);
-        printSingleSeparator();
+    public void printDetailedReport(Individual individual) {
+        System.out.println("\n🧬 CHROMOSOME DETAILS (PHENOTYPE):");
+        System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
+
+        // --- LOGICA SPOSTATA DAL FORMATTER ---
+        StringBuilder sb = new StringBuilder();
+        List<Point> genes = individual.getChromosomes();
+
+        // Header Tabella
+        // Larghezza Totale: 1+5+1+22+1+11+1+27+1 = 70 chars (approx)
+        sb.append(String.format("┌─────┬──────────────────────┬───────────┬───────────────────────────┐%n"));
+        sb.append(String.format("│ ID  │ VARIETY NAME         │ TYPE      │ COORDINATES (X, Y)        │%n"));
+        sb.append(String.format("├─────┼──────────────────────┼───────────┼───────────────────────────┤%n"));
+
+        for (int i = 0; i < genes.size(); i++) {
+            Point p = genes.get(i);
+
+            String name = p.getVarietyName();
+            String type = p.getType().name();
+
+            sb.append(String.format(Locale.US, "│ %-3d │ %-20s │ %-9s │ x=%-6.2f y=%-6.2f         │%n",
+                    (i + 1),
+                    truncate(name, 20),
+                    truncate(type, 9),
+                    p.getX(),
+                    p.getY()
+            ));
+        }
+        sb.append(String.format("└─────┴──────────────────────┴───────────┴───────────────────────────┘%n"));
+        // -------------------------------------
+
+        System.out.print(sb); // Print directly
+        System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
+    }
+
+    @Override
+    public void showSolutionValue(double fitness, int totalPlants) {
+        System.out.println("┌────────────────────────────────────────────────────────────┐");
+        System.out.printf(Locale.US, "│  FINAL FITNESS SCORE:          %-27.6f │%n", fitness);
+        System.out.printf(Locale.US, "│  TOTAL PLANTS PLACED:          %-27d │%n", totalPlants);
+        System.out.println("└────────────────────────────────────────────────────────────┘");
     }
 }
 

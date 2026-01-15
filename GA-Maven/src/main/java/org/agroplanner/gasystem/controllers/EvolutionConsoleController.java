@@ -10,17 +10,12 @@ import java.time.Instant;
 
 /**
  * Controller component orchestrating the interactive evolutionary session.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> Session Controller. It manages the lifecycle of a specific computation request,
- * handling user feedback, retries, and final result validation.</li>
- * <li><strong>Stochastic Mitigation (Retry Loop):</strong> Genetic Algorithms are non-deterministic. A run might fail
- * simply due to a bad random seed ("unlucky initialization"). This controller implements an automatic
- * <em>Retry Strategy</em> to smooth out statistical variance before reporting failure to the user.</li>
- * <li><strong>Fail-Fast Policy:</strong> While it retries on <em>Quality</em> failures (invalid solutions),
- * it fails immediately on <em>System</em> failures (Timeouts), preventing UI freezes on computationally infeasible inputs.</li>
- * </ul>
+ * <p>
+ * <strong>Resilience Strategy:</strong>
+ * Genetic Algorithms are stochastic processes. A single run might fail due to "unlucky" initialization.
+ * This controller implements an automatic <strong>Retry Loop</strong> (up to {@value #MAX_RETRY_ATTEMPTS} attempts)
+ * to smooth out statistical variance before reporting a failure to the user.
+ * </p>
  */
 public class EvolutionConsoleController {
 
@@ -85,7 +80,7 @@ public class EvolutionConsoleController {
             Instant start = Instant.now();
 
             // STEP 1: EXECUTION
-            // Delegate heavy lifting to the Service.
+            // Delegate to the Service.
             // This blocking call might throw EvolutionTimeoutException.
             lastSolution = service.executeEvolutionCycle();
 
@@ -131,4 +126,18 @@ public class EvolutionConsoleController {
 
         throw new MaxAttemptsExceededException(failureDetails);
     }
+
+    /**
+     * Delegates the result visualization to the View.
+     *
+     * @param solution The solution to display.
+     */
+    public void handleResultDisplay(Individual solution) {
+        view.showSolutionValue(solution.getFitness(), solution.getDimension());
+        if (view.askIfPrintDetails()) {
+
+            view.printDetailedReport(solution);
+        }
+    }
+
 }

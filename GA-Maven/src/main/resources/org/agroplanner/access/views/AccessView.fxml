@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane prefHeight="500.0" prefWidth="400.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.agroplanner.access.controllers.AccessJFXController">
+    <top>
+        <VBox alignment="CENTER" spacing="10.0" BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="20.0" top="20.0" />
+            </padding>
+            <children>
+                <Text strokeType="OUTSIDE" strokeWidth="0.0" text="AgroPlanner System">
+                    <font>
+                        <Font name="System Bold" size="24.0" />
+                    </font>
+                </Text>
+                <Label text="Secure Authentication Gateway" textFill="#757575" />
+            </children>
+        </VBox>
+    </top>
+    <center>
+        <TabPane tabClosingPolicy="UNAVAILABLE" BorderPane.alignment="CENTER">
+            <tabs>
+                <Tab text="Login">
+                    <content>
+                        <VBox alignment="CENTER" spacing="15.0">
+                            <padding>
+                                <Insets left="40.0" right="40.0" />
+                            </padding>
+                            <children>
+                                <TextField fx:id="loginUsernameField" promptText="Username" />
+                                <PasswordField fx:id="loginPasswordField" promptText="Password" />
+                                <Button fx:id="loginButton" defaultButton="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLoginAction" style="-fx-background-color: #2e7d32; -fx-text-fill: white;" text="Entra" />
+                                <Label fx:id="loginStatusLabel" textFill="#d32f2f" />
+                            </children>
+                        </VBox>
+                    </content>
+                </Tab>
+
+                <Tab text="Registrazione">
+                    <content>
+                        <ScrollPane fitToWidth="true">
+                            <content>
+                                <VBox spacing="10.0">
+                                    <padding>
+                                        <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+                                    </padding>
+                                    <children>
+                                        <Label text="Dati Personali" underline="true" />
+                                        <TextField fx:id="regFirstNameField" promptText="Nome" />
+                                        <TextField fx:id="regLastNameField" promptText="Cognome" />
+                                        <TextField fx:id="regEmailField" promptText="Email" />
+                                        <TextField fx:id="regPhoneField" promptText="Telefono" />
+
+                                        <Separator prefWidth="200.0" />
+
+                                        <Label text="Account" underline="true" />
+                                        <TextField fx:id="regUsernameField" promptText="Username (min 3 chars)" />
+                                        <PasswordField fx:id="regPasswordField" promptText="Password (min 4 chars)" />
+
+                                        <Label text="Ruolo Richiesto" />
+                                        <ComboBox fx:id="regRoleCombo" maxWidth="1.7976931348623157E308" />
+
+                                        <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleRegisterAction" text="Registra Utente" />
+                                        <Label fx:id="regStatusLabel" wrapText="true" textFill="#d32f2f"/>
+                                    </children>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+                    </content>  </Tab>
+            </tabs>
+        </TabPane>
+    </center>
+</BorderPane>

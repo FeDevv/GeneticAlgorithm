@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<BorderPane prefHeight="600.0" prefWidth="950.0" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.agroplanner.gasystem.controllers.EvolutionJFXController">
+    <top>
+        <BorderPane BorderPane.alignment="CENTER">
+            <padding>
+                <Insets bottom="15.0" left="20.0" right="20.0" top="20.0" />
+            </padding>
+            <left>
+                <Label text="Simulazione Evolutiva" BorderPane.alignment="CENTER_LEFT">
+                    <font>
+                        <Font name="System Bold" size="22.0" />
+                    </font>
+                </Label>
+            </left>
+            <right>
+                <Button cancelButton="true" mnemonicParsing="false" onAction="#handleExitAction" text="🏠 Dashboard" BorderPane.alignment="CENTER_RIGHT" />
+            </right>
+            <bottom>
+                <Separator BorderPane.alignment="CENTER">
+                    <padding>
+                        <Insets top="10.0" />
+                    </padding></Separator>
+            </bottom>
+        </BorderPane>
+    </top>
+
+    <center>
+        <SplitPane dividerPositions="0.30, 0.70" BorderPane.alignment="CENTER">
+            <items>
+
+                <VBox spacing="15.0">
+                    <padding>
+                        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                    </padding>
+                    <children>
+                        <Label style="-fx-font-weight: bold;" text="Console di Processo" />
+
+                        <TextArea fx:id="consoleArea" editable="false" prefHeight="300.0" style="-fx-font-family: 'Consolas'; -fx-font-size: 12;" wrapText="true" />
+
+                        <ProgressBar fx:id="progressBar" maxWidth="1.7976931348623157E308" progress="0.0" />
+
+                        <HBox spacing="10.0">
+                            <children>
+                                <Label text="Fitness Migliore:" textFill="#757575" />
+                                <Label fx:id="fitnessLabel" style="-fx-font-weight: bold; -fx-text-fill: #1565c0;" text="-" />
+                            </children>
+                        </HBox>
+
+                        <Region VBox.vgrow="ALWAYS" />
+
+                        <Button fx:id="startButton" defaultButton="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleRunEvolution" style="-fx-background-color: #2e7d32; -fx-text-fill: white;" text="AVVIA EVOLUZIONE" />
+
+                        <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                            <children>
+                                <Button fx:id="saveButton" disable="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleSaveAction" style="-fx-base: #ff9800;" text="💾 Salva nel DB" />
+                                <Button fx:id="exportButton" disable="true" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleExportAction" style="-fx-base: #1976d2;" text="Esporta File &gt;" />
+                            </children>
+                        </HBox>
+                    </children>
+                </VBox>
+
+                <StackPane fx:id="canvasContainer" style="-fx-background-color: white;">
+                    <children>
+                        <Canvas fx:id="plantCanvas" height="400.0" width="400.0" />
+                        <Label fx:id="placeholderLabel" text="In attesa di risultati..." textFill="#9e9e9e">
+                            <font>
+                                <Font size="14.0" />
+                            </font></Label>
+                    </children>
+                </StackPane>
+
+                <VBox spacing="5.0">
+                    <children>
+                        <Label style="-fx-font-weight: bold; -fx-padding: 5;" text="Dettaglio Posizioni">
+                            <padding>
+                                <Insets bottom="5" left="5" right="5" top="5" />
+                            </padding>
+                        </Label>
+                        <TableView fx:id="pointsTable" VBox.vgrow="ALWAYS">
+                            <columns>
+                                <TableColumn fx:id="colPtName" prefWidth="120.0" text="Pianta" />
+                                <TableColumn fx:id="colPtX" prefWidth="60.0" text="X (m)" />
+                                <TableColumn fx:id="colPtY" prefWidth="60.0" text="Y (m)" />
+                            </columns>
+                            <columnResizePolicy>
+                                <TableView fx:constant="CONSTRAINED_RESIZE_POLICY" />
+                            </columnResizePolicy>
+                        </TableView>
+                    </children>
+                </VBox>
+
+            </items>
+        </SplitPane>
+    </center>
+</BorderPane>

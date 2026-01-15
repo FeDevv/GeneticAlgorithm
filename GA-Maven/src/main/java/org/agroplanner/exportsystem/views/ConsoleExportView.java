@@ -3,6 +3,7 @@ package org.agroplanner.exportsystem.views;
 import org.agroplanner.exportsystem.model.ExportType;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Scanner;
 
@@ -20,31 +21,20 @@ import java.util.Scanner;
  * a safety gate to prevent accidental data loss.</li>
  * </ul>
  *
- * <p><strong>Static Analysis:</strong>
- * Suppresses {@code java:S106} as standard output usage is expected for this CLI component.
- * </p>
  */
 @SuppressWarnings("java:S106")
 public class ConsoleExportView implements ExportViewContract {
 
     private final Scanner scanner;
 
-    /**
-     * Constructs the view using the shared system scanner.
-     * @param scanner The input source (System.in).
-     */
     public ConsoleExportView(Scanner scanner) {
         this.scanner = scanner;
     }
 
     // ------------------- HELPER METHODS -------------------
 
-    private void printDoubleSeparator() {
-        System.out.println("══════════════════════════════════════════════════════════");
-    }
-
     private void printSingleSeparator() {
-        System.out.println("──────────────────────────────────────────────────────────");
+        System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
     }
 
     // ------------------- INTERACTION LOGIC -------------------
@@ -52,40 +42,40 @@ public class ConsoleExportView implements ExportViewContract {
     @Override
     public void showAvailableExports(List<ExportType> availableTypes) {
         System.out.println("\n");
-        printDoubleSeparator();
-        System.out.println(" 💾  EXPORT WIZARD ");
-        System.out.println("     Save your solution to a file.");
-        printDoubleSeparator();
+        // ASCII ART: EXPORT SYSTEM
+        System.out.println("███████╗██╗  ██╗██████╗  ██████╗ ██████╗ ████████╗");
+        System.out.println("██╔════╝╚██╗██╔╝██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝");
+        System.out.println("█████╗   ╚███╔╝ ██████╔╝██║   ██║██████╔╝   ██║   ");
+        System.out.println("██╔══╝   ██╔██╗ ██╔═══╝ ██║   ██║██╔══██╗   ██║   ");
+        System.out.println("███████╗██╔╝ ██╗██║     ╚██████╔╝██║  ██║   ██║   ");
+        System.out.println("╚══════╝╚═╝  ╚═╝╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ");
+        System.out.println("                  Report Generation Module            ");
+        printSingleSeparator();
 
-        System.out.println("\nAvailable Formats:");
-        System.out.println("┌─────┬──────────────┬──────────────────────────┐");
-        System.out.println("│ ID  │ FORMAT       │ DESCRIPTION              │");
-        System.out.println("├─────┼──────────────┼──────────────────────────┤");
+        System.out.println(" 💾  EXPORT WIZARD");
+        System.out.println("     Select a format to save your optimization results.");
+        System.out.println();
 
-        for (int i = 0; i < availableTypes.size(); i++) {
-            ExportType type = availableTypes.get(i);
-            // We map the description here for display purposes
-            String desc = availableTypes.get(i).getExportInfo();
+        // Header Tabella
+        System.out.println("┌──────┬────────────┬────────────────────────────────────────────────────────────────┐");
+        System.out.println("│  ID  │ FORMAT     │ DESCRIPTION                                                    │");
+        System.out.println("├──────┼────────────┼────────────────────────────────────────────────────────────────┤");
 
-            // Adjust index + 1 if you want menu to start at 1, or keep i for 0-based.
-            System.out.printf("│ %-3d │ %-12s │ %-24s │%n", availableTypes.get(i).getMenuId(), type.name(), desc);
+        for (ExportType type : availableTypes) {
+            System.out.printf(Locale.US, "│  %-2d  │ %-10s │ %-62s │%n",
+                    type.getMenuId(),
+                    type.name(),
+                    type.getExportInfo()
+            );
         }
-        System.out.println("└─────┴──────────────┴──────────────────────────┘");
-        System.out.println("      (Enter 0 to Cancel)");
+        System.out.println("└──────┴────────────┴────────────────────────────────────────────────────────────────┘");
+        System.out.println("    (Enter 0 to Cancel)");
     }
 
-    /**
-     * {@inheritDoc}
-     * <p><strong>Input Strategy:</strong>
-     * Uses a validation loop to ensure the user selects a valid ID from the table.
-     * Handles '0' as an explicit exit signal (returning {@code Optional.empty()}).
-     * </p>
-     */
     @Override
     public Optional<ExportType> askForExportType(List<ExportType> availableTypes) {
-        // Validation Loop
         while (true) {
-            System.out.print("\n> Select ID: ");
+            System.out.print("\n👉 Select Format ID: ");
 
             if (scanner.hasNextInt()) {
                 int inputId = scanner.nextInt();
@@ -97,97 +87,85 @@ public class ConsoleExportView implements ExportViewContract {
                 // CASE B: Valid Lookup
                 Optional<ExportType> selection = ExportType.fromMenuId(inputId);
 
-                // Verification: Exists AND is in the provided list
                 if (selection.isPresent() && availableTypes.contains(selection.get())) {
                     return selection;
                 }
             } else {
-                scanner.nextLine(); // Flush invalid token
+                scanner.nextLine();
             }
 
-            System.out.println("❌ Invalid ID. Please select a number from the table.");
+            System.out.println("  ❌ Invalid Selection. Please check the ID table above.");
         }
     }
 
-    /**
-     * {@inheritDoc}
-     * <p><strong>Sanitization Logic:</strong>
-     * Enforces strict filename rules to ensure cross-platform compatibility and security.
-     * Rejects:
-     * <ul>
-     * <li>Empty strings or spaces (forces underscores/dashes).</li>
-     * <li>Reserved characters: {@code < > : " / \ | ? *}</li>
-     * </ul>
-     * </p>
-     */
     @Override
     public String askForFilename() {
-        printSingleSeparator();
+        System.out.println();
         System.out.println("📝  FILE SETTINGS");
+        printSingleSeparator();
 
         while (true) {
-            System.out.print("\n> Enter filename (without extension): ");
+            System.out.print("👉 Enter filename (without extension): ");
 
             String name = scanner.nextLine().trim();
 
             // Validation: Empty check and spaces check
             if (name.isEmpty() || name.contains(" ")) {
-                System.out.println("⚠️ Filename cannot be empty or contain spaces.");
-                System.out.println("   Please use underscores (_) or dashes (-) for spaces instead.");
+                System.out.println("  ⚠️  Filename cannot be empty or contain spaces.");
+                System.out.println("      Use underscores (_) or dashes (-) instead.");
                 continue;
             }
 
             // Validation: Illegal characters (Windows/Linux safe)
-            // Regex checks for: < > : " / \ | ? *
             if (name.matches(".*[<>:\"/\\\\|?*].*")) {
-                System.out.println("❌ Invalid characters detected (<>:\"/\\|?*).");
-                System.out.println("   Please use only letters, numbers, underscores, or dashes.");
+                System.out.println("  ❌ Invalid characters detected (<>:\"/\\|?*).");
+                System.out.println("      Please use only letters, numbers, underscores, or dashes.");
             } else {
                 return name;
             }
         }
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void showSuccessMessage(String path) {
-        System.out.println("\n✅ EXPORT SUCCESSFUL!");
-        System.out.println("   File saved at: " + path);
+        System.out.println("\n ✅  EXPORT SUCCESSFUL!");
+        System.out.println("     File saved at: " + path);
         printSingleSeparator();
     }
 
-    /**
-     * {@inheritDoc}
-     */
     @Override
     public void showErrorMessage(String error) {
-        System.out.println("\n⛔ EXPORT FAILED:");
-        System.out.println("   " + error);
-        System.out.println("   Please try again with a different name or path.");
+        System.out.println("\n ⛔  EXPORT FAILED");
+        System.out.println("     Error: " + error);
+        System.out.println("     Please try again with a different name or path.");
+        printSingleSeparator();
     }
 
-    /**
-     * {@inheritDoc}
-     * <p><strong>UX Pattern:</strong> Binary Choice Loop (Overwrite vs Rename).</p>
-     */
+    @Override
     public boolean askOverwriteOrRename(String filename) {
-        System.out.println("⚠️ File '" + filename + "' already exists.");
-        System.out.print("\n> Do you want to [O]verwrite or [R]ename? (o/r): ");
+        System.out.println("\n ⚠️  FILE CONFLICT");
+        System.out.println("    The file '" + filename + "' already exists.");
 
         while (true) {
+            System.out.print("👉 Do you want to [O]verwrite or [R]ename? (o/r): ");
             String input = scanner.nextLine().trim();
 
             if (input.equalsIgnoreCase("o")) {
-                System.out.println("🔄 Overwriting...");
+                System.out.println("    🔄 Overwriting existing file...");
                 return true;
             } else if (input.equalsIgnoreCase("r")) {
-                System.out.println("↩️ Returning to selection...");
+                System.out.println("    ↩️  Returning to filename selection...");
                 return false;
-            } else {
-                System.out.print("❌ Invalid choice. Enter 'o' or 'r': ");
             }
+            System.out.println("  ❌ Invalid input. Type 'o' or 'r'.");
         }
+    }
+
+    @Override
+    public void showGuestExportRestricted() {
+        System.out.println("\n 🔒 EXPORT DISABLED");
+        System.out.println("    You are running in Guest/Demo mode.");
+        System.out.println("    To export professional reports (PDF/Excel), please login with a standard account.");
+        printSingleSeparator();
     }
 }

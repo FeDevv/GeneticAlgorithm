@@ -22,17 +22,15 @@ import java.util.stream.IntStream;
 
 /**
  * Service component acting as the <strong>Orchestrator Engine</strong> of the Genetic Algorithm.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> Facade / Mediator. It encapsulates the complexity of the evolutionary operators,
- * providing a simple high-level interface ({@link #executeEvolutionCycle()}) to the Controller layer.</li>
- * <li><strong>Concurrency Strategy:</strong> Leverages Java <strong>Parallel Streams</strong> to parallelize the most
- * CPU-intensive phases (Reproduction and Evaluation). This is made thread-safe by the immutable design of the
- * {@link org.agroplanner.gasystem.model.Point} class.</li>
- * <li><strong>Reliability:</strong> Implements a "Circuit Breaker" mechanism via {@link EvolutionTimeoutException}
- * to prevent runaway processes on large datasets.</li>
- * </ul>
+ * <p>
+ * It coordinates the evolutionary operators (Selection, Crossover, Mutation) and manages the
+ * lifecycle of generations.
+ * </p>
+ * <p><strong>Concurrency Note:</strong>
+ * This service leverages {@link java.util.stream.Stream#parallel()} to accelerate the reproductive phase.
+ * This is thread-safe because the {@link org.agroplanner.gasystem.model.Point} class is immutable and
+ * operators are stateless.
+ * </p>
  */
 public class EvolutionService {
 
@@ -97,7 +95,7 @@ public class EvolutionService {
         this.domain = domain;
         this.inventory = inventory;
 
-        // 3. Component Wiring (Dependency Composition)
+        // 3. Component Wiring
         this.populationFactory = new PopulationFactory(domain, inventory);
         this.fitnessCalculator = new FitnessCalculator(domain, maxRadius);
 

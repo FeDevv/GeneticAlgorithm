@@ -22,94 +22,50 @@ import org.agroplanner.shared.exceptions.InvalidInputException;
 public class Point {
 
     // ------------------- STATE (IMMUTABLE) -------------------
-
-    /** The Cartesian X-coordinate (center of the plant). */
     private final double x;
-
-    /** The Cartesian Y-coordinate (center of the plant). */
     private final double y;
-
-    /** The biological identity of the plant (Metadata). */
+    private final double radius;
     private final PlantType type;
 
-    /**
-     * The physical radius of the organism.
-     * <p>Defines the spatial footprint used for collision detection (Fitness Function).</p>
-     */
-    private final double radius;
+    // --- NUOVI CAMPI SPECIFICI ---
+    private final int varietyId;
+    private final String varietyName;
 
     // ------------------- CONSTRUCTORS -------------------
 
-    /**
-     * Constructs a new Gene (Point).
-     *
-     * <p><strong>Validation Logic (Fail-Fast):</strong></p>
-     * Ensures that no "Zombie Genes" (invalid states) can exist within the population.
-     *
-     * @param x      The X coordinate.
-     * @param y      The Y coordinate.
-     * @param radius The physical radius (must be > 0).
-     * @param type   The species identifier (must not be null).
-     * @throws InvalidInputException if coordinates are NaN, radius is non-positive, or type is missing.
-     */
-    public Point(double x, double y, double radius, PlantType type) {
-        // 1. Numerical Stability Check
-        // NaN (Not a Number) propagates virally in calculations, corrupting the entire fitness score.
-        if (Double.isNaN(x) || Double.isNaN(y)) {
-            throw new InvalidInputException("Coordinates cannot be NaN.");
-        }
-
-        // 2. Physical Constraint Check
-        if (radius <= 0) {
-            throw new InvalidInputException("Point radius must be positive. Got: " + radius);
-        }
-
-        // 3. Metadata Integrity Check
-        if (type == null) {
-            throw new InvalidInputException("PlantType cannot be null. Every point must have a species identity.");
-        }
+    public Point(double x, double y, double radius, PlantType type, int varietyId, String varietyName) {
+        // Validazioni standard
+        if (Double.isNaN(x) || Double.isNaN(y)) throw new InvalidInputException("Coordinates cannot be NaN.");
+        if (radius <= 0) throw new InvalidInputException("Point radius must be positive. Got: " + radius);
+        if (type == null) throw new InvalidInputException("PlantType cannot be null.");
+        if (varietyName == null) varietyName = "Unknown"; // Safety fallback
 
         this.x = x;
         this.y = y;
         this.radius = radius;
         this.type = type;
+
+        // Assegnazione nuovi campi
+        this.varietyId = varietyId;
+        this.varietyName = varietyName;
     }
 
     // ------------------- ACCESSORS -------------------
 
-    /**
-     * Retrieves the horizontal position.
-     * @return The X coordinate.
-     */
     public double getX() { return x; }
-
-    /**
-     * Retrieves the vertical position.
-     * @return The Y coordinate.
-     */
     public double getY() { return y; }
-
-    /**
-     * Retrieves the physical footprint size.
-     * @return The radius in meters.
-     */
     public double getRadius() { return radius; }
-
-    /**
-     * Retrieves the biological classification.
-     * @return The {@link PlantType} enum constant.
-     */
     public PlantType getType() { return type; }
 
+    // Nuovi Getter
+    public int getVarietyId() { return varietyId; }
+    public String getVarietyName() { return varietyName; }
 
     // ------------------- OBJECT CONTRACT -------------------
 
-    /**
-     * Returns a compact string representation suitable for visualization and debugging.
-     * <p>Format: {@code NAME[r=0.00]@(x.xxxx, y.yyyy)}</p>
-     */
     @Override
     public String toString() {
-        return String.format("%s[r=%.2f]@(%.4f, %.4f)", type.name(), radius, x, y);
+        // Esempio output: TOMATO(San Marzano)[id=5]@(10.5, 20.0)
+        return String.format("%s(%s)[id=%d]@(%.2f, %.2f)", type.name(), varietyName, varietyId, x, y);
     }
 }

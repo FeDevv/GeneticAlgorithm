@@ -1,6 +1,7 @@
 package org.agroplanner.domainsystem.controllers;
 
 import org.agroplanner.domainsystem.model.Domain;
+import org.agroplanner.domainsystem.model.DomainDefinition;
 import org.agroplanner.domainsystem.model.DomainType;
 import org.agroplanner.shared.exceptions.DomainConstraintException;
 import org.agroplanner.shared.exceptions.InvalidInputException;
@@ -10,36 +11,24 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * Controller component orchestrating the domain initialization workflow within the CLI environment.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> MVC Controller. It acts as the mediator between the user interface
- * ({@link DomainViewContract}) and the business logic ({@link DomainService}).</li>
- * <li><strong>Responsibility:</strong> Manages the session state during the configuration phase,
- * enforcing the execution order (Selection -> Parameter Input -> Instantiation).</li>
- * <li><strong>Fault Tolerance:</strong> Implements a <em>Retry Loop</em> strategy. Instead of terminating upon
- * validation errors, the controller catches domain-specific exceptions and cycles the workflow,
- * allowing the user to correct their input dynamically.</li>
- * </ul>
+ * Orchestrates the interactive domain initialization workflow.
+ * <p>
+ * This controller mediates the configuration process, guiding the user through
+ * type selection, parameter acquisition, and validation, ensuring only valid
+ * geometric definitions are passed to the rest of the system.
+ * </p>
  */
 public class DomainConsoleController {
 
-    /**
-     * Abstraction of the User Interface.
-     */
     private final DomainViewContract view;
 
-    /**
-     * Facade for Domain Business Logic.
-     */
     private final DomainService service;
 
     /**
-     * Constructs the controller injecting required dependencies.
+     * Initializes the controller with the IO handler and business logic facade.
      *
-     * @param view    The IO handler implementation.
-     * @param service The domain logic facade.
+     * @param view    The view abstraction for user interaction.
+     * @param service The domain service for logic and instantiation.
      */
     public DomainConsoleController(DomainViewContract view, DomainService service) {
         this.view = view;
@@ -47,32 +36,21 @@ public class DomainConsoleController {
     }
 
     /**
-     * Executes the synchronous wizard for geometric domain creation.
+     * Executes the wizard for geometric domain creation.
+     * <p>
+     * Implements a robust <strong>Retry Loop</strong>: domain-specific exceptions
+     * (Validation or Constraints) are caught and displayed as feedback, allowing the
+     * user to correct inputs without restarting the application.
+     * </p>
      *
-     * <p><strong>Workflow:</strong></p>
-     * <ol>
-     * <li><strong>Type Selection:</strong> Fetches available {@link DomainType}s from the Service and prompts the user via the View.</li>
-     * <li><strong>Data Acquisition:</strong> Requests the specific parameters defined by the selected type's schema.</li>
-     * <li><strong>Instantiation:</strong> Invokes the Service to create the entity. This triggers the "Deep Protection" validation chain.</li>
-     * </ol>
-     *
-     * <p><strong>Error Handling Strategy:</strong></p>
-     * Differentiates between error categories to provide specific feedback:
-     * <ul>
-     * <li>{@link DomainConstraintException}: Semantic errors (e.g., "Inner Radius > Outer Radius"). Logic is rejected.</li>
-     * <li>{@link InvalidInputException}: Structural errors (e.g., Missing keys). Data is rejected.</li>
-     * <li>{@link Exception}: Unexpected system failures. Caught to prevent JVM crash (Graceful Degradation).</li>
-     * </ul>
-     *
-     * @return an {@link Optional} containing the valid {@link Domain} instance,
-     * or {@code Optional.empty()} if the user cancels the operation (Exit condition).
+     * @return An {@link Optional} containing the valid {@link DomainDefinition} if created,
+     * or empty if the user cancels the operation.
      */
-    public Optional<Domain> runDomainCreationWizard() {
+    public Optional<DomainDefinition> runDomainCreationWizard() { //🧙‍♂️
         while (true) {
             // ==================================================================================
             // STEP 1: TYPE SELECTION
             // ==================================================================================
-            // Data Flow: Service (Data) -> Controller -> View (Render)
             view.showAvailableDomains(service.getAvailableDomainTypes());
             Optional<DomainType> selectedType = view.askForDomainType(service.getAvailableDomainTypes());
 
@@ -85,19 +63,18 @@ public class DomainConsoleController {
             // STEP 2: PARAMETER ACQUISITION
             // ==================================================================================
             DomainType type = selectedType.get();
-            // The View handles low-level parsing (String -> Double)
+
             Map<String, Double> params = view.askForParameters(type);
 
             // ==================================================================================
             // STEP 3: CREATION & VALIDATION (The "Deep Protection" Boundary)
             // ==================================================================================
             try {
-                // Delegation: The Service orchestrates the Factory, which invokes Constructors.
-                // Any violation of Physical or Topological invariants throws an exception here.
-                Domain domain = service.createDomain(type, params);
+
+                service.createDomain(type, params);
 
                 view.showSuccessMessage();
-                return Optional.of(domain);
+                return Optional.of(new DomainDefinition(type, params));
 
             } catch (DomainConstraintException e) {
                 // 🛑 CATEGORY: SEMANTIC/LOGIC ERROR

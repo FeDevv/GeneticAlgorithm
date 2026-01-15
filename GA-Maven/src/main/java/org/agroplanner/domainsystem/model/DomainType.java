@@ -5,22 +5,15 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Registry of supported geometric domain types within the simulation environment.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> Metadata Registry </li>
- * <li><strong>Role:</strong> Serves as the central source of truth for domain configuration. By encapsulating
- * the {@code requiredParameters} list, this Enum enables a <strong>Data-Driven UI</strong> approach:
- * the View can dynamically generate input prompts based on the selected type's requirements without
- * hard-coding specific logic for each shape.</li>
- * <li><strong>Factory Contract:</strong> Acts as the dispatch key for the Domain Factory. The parameter keys
- * defined here represent the strict contract that input data must satisfy before object instantiation is attempted.</li>
- * </ul>
+ * Registry of supported geometric domain types.
+ * <p>
+ * Acts as the single source of truth for domain metadata, enabling dynamic UI generation
+ * and schema validation without hardcoding field names in the View layer.
+ * </p>
  */
 public enum DomainType {
 
-    // ------------------- ENUM CONSTANTS -------------------
+    // --- ENUM CONSTANTS (METADATA) ---
 
     /**
      * A circular domain defined by a single radius.
@@ -135,12 +128,8 @@ public enum DomainType {
     /**
      * Resolves a {@link DomainType} from its numeric menu identifier.
      *
-     * <p><strong>Functional Implementation:</strong></p>
-     * Utilizes the Stream API to filter the enum constants. Returns an {@link Optional} to enforce
-     * null-safety handling in the Controller layer when invalid IDs are provided.
-     *
      * @param id The numeric ID to lookup.
-     * @return An {@code Optional<DomainType>} containing the match, or empty if no match exists.
+     * @return An {@link Optional} containing the match, or empty if no match exists.
      */
     public static Optional<DomainType> fromMenuId(int id) {
         return Arrays.stream(DomainType.values())

@@ -1,61 +1,55 @@
 package org.agroplanner.inventory.controller;
 
+import org.agroplanner.access.model.Role;
+import org.agroplanner.access.model.User;
+import org.agroplanner.inventory.dao.PlantVarietyDAOContract;
 import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.inventory.model.PlantType;
-import org.agroplanner.inventory.view.InventoryViewContract;
+import org.agroplanner.inventory.model.PlantVarietySheet;
+import org.agroplanner.inventory.views.InventoryViewContract;
+import org.agroplanner.shared.exceptions.DataPersistenceException;
 import org.agroplanner.shared.exceptions.InvalidInputException;
 
+import java.util.List;
+import java.util.Optional;
+
 /**
- * Controller component responsible for orchestrating the inventory population workflow.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> MVC Controller. Acts as the mediator between the {@link InventoryViewContract} (UI)
- * and the {@link PlantInventory} (Model).</li>
- * <li><strong>Dependency Inversion:</strong> Dependencies are injected via the constructor using the
- * <em>Constructor Injection</em> pattern. This decouples the controller from specific View implementations
- * (e.g., Console vs. GUI) and facilitates Unit Testing via mocking.</li>
- * <li><strong>Workflow:</strong> Implements a synchronous "Wizard" pattern, guiding the user through
- * a sequential series of steps to populate the plant list.</li>
- * </ul>
+ * Controller component orchestrating the Inventory and Catalog management workflows.
+ * <p>
+ * This class acts as the mediator between the user interface (View) and the domain model,
+ * handling two distinct flows:
+ * <ol>
+ * <li><strong>Inventory Population:</strong> Selecting varieties and quantities for a simulation.</li>
+ * <li><strong>Catalog Management:</strong> Creating new varieties (Agronomist only).</li>
+ * </ol>
+ * </p>
  */
 public class InventoryConsoleController {
 
-    /**
-     * The abstract interface for user interaction.
-     */
+    private final static double MAX_RADIUS = 9999.0;
+
     private final InventoryViewContract view;
+    private final PlantVarietyDAOContract dao;
+    private final CatalogService catalogService;
 
     /**
-     * Constructs a new controller with the specified view implementation.
+     * Constructs the controller using Constructor Injection.
      *
-     * @param view The UI contract implementation (Dependency Injection).
+     * @param view The abstraction of the user interface.
+     * @param dao  The data access object injected by the system orchestrator.
      */
-    public InventoryConsoleController(InventoryViewContract view) {
+    public InventoryConsoleController(InventoryViewContract view, PlantVarietyDAOContract dao) {
         this.view = view;
+        this.dao = dao;
+        this.catalogService = new CatalogService(dao);
     }
 
+
     /**
-     * Executes the interactive inventory configuration wizard.
+     * Executes the interactive wizard to populate the simulation inventory.
      *
-     * <p><strong>Control Flow:</strong></p>
-     * Enters a conditional loop that persists until the user explicitly opts to stop adding items.
-     * Within each iteration, it:
-     * <ol>
-     * <li>Request data input from the View (Type, Quantity, Radius).</li>
-     * <li>Attempts to mutate the Model state.</li>
-     * <li>Provides feedback on the current inventory status.</li>
-     * </ol>
-     *
-     * <p><strong>Error Handling Strategy (Recovery Loop):</strong></p>
-     * Implements a <code>try-catch</code> block around the Model mutation. If the Model rejects the data
-     * (throwing {@link InvalidInputException}), the controller catches the error, instructs the View
-     * to display the error message, and restarts the loop iteration. This ensures the application
-     * remains stable and allows the user to correct their input without crashing the session.
-     *
-     * @param domainMaxRadius A contextual constraint from the main application, used to validate
-     * that plants do not physically exceed the available domain boundaries.
-     * @return A fully populated, validated {@link PlantInventory} instance ready for processing.
+     * @param domainMaxRadius The maximum allowable radius imposed by the selected field domain.
+     * @return A fully populated {@link PlantInventory} ready for the evolutionary engine.
      */
     public PlantInventory runInventoryWizard(double domainMaxRadius) {
         view.showWizardStart();
@@ -64,30 +58,104 @@ public class InventoryConsoleController {
 
         while (keepAdding) {
             try {
-                // 1. View Interaction
-                view.showAvailablePlants(PlantType.values());
-                PlantType type = view.askForPlantSelection(PlantType.values());
+                // 1. Category Selection
+                view.showAvailablePlantTypes(PlantType.values());
+                Optional<PlantType> typeOpt = view.askForPlantType(PlantType.values());
 
-                int quantity = view.askForQuantity(type);
-                double radius = view.askForRadius(type, domainMaxRadius);
+                // EXIT CONDITION: User selected "Back"
+                if (typeOpt.isEmpty()) {
+                    break;
+                }
 
-                // 2. Model Update (Deep Protection boundary)
-                // If inputs are invalid (logic bypassed in View), addEntry throws InvalidInputException.
-                inventory.addEntry(type, quantity, radius);
+                PlantType selectedType = typeOpt.get();
 
-                // 3. Feedback Loop
+                // 2. Data Retrieval
+                List<PlantVarietySheet> availableVarieties = dao.findByType(selectedType);
+
+                if (availableVarieties.isEmpty()) {
+                    view.showNoVarietiesFound(selectedType);
+                    continue;
+                }
+
+                // 3. Variety Selection
+                PlantVarietySheet selectedSheet = view.askForVarietySelection(availableVarieties);
+
+                // Constraint Check: Physical fit
+                if (selectedSheet.getMinDistance() > domainMaxRadius) {
+                    throw new InvalidInputException("Variety too large for this domain.");
+                }
+
+                // 4. Quantity Input
+                int quantity = view.askForQuantity(selectedSheet.getVarietyName());
+                inventory.addEntry(selectedSheet, quantity);
+
+                // 5. Feedback & Loop
                 view.showCurrentStatus(inventory.getTotalPopulationSize(), inventory.getMaxRadius());
-
-                // 4. Continuation Check
                 keepAdding = view.askIfAddMore();
 
-            } catch (InvalidInputException e) {
-                // Recoverable Error Boundary:
-                // Captures domain validation failures and bridges them back to the UI.
+            } catch (InvalidInputException | DataPersistenceException e) {
                 view.showErrorMessage(e.getMessage());
             }
         }
-
         return inventory;
+    }
+
+    /**
+     * Executes the Catalog Management workflow for authorized personnel.
+     *
+     * @param currentUser The user attempting to access the module.
+     */
+    public void runCatalogManager(User currentUser) {
+        if (currentUser.getRole() != Role.AGRONOMIST) {
+            view.showErrorMessage("Access Denied.");
+            return;
+        }
+
+        boolean keepCreating = true;
+        while (keepCreating) {
+            handleCreationFlow(currentUser);
+            keepCreating = view.askIfAddMore();
+        }
+    }
+
+    /**
+     * Orchestrates the creation of a single plant variety.
+     */
+    private void handleCreationFlow(User author) {
+        try {
+            view.showAvailablePlantTypes(PlantType.values());
+            Optional<PlantType> typeOpt = view.askForPlantType(PlantType.values());
+
+            if (typeOpt.isEmpty()) {
+                return;
+            }
+            PlantType type = typeOpt.get();
+
+            // The View handles format validation (Regex, Number parsing)
+            PlantVarietySheet newSheet = view.askForNewSheetData(type, MAX_RADIUS);
+            newSheet.setAuthor(author);
+
+            // Delegate to Service
+            if (catalogService.registerNewVariety(newSheet)) {
+                view.showSuccessMessage("New variety '" + newSheet.getVarietyName() + "' added to Catalog.");
+            } else {
+                view.showErrorMessage("Failed to save variety (Database rejected the operation).");
+            }
+
+        } catch (InvalidInputException e) {
+            view.showErrorMessage("Validation Error: " + e.getMessage());
+        } catch (DataPersistenceException e) {
+            view.showErrorMessage("Database Error: " + e.getMessage());
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Unknown Internal Error";
+            view.showErrorMessage("Critical Error: " + msg);
+        }
+    }
+
+    /**
+     * Delegates the visualization of the solution manifest to the view.
+     */
+    public void showSolutionManifest(List<PlantVarietySheet> sheets) {
+        view.displayDetailedManifest(sheets);
     }
 }

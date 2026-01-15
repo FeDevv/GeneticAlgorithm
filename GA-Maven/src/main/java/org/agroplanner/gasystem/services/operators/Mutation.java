@@ -119,7 +119,14 @@ public class Mutation {
 
                 // State Update:
                 // Since Point is immutable, we instantiate a new one.
-                Point newPoint = new Point(finalX, finalY, radius, type);
+                Point newPoint = new Point(
+                        finalX,
+                        finalY,
+                        radius,
+                        type,
+                        oldPoint.getVarietyId(),   // <--- PRESERVA ID
+                        oldPoint.getVarietyName()  // <--- PRESERVA NOME
+                );
                 individual.setChromosome(i, newPoint);
             }
         }

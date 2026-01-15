@@ -8,18 +8,11 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Central factory component responsible for the instantiation of concrete geometric domains.
- *
- * <p><strong>Architecture & Design:</strong></p>
- * <ul>
- * <li><strong>Pattern:</strong> Implements the <em>Parameterized Factory Method</em> pattern. It centralizes
- * the complex logic of converting raw configuration maps into strongly-typed {@link Domain} objects.</li>
- * <li><strong>SOLID Principles:</strong> Supports the <em>Open/Closed Principle (OCP)</em> partially (new shapes
- * require updating the switch, but clients remain unaffected) and the <em>Dependency Inversion Principle (DIP)</em>
- * by decoupling high-level controllers from concrete domain implementations.</li>
- * <li><strong>Singleton Strategy:</strong> Uses the <em>Initialization-on-demand holder idiom</em> (Bill Pugh)
- * to guarantee thread-safety and lazy initialization without the performance overhead of synchronized blocks.</li>
- * </ul>
+ * Central factory component for the instantiation of concrete geometric domains.
+ * <p>
+ * Implements the <strong>Parameterized Factory Method</strong> pattern to convert raw configuration maps
+ * into strongly-typed {@link Domain} objects, enforcing structural integrity before instantiation.
+ * </p>
  */
 public class DomainFactory {
 
@@ -27,7 +20,7 @@ public class DomainFactory {
      * Private constructor to strictly enforce the Singleton pattern.
      */
     private DomainFactory() {
-        // Stateless initialization
+        // Enforce Singleton
     }
 
     /**
@@ -54,27 +47,20 @@ public class DomainFactory {
     // ------------------- BUSINESS LOGIC -------------------
 
     /**
-     * Fabricates a specific {@link Domain} implementation based on the provided metadata and parameters.
+     * Fabricates a specific {@link Domain} implementation based on metadata and parameters.
      *
-     * <p><strong>Validation Pipeline:</strong></p>
-     * <ol>
-     * <li>Performs structural validation (presence of required keys) via {@link #validateParameters}.</li>
-     * <li>Delegates instantiation to the specific domain constructor.</li>
-     * <li>Domain constructors enforce deep semantic invariants (e.g., inner radius < outer radius).</li>
-     * </ol>
-     *
-     * @param type   The metadata descriptor indicating which concrete class to instantiate.
-     * @param params The configuration map containing the geometric values (e.g., "radius" -> 5.0).
-     * @return A new, fully initialized and validated instance of a {@link Domain} subclass.
-     * @throws InvalidInputException     If the provided map is missing required keys defined in {@link DomainType} or wrong values are entered.
-     * @throws DomainConstraintException If the parameters are present but numerically invalid (e.g., negative).
+     * @param type   The descriptor indicating which concrete class to instantiate.
+     * @param params The configuration map containing the geometric values.
+     * @return A new, fully initialized and validated {@link Domain} instance.
+     * @throws InvalidInputException     If required parameters are missing.
+     * @throws DomainConstraintException If parameters are present but numerically invalid (e.g., negative).
      */
     public Domain createDomain(DomainType type, Map<String, Double> params) {
 
-        // Phase 1: Pre-creation Validation (Fail-Fast)
+        // Phase 1: Fail-Fast Validation
         validateParameters(type, params);
 
-        // Phase 2: Instantiation (Switch Expression)
+        // Phase 2: Instantiation
         return switch (type) {
             case CIRCLE ->
                     new CircleDomain(params.get("radius"));
@@ -97,19 +83,10 @@ public class DomainFactory {
     }
 
     /**
-     * Internal helper to enforce the parameter contract defined by the {@link DomainType}.
-     *
-     * <p><strong>Checks Performed:</strong></p>
-     * <ul>
-     * <li><strong>Completeness:</strong> Ensures the map contains all keys listed in {@link DomainType#getRequiredParameters()}.</li>
-     * <li><strong>Non-Nullity:</strong> Ensures no value is null.</li>
-     * <li><strong>Positivity:</strong> Enforces the fundamental geometric rule that dimensions must be strictly positive.</li>
-     * </ul>
+     * Enforces the parameter contract defined by the {@link DomainType}.
      *
      * @param type   The domain type schema.
      * @param params The input parameters to validate.
-     * @throws InvalidInputException     If the schema contract is violated (missing keys).
-     * @throws DomainConstraintException If physical constraints are violated (negative values).
      */
     private void validateParameters(DomainType type, Map<String, Double> params) {
 
