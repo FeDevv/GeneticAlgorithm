@@ -161,7 +161,7 @@ public class SqlSolutionDAO implements SolutionDAOContract {
 
     @Override
     public Optional<LoadedSession> loadSolution(int solutionId) {
-        String sqlItems = "SELECT * FROM solution_items WHERE solution_id = ?";
+        String sqlItems = "SELECT coord_x, coord_y, radius, plant_type, variety_id, variety_name FROM solution_items WHERE solution_id = ?";
         String sqlHeader = "SELECT fitness, domain_id FROM solutions WHERE id = ?";
 
         List<Point> points = new ArrayList<>();

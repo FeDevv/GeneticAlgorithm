@@ -8,7 +8,6 @@ import org.agroplanner.inventory.model.PlantVarietySheet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Volatile implementation of the Plant Inventory.

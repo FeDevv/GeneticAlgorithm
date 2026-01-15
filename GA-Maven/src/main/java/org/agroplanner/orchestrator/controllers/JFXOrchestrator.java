@@ -25,6 +25,7 @@ import org.agroplanner.inventory.model.PlantInventory;
 import org.agroplanner.inventory.model.PlantVarietySheet;
 import org.agroplanner.persistence.controllers.PersistenceJFXController;
 import org.agroplanner.persistence.factories.AgroPersistenceFactory;
+import org.agroplanner.shared.exceptions.UIInitializationException;
 
 import java.io.IOException;
 import java.util.List;
@@ -194,7 +195,6 @@ public class JFXOrchestrator extends Application {
             controller.init(
                     evoService,
                     domain,
-                    inventory,
                     def,
                     // On Export Requested
                     solution -> goToExport(solution, domain, inventory),
@@ -295,6 +295,6 @@ public class JFXOrchestrator extends Application {
     }
 
     private void showFatalError(String msg, Exception e) {
-        throw new RuntimeException("CRITICAL UI ERROR: " + msg, e);
+        throw new UIInitializationException("CRITICAL UI ERROR: " + msg, e);
     }
 }

@@ -16,7 +16,7 @@ import org.agroplanner.domainsystem.model.Domain;
 import org.agroplanner.domainsystem.model.DomainDefinition;
 import org.agroplanner.gasystem.model.Individual;
 import org.agroplanner.gasystem.model.Point;
-import org.agroplanner.inventory.model.PlantInventory;
+import javafx.scene.control.ProgressIndicator;
 import org.agroplanner.persistence.controllers.PersistenceJFXController;
 import org.agroplanner.persistence.factories.AgroPersistenceFactory;
 import org.agroplanner.shared.exceptions.MaxAttemptsExceededException;
@@ -75,7 +75,7 @@ public class EvolutionJFXController {
      * 1. New Simulation: Sets up the UI for running the algorithm.
      * 2. Loaded Session: Sets up the UI for viewing an existing solution (Read-Only).
      */
-    public void init(EvolutionService service, Domain domain, PlantInventory inventory, DomainDefinition domainDef,
+    public void init(EvolutionService service, Domain domain, DomainDefinition domainDef,
                      Consumer<Individual> onExportRequested, AgroPersistenceFactory factory,
                      User user, boolean isDemoMode, Individual loadedSolution, Runnable onExit) {
 
@@ -169,7 +169,7 @@ public class EvolutionJFXController {
         startButton.setDisable(true);
         saveButton.setDisable(true);
         exportButton.setDisable(true);
-        progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+        progressBar.setProgress(ProgressIndicator.INDETERMINATE_PROGRESS);
         consoleArea.clear();
 
         // Start Background Task

@@ -109,7 +109,7 @@ public class ConsoleEvolutionView implements EvolutionViewContract {
     @Override
     public void printDetailedReport(Individual individual) {
         System.out.println("\n🧬 CHROMOSOME DETAILS (PHENOTYPE):");
-        System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
+        printSingleSeparator();
 
         // --- LOGICA SPOSTATA DAL FORMATTER ---
         StringBuilder sb = new StringBuilder();
@@ -138,8 +138,8 @@ public class ConsoleEvolutionView implements EvolutionViewContract {
         sb.append(String.format("└─────┴──────────────────────┴───────────┴───────────────────────────┘%n"));
         // -------------------------------------
 
-        System.out.print(sb); // Print directly
-        System.out.println("──────────────────────────────────────────────────────────────────────────────────────");
+        System.out.print(sb);
+        printSingleSeparator();
     }
 
     @Override

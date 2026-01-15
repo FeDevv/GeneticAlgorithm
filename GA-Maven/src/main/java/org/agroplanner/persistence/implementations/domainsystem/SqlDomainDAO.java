@@ -74,7 +74,7 @@ public class SqlDomainDAO implements DomainDAOContract {
 
     @Override
     public DomainDefinition load(int id) {
-        String sql = "SELECT * FROM domains WHERE id = ?";
+        String sql = "SELECT type, params FROM domains WHERE id = ?";
 
         Connection conn = DBConnection.getInstance().getConnection();
 

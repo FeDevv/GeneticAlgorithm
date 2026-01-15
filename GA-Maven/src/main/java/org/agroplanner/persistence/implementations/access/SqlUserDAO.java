@@ -90,7 +90,7 @@ public class SqlUserDAO implements UserDAOContract {
 
     @Override
     public User findByUsername(String username) {
-        String sql = "SELECT * FROM users WHERE username = ?";
+        String sql = "SELECT id, username, password, role, first_name, last_name, email, phone FROM users WHERE username = ?";
 
         Connection conn = DBConnection.getInstance().getConnection();
 

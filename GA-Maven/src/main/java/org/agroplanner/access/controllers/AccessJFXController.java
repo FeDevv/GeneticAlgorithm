@@ -47,6 +47,10 @@ public class AccessJFXController {
     @FXML private Label regStatusLabel;
     @FXML private Button regButton;
 
+    private static final String RedColorString = "-fx-text-fill: red;";
+    private static final String GreenColorString = "-fx-text-fill: green;";
+    private static final String OrangeColorString = "-fx-text-fill: orange;";
+
     /**
      * Dependency Injection method called by the Orchestrator immediately after loading the FXML.
      * <p>
@@ -85,7 +89,7 @@ public class AccessJFXController {
 
             if (user != null) {
                 // UI Feedback: Success
-                loginStatusLabel.setStyle("-fx-text-fill: green;");
+                loginStatusLabel.setStyle(GreenColorString);
                 loginStatusLabel.setText("Welcome back, " + user.getFirstName() + "!");
                 loginButton.setDisable(true);
 
@@ -99,12 +103,11 @@ public class AccessJFXController {
 
             } else {
                 // UI Feedback: Failure
-                loginStatusLabel.setStyle("-fx-text-fill: red;");
+                loginStatusLabel.setStyle(RedColorString);
                 loginStatusLabel.setText("Invalid credentials.");
             }
         } catch (Exception e) {
             loginStatusLabel.setText("System Error: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 
@@ -152,11 +155,11 @@ public class AccessJFXController {
             clearRegistrationFields();
         } catch (InvalidInputException | DuplicateUserException e) {
             // Domain errors (Validation/Duplication)
-            regStatusLabel.setStyle("-fx-text-fill: red;");
+            regStatusLabel.setStyle(RedColorString);
             regStatusLabel.setText(e.getMessage());
         } catch (Exception e) {
             // Unexpected technical errors
-            regStatusLabel.setStyle("-fx-text-fill: red;");
+            regStatusLabel.setStyle(RedColorString);
             regStatusLabel.setText("Database Error: " + e.getMessage());
         }
     }
@@ -171,7 +174,7 @@ public class AccessJFXController {
      * @param dto The user data waiting for approval.
      */
     private void runAgronomistSimulation(CredentialsDTO dto) {
-        regStatusLabel.setStyle("-fx-text-fill: orange;");
+        regStatusLabel.setStyle(OrangeColorString);
         regStatusLabel.setText("Contacting National Register...");
         regButton.setDisable(true); // Disable button during process
 
@@ -192,7 +195,7 @@ public class AccessJFXController {
 
         simulationTask.setOnSucceeded(e -> {
             regStatusLabel.textProperty().unbind(); // Unbind before setting text manually
-            regStatusLabel.setStyle("-fx-text-fill: green;");
+            regStatusLabel.setStyle(GreenColorString);
             regStatusLabel.setText("License Verified. Proceeding...");
 
             // Proceed to actual registration
@@ -202,7 +205,7 @@ public class AccessJFXController {
 
         simulationTask.setOnFailed(e -> {
             regStatusLabel.textProperty().unbind();
-            regStatusLabel.setStyle("-fx-text-fill: red;");
+            regStatusLabel.setStyle(RedColorString);
             regStatusLabel.setText("Connection to Register failed.");
             regButton.setDisable(false);
         });

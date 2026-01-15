@@ -38,6 +38,9 @@ public class DomainJFXController {
     // Maps parameter names (e.g., "width") to their generated input fields
     private final Map<String, TextField> activeInputFields = new HashMap<>();
 
+    private static final String RedColorString = "-fx-text-fill: red;";
+    private static final String GreenColorString = "-fx-text-fill: green;";
+
     /**
      * Initializes the controller with required services.
      *
@@ -124,7 +127,7 @@ public class DomainJFXController {
             service.createDomain(type, params);
 
             // 3. Success Workflow
-            feedbackLabel.setStyle("-fx-text-fill: green;");
+            feedbackLabel.setStyle(GreenColorString);
             feedbackLabel.setText("Domain configured successfully!");
             createButton.setDisable(true); // Prevent double submission
 
@@ -134,19 +137,19 @@ public class DomainJFXController {
             }
 
         } catch (NumberFormatException _) {
-            feedbackLabel.setStyle("-fx-text-fill: red;");
+            feedbackLabel.setStyle(RedColorString);
             feedbackLabel.setText("Input Error: Please enter valid numbers.");
         } catch (DomainConstraintException e) {
             // Semantic Errors (e.g., Rectangle with negative area)
-            feedbackLabel.setStyle("-fx-text-fill: red;");
+            feedbackLabel.setStyle(RedColorString);
             feedbackLabel.setText("Geometry Error: " + e.getMessage());
         } catch (InvalidInputException e) {
             // Validation Errors (e.g., Empty fields)
-            feedbackLabel.setStyle("-fx-text-fill: red;");
+            feedbackLabel.setStyle(RedColorString);
             feedbackLabel.setText("Missing Data: " + e.getMessage());
         } catch (Exception e) {
             // Unexpected Errors
-            feedbackLabel.setStyle("-fx-text-fill: red;");
+            feedbackLabel.setStyle(RedColorString);
             feedbackLabel.setText("System Error: " + e.getMessage());
         }
     }
