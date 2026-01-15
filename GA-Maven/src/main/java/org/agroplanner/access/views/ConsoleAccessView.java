@@ -13,6 +13,7 @@ import java.util.regex.Pattern;
  * for the authentication workflow.
  * </p>
  */
+@SuppressWarnings("java:S106")
 public class ConsoleAccessView implements AccessViewInterface {
 
     private final Scanner scanner;
