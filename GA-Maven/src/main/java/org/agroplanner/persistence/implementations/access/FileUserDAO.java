@@ -150,7 +150,7 @@ public class FileUserDAO implements UserDAOContract {
                         try {
                             int id = Integer.parseInt(parts[0]);
                             if (id > maxId) maxId = id;
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException _) {}
                     }
                 }
             }

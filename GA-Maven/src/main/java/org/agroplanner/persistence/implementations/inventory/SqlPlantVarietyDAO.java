@@ -187,7 +187,7 @@ public class SqlPlantVarietyDAO implements PlantVarietyDAOContract {
 
         try {
             p.setType(PlantType.valueOf(rs.getString("plant_type")));
-        } catch (IllegalArgumentException e) {
+        } catch (IllegalArgumentException _) {
             p.setType(PlantType.GENERIC);
         }
 

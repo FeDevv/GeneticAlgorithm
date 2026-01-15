@@ -65,16 +65,16 @@ public class AccessService {
         validateRegistrationData(dto);
 
         // 2. Uniqueness Check
-        if (userDAO.findByUsername(dto.username) != null) {
-            throw new DuplicateUserException("Username '" + dto.username + "' already taken.");
+        if (userDAO.findByUsername(dto.getUsername()) != null) {
+            throw new DuplicateUserException("Username '" + dto.getUsername() + "' already taken.");
         }
 
         // 3. Entity Creation (Builder)
-        User newUser = new User.Builder(dto.username, dto.password, dto.requestedRole)
-                .firstName(dto.firstName)
-                .lastName(dto.lastName)
-                .email(dto.email)
-                .phone(dto.phone)
+        User newUser = new User.Builder(dto.getUsername(), dto.getPassword(), dto.getRequestedRole())
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
+                .email(dto.getEmail())
+                .phone(dto.getPhone())
                 .build();
 
         // 4. Persistence
@@ -91,11 +91,11 @@ public class AccessService {
      * @throws InvalidInputException If any field fails the validation criteria.
      */
     private void validateRegistrationData(CredentialsDTO dto) throws InvalidInputException {
-        if (dto.username == null || dto.username.length() < 3)
+        if (dto.getUsername() == null || dto.getUsername().length() < 3)
             throw new InvalidInputException("Username must be at least 3 chars.");
-        if (dto.password == null || dto.password.length() < 4)
+        if (dto.getPassword() == null || dto.getPassword().length() < 4)
             throw new InvalidInputException("Password must be at least 4 chars.");
-        if (dto.requestedRole == null)
+        if (dto.getRequestedRole() == null)
             throw new InvalidInputException("Role is required.");
     }
 }

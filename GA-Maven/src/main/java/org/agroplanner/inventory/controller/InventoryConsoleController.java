@@ -26,7 +26,7 @@ import java.util.Optional;
  */
 public class InventoryConsoleController {
 
-    private final static double MAX_RADIUS = 9999.0;
+    private static final double MAX_RADIUS = 9999.0;
 
     private final InventoryViewContract view;
     private final PlantVarietyDAOContract dao;
@@ -62,39 +62,44 @@ public class InventoryConsoleController {
                 view.showAvailablePlantTypes(PlantType.values());
                 Optional<PlantType> typeOpt = view.askForPlantType(PlantType.values());
 
-                // EXIT CONDITION: User selected "Back"
-                if (typeOpt.isEmpty()) {
-                    break;
+                if (typeOpt.isPresent()) {
+                    // --- RAMO PRINCIPALE (Utente ha selezionato un tipo) ---
+                    PlantType selectedType = typeOpt.get();
+                    List<PlantVarietySheet> availableVarieties = dao.findByType(selectedType);
+
+                    if (!availableVarieties.isEmpty()) {
+                        // --- RAMO SUCCESSO (Ci sono varietà) ---
+
+                        // 3. Variety Selection
+                        PlantVarietySheet selectedSheet = view.askForVarietySelection(availableVarieties);
+
+                        // Constraint Check: Physical fit
+                        if (selectedSheet.getMinDistance() > domainMaxRadius) {
+                            throw new InvalidInputException("Variety too large for this domain.");
+                        }
+
+                        // 4. Quantity Input
+                        int quantity = view.askForQuantity(selectedSheet.getVarietyName());
+                        inventory.addEntry(selectedSheet, quantity);
+
+                        // 5. Feedback & Loop check
+                        view.showCurrentStatus(inventory.getTotalPopulationSize(), inventory.getMaxRadius());
+                        keepAdding = view.askIfAddMore();
+
+                    } else {
+                        // --- RAMO FALLIMENTO (Nessuna varietà nel DB) ---
+                        view.showNoVarietiesFound(selectedType);
+                        // Il loop ricomincia naturalmente senza 'continue'
+                    }
+
+                } else {
+                    // --- RAMO USCITA (Utente ha scelto "Indietro") ---
+                    keepAdding = false; // Sostituisce il 'break'
                 }
-
-                PlantType selectedType = typeOpt.get();
-
-                // 2. Data Retrieval
-                List<PlantVarietySheet> availableVarieties = dao.findByType(selectedType);
-
-                if (availableVarieties.isEmpty()) {
-                    view.showNoVarietiesFound(selectedType);
-                    continue;
-                }
-
-                // 3. Variety Selection
-                PlantVarietySheet selectedSheet = view.askForVarietySelection(availableVarieties);
-
-                // Constraint Check: Physical fit
-                if (selectedSheet.getMinDistance() > domainMaxRadius) {
-                    throw new InvalidInputException("Variety too large for this domain.");
-                }
-
-                // 4. Quantity Input
-                int quantity = view.askForQuantity(selectedSheet.getVarietyName());
-                inventory.addEntry(selectedSheet, quantity);
-
-                // 5. Feedback & Loop
-                view.showCurrentStatus(inventory.getTotalPopulationSize(), inventory.getMaxRadius());
-                keepAdding = view.askIfAddMore();
 
             } catch (InvalidInputException | DataPersistenceException e) {
                 view.showErrorMessage(e.getMessage());
+                // Il catch permette al loop di continuare naturalmente
             }
         }
         return inventory;

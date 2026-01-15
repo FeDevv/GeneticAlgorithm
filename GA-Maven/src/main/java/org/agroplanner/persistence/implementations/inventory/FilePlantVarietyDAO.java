@@ -34,14 +34,18 @@ public class FilePlantVarietyDAO implements PlantVarietyDAOContract {
     @Override
     public void initStorage() {
         try {
-            Path path = Paths.get("data");
-            if (!Files.exists(path)) {
-                Files.createDirectories(path);
+            // 1. Dir creation
+            Path directory = Paths.get("data");
+            if (!Files.exists(directory)) {
+                Files.createDirectories(directory);
             }
-            File file = new File(FILE_PATH);
-            if (!file.exists()) {
-                file.createNewFile();
+
+            // 2. File creation
+            Path filePath = Paths.get(FILE_PATH);
+            if (!Files.exists(filePath)) {
+                Files.createFile(filePath);
             }
+
         } catch (IOException e) {
             throw new DataPersistenceException("Critical Error: Unable to initialize Plant File Storage.", e);
         }

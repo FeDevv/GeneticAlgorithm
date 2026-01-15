@@ -79,7 +79,7 @@ public class DBConnection {
                 this.activeConnection.close();
             }
             this.activeConnection = null;
-        } catch (SQLException e) {
+        } catch (SQLException _) {
             // Quietly suppress closure errors during reconfiguration
         }
 

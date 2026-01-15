@@ -140,8 +140,8 @@ public class SqlSolutionDAO implements SolutionDAOContract {
             // E. Rollback on failure
             try {
                 conn.rollback();
-            } catch (SQLException ignored) {
-                // Ignoriamo errori durante il rollback
+            } catch (SQLException _) {
+                // ignore errors during rollback
             }
             throw new DataPersistenceException("Transaction Failed: " + e.getMessage(), e);
 
@@ -149,7 +149,7 @@ public class SqlSolutionDAO implements SolutionDAOContract {
             // F. Reset Connection State
             try {
                 conn.setAutoCommit(true);
-            } catch (SQLException e) {
+            } catch (SQLException _) {
                 System.err.println("Warning: Failed to reset auto-commit.");
             }
 
@@ -237,6 +237,6 @@ public class SqlSolutionDAO implements SolutionDAOContract {
     }
 
     private PlantType safePlantType(String s) {
-        try { return PlantType.valueOf(s); } catch (Exception e) { return PlantType.GENERIC; }
+        try { return PlantType.valueOf(s); } catch (Exception _) { return PlantType.GENERIC; }
     }
 }

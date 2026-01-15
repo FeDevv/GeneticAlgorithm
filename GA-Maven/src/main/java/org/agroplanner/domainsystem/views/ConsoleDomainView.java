@@ -122,7 +122,7 @@ public class ConsoleDomainView implements DomainViewContract {
     public void showSuccessMessage() {
         System.out.println("\n✅ DOMAIN CREATED SUCCESSFULLY.");
         printSingleSeparator();
-        try { Thread.sleep(500); } catch (Exception ignored) {}
+        try { Thread.sleep(500); } catch (Exception _) {}
     }
 
     @Override

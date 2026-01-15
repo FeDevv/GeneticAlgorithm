@@ -133,7 +133,7 @@ public class DomainJFXController {
                 onDomainCreated.accept(new DomainDefinition(type, params));
             }
 
-        } catch (NumberFormatException e) {
+        } catch (NumberFormatException _) {
             feedbackLabel.setStyle("-fx-text-fill: red;");
             feedbackLabel.setText("Input Error: Please enter valid numbers.");
         } catch (DomainConstraintException e) {
@@ -148,7 +148,6 @@ public class DomainJFXController {
             // Unexpected Errors
             feedbackLabel.setStyle("-fx-text-fill: red;");
             feedbackLabel.setText("System Error: " + e.getMessage());
-            e.printStackTrace();
         }
     }
 

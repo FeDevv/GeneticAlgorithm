@@ -95,7 +95,7 @@ public class ConsoleInventoryView implements InventoryViewContract {
 
                 System.out.println("❌ Invalid ID. Please try again.");
 
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException _) {
                 System.out.println("❌ Invalid input. Please enter a number.");
             }
         }
@@ -172,7 +172,7 @@ public class ConsoleInventoryView implements InventoryViewContract {
         sheet.setVarietyName(readString("Variety Name"));
 
         while (true) {
-            System.out.printf(Locale.US, "> %-20s (Max %.2f): ", "Min Distance (m)", maxDomainRadius);
+            System.out.printf(Locale.US, "> %-20s: ", "Min Distance (m)");
             if (scanner.hasNextDouble()) {
                 double val = scanner.nextDouble();
                 scanner.nextLine();
@@ -180,7 +180,7 @@ public class ConsoleInventoryView implements InventoryViewContract {
                     sheet.setMinDistance(val);
                     break;
                 }
-                System.out.println("  ⚠️  Invalid distance (Must be > 0 and fit in domain).");
+                System.out.println("  ⚠️  Invalid distance (Must be > 0 and fit in domain, < " + maxDomainRadius + ").");
             } else {
                 scanner.next();
                 System.out.println("  ❌ Not a number.");

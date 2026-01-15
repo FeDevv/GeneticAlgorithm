@@ -131,7 +131,7 @@ public class AccessJFXController {
                 regRoleCombo.getValue()
         );
 
-        if (dto.requestedRole == Role.AGRONOMIST) {
+        if (dto.getRequestedRole() == Role.AGRONOMIST) {
             // Agronomists require a simulated external validation (Async)
             runAgronomistSimulation(dto);
         } else {

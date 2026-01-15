@@ -116,7 +116,7 @@ public class PlantInventory {
             if (qty > 0) {
                 try {
                     inv.addEntry(sheet, qty);
-                } catch (InvalidInputException ignored) {
+                } catch (InvalidInputException _) {
                     // Suppress exceptions during reconstruction of validated data
                 }
             }

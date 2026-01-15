@@ -31,14 +31,16 @@ public class FileDomainDAO implements DomainDAOContract {
     @Override
     public void initStorage() {
         try {
-            Path path = Paths.get("data");
-            if (!Files.exists(path)) {
-                Files.createDirectories(path);
+            Path directory = Paths.get("data");
+            if (!Files.exists(directory)) {
+                Files.createDirectories(directory);
             }
-            File file = new File(FILE_PATH);
-            if (!file.exists()) {
-                file.createNewFile();
+
+            Path filePath = Paths.get(FILE_PATH);
+            if (!Files.exists(filePath)) {
+                Files.createFile(filePath);
             }
+
         } catch (IOException e) {
             throw new DataPersistenceException("Critical Error: Unable to initialize Domain File Storage.", e);
         }
@@ -111,7 +113,7 @@ public class FileDomainDAO implements DomainDAOContract {
             if (kv.length == 2) {
                 try {
                     map.put(kv[0], Double.parseDouble(kv[1]));
-                } catch (NumberFormatException ignored) {
+                } catch (NumberFormatException _) {
                     // Ignore malformed values
                 }
             }
@@ -133,7 +135,7 @@ public class FileDomainDAO implements DomainDAOContract {
                         try {
                             int id = Integer.parseInt(parts[0]);
                             if (id > maxId) maxId = id;
-                        } catch (NumberFormatException ignored) {}
+                        } catch (NumberFormatException _) {}
                     }
                 }
             }

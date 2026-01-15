@@ -108,7 +108,7 @@ public class ConsoleSystemView implements SystemViewContract {
         System.out.println("\n⛔ TASK ABORTED.");
         System.out.println("   Reason: " + reason);
         System.out.println("   Returning to dashboard...\n");
-        try { Thread.sleep(1200); } catch (Exception ignored) {}
+        try { Thread.sleep(1200); } catch (Exception _) {}
     }
 
     @Override
@@ -122,7 +122,7 @@ public class ConsoleSystemView implements SystemViewContract {
     @Override
     public void showLogoutMessage() {
         System.out.println("\n 🔒 Logging out...");
-        try { Thread.sleep(800); } catch (Exception ignored) {}
+        try { Thread.sleep(800); } catch (Exception _) {}
     }
 
     @Override
@@ -153,7 +153,7 @@ public class ConsoleSystemView implements SystemViewContract {
             // Consumes the previous newline and waits for a new one
             if(scanner.hasNextLine()) scanner.nextLine(); // flush
             scanner.nextLine(); // wait
-        } catch (Exception ignored) {}
+        } catch (Exception _) {}
     }
 
     @Override

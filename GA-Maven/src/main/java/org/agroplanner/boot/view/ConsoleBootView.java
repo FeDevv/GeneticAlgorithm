@@ -70,7 +70,7 @@ public class ConsoleBootView implements BootViewContract {
                     printConfirmation(selected);
                     return selected;
                 }
-            } catch (NumberFormatException ignored) {
+            } catch (NumberFormatException _) {
                 // Ignore parsing errors, loop again
             }
 
@@ -90,7 +90,7 @@ public class ConsoleBootView implements BootViewContract {
         try {
             // UX Pause: gives the user a moment to read
             Thread.sleep(800);
-        } catch (Exception ignored) {
+        } catch (Exception _) {
             Thread.currentThread().interrupt();
         }
     }

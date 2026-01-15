@@ -138,7 +138,7 @@ public class SqlUserDAO implements UserDAOContract {
         Role role;
         try {
             role = Role.valueOf(rs.getString("role"));
-        } catch (IllegalArgumentException | NullPointerException e) {
+        } catch (IllegalArgumentException | NullPointerException _) {
             // Fallback to safe default if DB contains invalid enum value
             role = Role.USER;
         }

@@ -335,7 +335,7 @@ public class InventoryJFXController {
                     s.setAuthor(currentUser);
 
                     return s;
-                } catch (NumberFormatException e) {
+                } catch (NumberFormatException _) {
                     return null; // Invalid number format
                 }
             }

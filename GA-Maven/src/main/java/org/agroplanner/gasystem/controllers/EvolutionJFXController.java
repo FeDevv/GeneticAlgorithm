@@ -176,9 +176,9 @@ public class EvolutionJFXController {
         EvolutionTask task = new EvolutionTask();
 
         // Redirect task messages to Console TextArea
-        task.messageProperty().addListener((obs, oldMsg, newMsg) -> {
-            consoleArea.appendText(newMsg + "\n");
-        });
+        task.messageProperty().addListener((obs, oldMsg, newMsg) ->
+            consoleArea.appendText(newMsg + "\n")
+        );
 
         task.setOnSucceeded(e -> {
             this.bestSolution = task.getValue();

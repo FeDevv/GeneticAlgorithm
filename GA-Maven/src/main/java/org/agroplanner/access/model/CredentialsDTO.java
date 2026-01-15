@@ -8,16 +8,17 @@ package org.agroplanner.access.model;
  * </p>
  */
 public class CredentialsDTO {
+
     // Core Authentication Data
-    public String username;
-    public String password;
+    private String username;
+    private String password;
 
     // Profile Data (Registration only)
-    public String firstName;
-    public String lastName;
-    public String email;
-    public String phone;
-    public Role requestedRole;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private String phone;
+    private Role requestedRole;
 
     public CredentialsDTO() { }
 
@@ -37,4 +38,27 @@ public class CredentialsDTO {
         this.phone = phone;
         this.requestedRole = role;
     }
+
+    // --- GETTERS & SETTERS (Generati per l'incapsulamento) ---
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public Role getRequestedRole() { return requestedRole; }
+    public void setRequestedRole(Role requestedRole) { this.requestedRole = requestedRole; }
 }

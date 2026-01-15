@@ -112,7 +112,7 @@ public class SqlDomainDAO implements DomainDAOContract {
             if (kv.length == 2) {
                 try {
                     map.put(kv[0], Double.parseDouble(kv[1]));
-                } catch (NumberFormatException ignored) {
+                } catch (NumberFormatException _) {
                     // Ignore malformed numbers to prevent crash during read
                 }
             }

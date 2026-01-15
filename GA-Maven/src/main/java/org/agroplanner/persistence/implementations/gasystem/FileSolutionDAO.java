@@ -105,7 +105,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
                     // Use filename hash as pseudo-ID for retrieval
                     int fakeId = f.getName().hashCode();
                     list.add(new SolutionMetadata(fakeId, titleRaw, date, fitness));
-                } catch (Exception e) {
+                } catch (Exception _) {
                     // Log but don't crash
                     System.err.println("Skipping malformed file: " + f.getName());
                 }
@@ -122,56 +122,60 @@ public class FileSolutionDAO implements SolutionDAOContract {
         File[] files = folder.listFiles();
         if (files == null) return Optional.empty();
 
-        File target = null;
-        for (File f : files) {
-            if (f.getName().hashCode() == solutionId) {
-                target = f;
-                break;
-            }
-        }
+        // search file comparing hash
+        Optional<File> targetOpt = java.util.Arrays.stream(files)
+                .filter(f -> f.getName().hashCode() == solutionId)
+                .findFirst();
 
-        if (target == null) return Optional.empty();
+        if (targetOpt.isEmpty()) return Optional.empty();
+        File target = targetOpt.get();
+
 
         List<Point> points = new ArrayList<>();
         double loadedFitness = 0.0;
-
-        // Default values
+        // default
         DomainType docType = DomainType.RECTANGLE;
         Map<String, Double> docParams = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(target))) {
             String line;
+
             while ((line = br.readLine()) != null) {
                 line = line.trim();
-                if (line.isEmpty()) continue;
 
-                // Header Parsing
-                if (line.startsWith("# Final Fitness:")) {
-                    loadedFitness = Double.parseDouble(line.split(":")[1].trim());
-                    continue;
-                }
-                // domain parsing
-                else if (line.startsWith("# DomainType:")) {
-                    try {
-                        docType = DomainType.valueOf(line.split(":")[1].trim());
-                    } catch (Exception ignored) {}
-                }
-                else if (line.startsWith("# DomainParams:")) {
-                    docParams = stringToMap(line.split(":")[1].trim());
-                }
+                if (!line.isEmpty()) {
+                    // if not empty, analyze
 
-                if (line.startsWith("#") || line.startsWith("VARIETY_ID")) continue;
+                    if (line.startsWith("#")) {
+                        // metadata
+                        if (line.startsWith("# Final Fitness:")) {
+                            loadedFitness = Double.parseDouble(line.split(":")[1].trim());
+                        }
+                        else if (line.startsWith("# DomainType:")) {
+                            try {
+                                docType = DomainType.valueOf(line.split(":")[1].trim());
+                            } catch (IllegalArgumentException _) {
+                                // ignore unkown type, use default
+                            }
+                        }
+                        else if (line.startsWith("# DomainParams:")) {
+                            docParams = stringToMap(line.split(":")[1].trim());
+                        }
+                        // if starts with # and reached here, it is a comment
 
-                // Data Parsing
-                String[] p = line.split(";");
-                if (p.length >= 6) {
-                    int vId = Integer.parseInt(p[0]);
-                    String vName = p[1];
-                    PlantType type = PlantType.valueOf(p[2]);
-                    double x = Double.parseDouble(p[3]);
-                    double y = Double.parseDouble(p[4]);
-                    double r = Double.parseDouble(p[5]);
-                    points.add(new Point(x, y, r, type, vId, vName));
+                    } else if (!line.startsWith("VARIETY_ID")) {
+                        // data
+                        String[] p = line.split(";");
+                        if (p.length >= 6) {
+                            int vId = Integer.parseInt(p[0]);
+                            String vName = p[1];
+                            PlantType type = PlantType.valueOf(p[2]);
+                            double x = Double.parseDouble(p[3]);
+                            double y = Double.parseDouble(p[4]);
+                            double r = Double.parseDouble(p[5]);
+                            points.add(new Point(x, y, r, type, vId, vName));
+                        }
+                    }
                 }
             }
 
@@ -200,7 +204,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
             if (kv.length == 2) {
                 try {
                     map.put(kv[0], Double.parseDouble(kv[1]));
-                } catch (NumberFormatException ignored) {}
+                } catch (NumberFormatException _) {}
             }
         }
         return map;
@@ -216,7 +220,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
                 }
                 limit++;
             }
-        } catch (Exception ignored) {}
+        } catch (Exception _) {}
         return 0.0;
     }
 }

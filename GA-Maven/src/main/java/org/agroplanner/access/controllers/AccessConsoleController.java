@@ -62,7 +62,7 @@ public class AccessConsoleController {
     private User handleLogin() {
         try {
             CredentialsDTO creds = view.askLoginDetails();
-            User user = service.login(creds.username, creds.password);
+            User user = service.login(creds.getUsername(), creds.getPassword());
 
             if (user != null) {
                 view.showSuccessMessage("Welcome back, " + user.getFullName());
@@ -83,7 +83,7 @@ public class AccessConsoleController {
         CredentialsDTO dto = view.askRegistrationDetails();
 
         // Specific UI workflow for Agronomists (Simulation)
-        if (dto.requestedRole == Role.AGRONOMIST) {
+        if (dto.getRequestedRole() == Role.AGRONOMIST) {
             view.showAgronomistValidationSequence();
         }
 

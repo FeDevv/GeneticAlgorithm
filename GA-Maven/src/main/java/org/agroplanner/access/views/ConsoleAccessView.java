@@ -134,14 +134,11 @@ public class ConsoleAccessView implements AccessViewInterface {
 
             if (input.isEmpty()) {
                 System.out.println("  ⚠️  Field cannot be empty.\n");
-                continue;
-            }
-
-            if (!pattern.matcher(input).matches()) {
+            } else if (!pattern.matcher(input).matches()) {
                 System.out.println("  ❌ " + errorMessage + "\n");
-                continue;
+            } else {
+                return input;
             }
-            return input;
         }
     }
 
@@ -168,7 +165,7 @@ public class ConsoleAccessView implements AccessViewInterface {
                 System.out.print(".");
             }
             Thread.sleep(400);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
         }
         System.out.println("\n[SYSTEM] ✅ LICENSE VERIFIED. Welcome, Doctor.\n");
