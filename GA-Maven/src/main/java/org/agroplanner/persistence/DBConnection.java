@@ -21,7 +21,7 @@ public class DBConnection {
 
     // Default credentials for H2 Embedded
     private static final String USER = "sa";
-    private static final String PASSWORD = "testPassword";
+    private static final String PASSWORD = "ISPW2025_2026";
     private static final String DISK_URL = "jdbc:h2:./agri_db";
 
     private DBConnection() {

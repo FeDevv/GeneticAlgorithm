@@ -35,8 +35,8 @@ public class PersistenceJFXController {
     private Consumer<LoadedSession> onLoadSuccess; // Callback to return loaded data
     private Stage stage;
 
-    private static final String RedColorString = "-fx-text-fill: red;";
-    private static final String BlackColorString = "-fx-text-fill: black;";
+    private static final String RED_COLOR_STRING = "-fx-text-fill: red;";
+    private static final String BLACK_COLOR_STRING = "-fx-text-fill: black;";
 
     // --- FXML INJECTIONS (Load View) ---
     @FXML private TableView<SolutionMetadata> solutionsTable;
@@ -92,7 +92,7 @@ public class PersistenceJFXController {
                 solutionsTable.setItems(FXCollections.observableArrayList(data));
             }
         } catch (Exception e) {
-            statusLabel.setStyle(RedColorString);
+            statusLabel.setStyle(RED_COLOR_STRING);
             statusLabel.setText("Database Error: " + e.getMessage());
         }
     }
@@ -103,7 +103,7 @@ public class PersistenceJFXController {
         if (selected == null) return;
 
         try {
-            statusLabel.setStyle(BlackColorString);
+            statusLabel.setStyle(BLACK_COLOR_STRING);
             statusLabel.setText("Loading data...");
 
             Optional<LoadedSession> sessionOpt = dao.loadSolution(selected.getId());
@@ -114,11 +114,11 @@ public class PersistenceJFXController {
                 }
                 stage.close();
             } else {
-                statusLabel.setStyle(RedColorString);
+                statusLabel.setStyle(RED_COLOR_STRING);
                 statusLabel.setText("Error: Solution not found or corrupted.");
             }
         } catch (DataPersistenceException e) {
-            statusLabel.setStyle(RedColorString);
+            statusLabel.setStyle(RED_COLOR_STRING);
             statusLabel.setText("Load Error: " + e.getMessage());
         }
     }
