@@ -14,6 +14,5 @@ public class Main {
 }
 
 // remove unused methods in credentialDTO
-// check inventoryconsolecontroller --> runinventorywizard if error occurs
-// check filedomaindao --> init if error occurs
-// check filesolutiondao --> loadSolution
+
+

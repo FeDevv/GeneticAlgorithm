@@ -18,6 +18,8 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -35,6 +37,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
     // Pattern: sol_u{USER_ID}_{TITLE}_{DATE}.csv
     private static final Pattern FILENAME_PATTERN = Pattern.compile("sol_u(\\d+)_(.*)_(\\d{8}_\\d{6})\\.csv");
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final Logger LOGGER = Logger.getLogger(FileSolutionDAO.class.getName());
 
     @Override
     public void initStorage() {
@@ -107,7 +110,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
                     list.add(new SolutionMetadata(fakeId, titleRaw, date, fitness));
                 } catch (Exception _) {
                     // Log but don't crash
-                    System.err.println("Skipping malformed file: " + f.getName());
+                    LOGGER.log(Level.WARNING, "Skipping malformed file: {0}", f.getName());
                 }
             }
         }
@@ -122,7 +125,7 @@ public class FileSolutionDAO implements SolutionDAOContract {
         File[] files = folder.listFiles();
         if (files == null) return Optional.empty();
 
-        // search file comparing hash
+        // search file using stream
         Optional<File> targetOpt = java.util.Arrays.stream(files)
                 .filter(f -> f.getName().hashCode() == solutionId)
                 .findFirst();
@@ -130,11 +133,9 @@ public class FileSolutionDAO implements SolutionDAOContract {
         if (targetOpt.isEmpty()) return Optional.empty();
         File target = targetOpt.get();
 
-
         List<Point> points = new ArrayList<>();
         double loadedFitness = 0.0;
-        // default
-        DomainType docType = DomainType.RECTANGLE;
+        DomainType docType = DomainType.RECTANGLE; // Default
         Map<String, Double> docParams = new HashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(target))) {
@@ -142,39 +143,25 @@ public class FileSolutionDAO implements SolutionDAOContract {
 
             while ((line = br.readLine()) != null) {
                 line = line.trim();
+                if (line.isEmpty()) continue; // Skip empty lines
 
-                if (!line.isEmpty()) {
-                    // if not empty, analyze
-
-                    if (line.startsWith("#")) {
-                        // metadata
-                        if (line.startsWith("# Final Fitness:")) {
-                            loadedFitness = Double.parseDouble(line.split(":")[1].trim());
-                        }
-                        else if (line.startsWith("# DomainType:")) {
-                            try {
-                                docType = DomainType.valueOf(line.split(":")[1].trim());
-                            } catch (IllegalArgumentException _) {
-                                // ignore unkown type, use default
-                            }
-                        }
-                        else if (line.startsWith("# DomainParams:")) {
-                            docParams = stringToMap(line.split(":")[1].trim());
-                        }
-                        // if starts with # and reached here, it is a comment
-
-                    } else if (!line.startsWith("VARIETY_ID")) {
-                        // data
-                        String[] p = line.split(";");
-                        if (p.length >= 6) {
-                            int vId = Integer.parseInt(p[0]);
-                            String vName = p[1];
-                            PlantType type = PlantType.valueOf(p[2]);
-                            double x = Double.parseDouble(p[3]);
-                            double y = Double.parseDouble(p[4]);
-                            double r = Double.parseDouble(p[5]);
-                            points.add(new Point(x, y, r, type, vId, vName));
-                        }
+                if (line.startsWith("#")) {
+                    // --- METADATA SECTION ---
+                    if (line.startsWith("# Final Fitness:")) {
+                        loadedFitness = parseFitness(line);
+                    }
+                    else if (line.startsWith("# DomainType:")) {
+                        docType = parseDomainType(line);
+                    }
+                    else if (line.startsWith("# DomainParams:")) {
+                        docParams = stringToMap(line.split(":")[1].trim());
+                    }
+                }
+                else if (!line.startsWith("VARIETY_ID")) {
+                    // --- DATA SECTION ---
+                    Point p = parsePointFromLine(line);
+                    if (p != null) {
+                        points.add(p);
                     }
                 }
             }
@@ -186,6 +173,43 @@ public class FileSolutionDAO implements SolutionDAOContract {
         } catch (Exception e) {
             throw new DataPersistenceException("Error reading solution file: " + target.getName(), e);
         }
+    }
+
+    // helper methods for loadSolution
+    private DomainType parseDomainType(String line) {
+        try {
+            return DomainType.valueOf(line.split(":")[1].trim());
+        } catch (IllegalArgumentException | ArrayIndexOutOfBoundsException _) {
+            return DomainType.RECTANGLE; // Fallback sicuro
+        }
+    }
+
+    // helper methods for loadSolution
+    private double parseFitness(String line) {
+        try {
+            return Double.parseDouble(line.split(":")[1].trim());
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException _) {
+            return 0.0;
+        }
+    }
+
+    // helper methods for loadSolution
+    private Point parsePointFromLine(String line) {
+        String[] p = line.split(";");
+        if (p.length >= 6) {
+            try {
+                int vId = Integer.parseInt(p[0]);
+                String vName = p[1];
+                PlantType type = PlantType.valueOf(p[2]);
+                double x = Double.parseDouble(p[3]);
+                double y = Double.parseDouble(p[4]);
+                double r = Double.parseDouble(p[5]);
+                return new Point(x, y, r, type, vId, vName);
+            } catch (IllegalArgumentException _) {
+                // Ignore malformed lines
+            }
+        }
+        return null;
     }
 
     // --- HELPER ---
@@ -204,7 +228,9 @@ public class FileSolutionDAO implements SolutionDAOContract {
             if (kv.length == 2) {
                 try {
                     map.put(kv[0], Double.parseDouble(kv[1]));
-                } catch (NumberFormatException _) {}
+                } catch (NumberFormatException _) {
+                    // ignore malformed sections
+                }
             }
         }
         return map;
@@ -220,7 +246,9 @@ public class FileSolutionDAO implements SolutionDAOContract {
                 }
                 limit++;
             }
-        } catch (Exception _) {}
+        } catch (Exception _) {
+            // ignore malforemd fitnesses
+        }
         return 0.0;
     }
 }

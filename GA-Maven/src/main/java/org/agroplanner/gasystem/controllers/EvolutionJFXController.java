@@ -193,11 +193,8 @@ public class EvolutionJFXController {
 
             // Enable post-processing actions
             saveButton.setDisable(false);
-            exportButton.setDisable(true); // Export enabled after save or explicit logic?
-            // Usually allow export if save isn't mandatory,
-            // but disabling Save ensures data isn't lost.
-            // Let's keep logic: User must save to DB? No, enable Export.
-            exportButton.setDisable(false); // Fix: allow export without saving to DB (optional)
+            exportButton.setDisable(true);
+
         });
 
         task.setOnFailed(e -> {
@@ -227,6 +224,7 @@ public class EvolutionJFXController {
                     // UI Callback on success
                     saveButton.setDisable(true);
                     saveButton.setText("Saved ✅");
+                    exportButton.setDisable(false);
                 }
         );
     }

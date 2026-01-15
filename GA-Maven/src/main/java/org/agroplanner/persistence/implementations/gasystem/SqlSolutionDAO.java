@@ -16,6 +16,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * JDBC implementation for storing Evolutionary Solutions.
@@ -32,6 +34,7 @@ import java.util.Optional;
 public class SqlSolutionDAO implements SolutionDAOContract {
 
     private final DomainDAOContract domainDAO;
+    private static final Logger LOGGER = Logger.getLogger(SqlSolutionDAO.class.getName());
 
     /**
      * @param domainDAO Used to delegate the persistence of geometric data.
@@ -119,8 +122,8 @@ public class SqlSolutionDAO implements SolutionDAOContract {
 
             // C. Items Batch Insert
             try (PreparedStatement pstmt = conn.prepareStatement(insertItem)) {
+                pstmt.setInt(1, solutionId);
                 for (Point p : solution.getChromosomes()) {
-                    pstmt.setInt(1, solutionId);
                     pstmt.setInt(2, p.getVarietyId());
                     pstmt.setString(3, p.getVarietyName());
                     pstmt.setString(4, p.getType().name());
@@ -149,8 +152,8 @@ public class SqlSolutionDAO implements SolutionDAOContract {
             // F. Reset Connection State
             try {
                 conn.setAutoCommit(true);
-            } catch (SQLException _) {
-                System.err.println("Warning: Failed to reset auto-commit.");
+            } catch (SQLException e) {
+                LOGGER.log(Level.WARNING, "Warning: Failed to reset auto-commit.", e);
             }
 
         }

@@ -129,19 +129,33 @@ public class FileDomainDAO implements DomainDAOContract {
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                if (!line.trim().isEmpty()) {
-                    String[] parts = line.split(FIELD_SEPARATOR);
-                    if (parts.length > 0) {
-                        try {
-                            int id = Integer.parseInt(parts[0]);
-                            if (id > maxId) maxId = id;
-                        } catch (NumberFormatException _) {}
-                    }
+
+                int id = extractIdFromLine(line);
+
+                if (id > maxId) {
+                    maxId = id;
                 }
             }
         } catch (IOException e) {
             throw new DataPersistenceException("Error generating ID for domain.", e);
         }
         return maxId + 1;
+    }
+
+    /**
+     * Helper method to retrieve ID, -1 if line is invalid
+     */
+    private int extractIdFromLine(String line) {
+        if (line.trim().isEmpty()) return -1;
+
+        String[] parts = line.split(FIELD_SEPARATOR);
+        if (parts.length > 0) {
+            try {
+                return Integer.parseInt(parts[0]);
+            } catch (NumberFormatException _) {
+                // ignore malformed IDs
+            }
+        }
+        return -1;
     }
 }

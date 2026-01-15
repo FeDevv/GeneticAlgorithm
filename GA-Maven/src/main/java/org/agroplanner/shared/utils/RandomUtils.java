@@ -61,7 +61,7 @@ public class RandomUtils {
                     "Cannot select %d unique indices from a range of %d.", n, maxExclusive));
         }
 
-        Set<Integer> uniqueIndices = new HashSet<>(n);
+        Set<Integer> uniqueIndices = HashSet.newHashSet(n);
         ThreadLocalRandom currentRandom = ThreadLocalRandom.current();
 
         while (uniqueIndices.size() < n) {

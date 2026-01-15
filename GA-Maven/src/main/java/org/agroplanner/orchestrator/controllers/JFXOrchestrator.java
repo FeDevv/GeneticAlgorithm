@@ -295,6 +295,6 @@ public class JFXOrchestrator extends Application {
     }
 
     private void showFatalError(String msg, Exception e) {
-        System.err.println("CRITICAL UI ERROR: " + msg);
+        throw new RuntimeException("CRITICAL UI ERROR: " + msg, e);
     }
 }

@@ -45,7 +45,7 @@ public class MemoryPlantVarietyDAO implements PlantVarietyDAOContract {
     public List<PlantVarietySheet> findByType(PlantType type) {
         return memoryDb.stream()
                 .filter(p -> p.getType() == type)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     @Override
@@ -62,6 +62,6 @@ public class MemoryPlantVarietyDAO implements PlantVarietyDAOContract {
     public List<PlantVarietySheet> findAllByIds(Set<Integer> ids) {
         return memoryDb.stream()
                 .filter(p -> ids.contains(p.getId()))
-                .collect(Collectors.toList());
+                .toList();
     }
 }

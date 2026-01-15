@@ -27,7 +27,7 @@ public abstract class AgroPersistenceFactory {
      * depends on the former.
      * </p>
      */
-    public AgroPersistenceFactory() {
+    protected AgroPersistenceFactory() {
         this.userDAO = createUserDAO();
         this.plantDAO = createPlantDAO();
         this.domainDAO = createDomainDAO();

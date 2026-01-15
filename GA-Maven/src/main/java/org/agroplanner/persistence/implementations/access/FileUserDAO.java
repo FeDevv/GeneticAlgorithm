@@ -141,23 +141,39 @@ public class FileUserDAO implements UserDAOContract {
 
     private int generateNewId() {
         int maxId = 0;
+
         try (BufferedReader reader = new BufferedReader(new FileReader(FILE_PATH))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 if (!line.trim().isEmpty()) {
-                    String[] parts = line.split(SEPARATOR);
-                    if (parts.length > 0) {
-                        try {
-                            int id = Integer.parseInt(parts[0]);
-                            if (id > maxId) maxId = id;
-                        } catch (NumberFormatException _) {}
+
+                    int foundId = parseIdFromLine(line);
+
+                    if (foundId > maxId) {
+                        maxId = foundId;
                     }
                 }
             }
         } catch (IOException e) {
             throw new DataPersistenceException("Unable to generate new ID: Storage access failed.", e);
         }
+
         return maxId + 1;
+    }
+
+    /**
+     * helper method. Tries to parse ID from given edrow
+     */
+    private int parseIdFromLine(String line) {
+        try {
+            String[] parts = line.split(SEPARATOR);
+            if (parts.length > 0) {
+                return Integer.parseInt(parts[0]);
+            }
+        } catch (NumberFormatException _) {
+            // ignore malforemd lines
+        }
+        return -1;
     }
 
     /**

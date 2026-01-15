@@ -10,6 +10,8 @@ import org.agroplanner.persistence.factories.AgroPersistenceFactory;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 /**
@@ -24,6 +26,7 @@ import java.util.Scanner;
  * </p>
  */
 public class SystemOrchestrator {
+    private static final Logger LOGGER = Logger.getLogger(SystemOrchestrator.class.getName());
 
     public void run() {
         // 1. BOOT SEQUENCE
@@ -37,7 +40,7 @@ public class SystemOrchestrator {
         try {
             persistenceService.initialize(config);
         } catch (Exception e) {
-            System.err.println("FATAL ERROR: Persistence Initialization failed -> " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "FATAL ERROR: Persistence Initialization failed", e);
             return;
         }
 
@@ -54,22 +57,17 @@ public class SystemOrchestrator {
             factory.getPlantDAO().initStorage();
             factory.getSolutionDAO().initStorage();
         } catch (DataPersistenceException e) {
-            System.err.println("FATAL STARTUP ERROR (Storage Init): " + e.getMessage());
+            LOGGER.log(Level.SEVERE, "FATAL STARTUP ERROR (Storage Init)", e);
             return;
         }
 
-        //System.out.println(" [KERNEL] System Engine Loaded: " + config.getPersistenceType());
-
         // 5. RUNTIME DISPATCH
         if (config.isGuiActive()) {
-            System.out.println(" [KERNEL] Launching JavaFX Environment...");
-            // Passiamo le dipendenze staticamente prima di lanciare
+            LOGGER.info("[KERNEL] Launching JavaFX Environment...");
             JFXOrchestrator.launchApp(factory, domainService, exportService);
         } else {
             new CLIOrchestrator(factory, domainService, exportService).run();
         }
 
-        // Boot scanner is not closed here because CLIOrchestrator manages its own System.in stream
-        // or reuses the stream. In CLI apps, closing System.in is usually final.
     }
 }
