@@ -1,7 +1,6 @@
 package org.agroplanner.persistence;
 
 import org.agroplanner.boot.model.PersistenceType;
-import org.agroplanner.persistence.implementations.gasystem.SqlSolutionDAO;
 import org.agroplanner.shared.exceptions.DataPersistenceException;
 
 import java.io.IOException;
