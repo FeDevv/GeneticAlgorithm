@@ -40,7 +40,6 @@ public class ConsoleInventoryView implements InventoryViewContract {
     @Override
     public void showWizardStart() {
         System.out.println("\n");
-        // ASCII ART: INVENTORY
         System.out.println("██╗███╗   ██╗██╗   ██╗███████╗███╗   ██╗████████╗ ██████╗ ██████╗ ██╗   ██╗");
         System.out.println("██║████╗  ██║██║   ██║██╔════╝████╗  ██║╚══██╔══╝██╔═══██╗██╔══██╗╚██╗ ██╔╝");
         System.out.println("██║██╔██╗ ██║██║   ██║█████╗  ██╔██╗ ██║   ██║   ██║   ██║██████╔╝ ╚████╔╝ ");
@@ -56,13 +55,11 @@ public class ConsoleInventoryView implements InventoryViewContract {
     @Override
     public void showAvailablePlantTypes(PlantType[] types) {
         System.out.println("\nSELECT PLANT CATEGORY:");
-        // Header Tabella
         System.out.println("┌─────┬──────────────────────────┬──────┐");
         System.out.println("│ ID  │ CATEGORY NAME            │ ICON │");
         System.out.println("├─────┼──────────────────────────┼──────┤");
 
         for (PlantType type : types) {
-            // Allineamento preciso: %-3d | %-24s | %-4s
             System.out.printf("│ %-3d │ %-24s │  %s  │%n",
                     type.getId(),
                     type.name(),

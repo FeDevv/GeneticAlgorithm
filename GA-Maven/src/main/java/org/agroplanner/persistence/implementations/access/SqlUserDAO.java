@@ -118,7 +118,6 @@ public class SqlUserDAO implements UserDAOContract {
              ResultSet rs = stmt.executeQuery(countSql)) {
 
             if (rs.next() && rs.getInt(1) == 0) {
-                // AGGIORNATO CON BUILDER
                 User admin = new User.Builder("admin", "admin", Role.ADMINISTRATOR)
                         .firstName("System")
                         .lastName("Admin")

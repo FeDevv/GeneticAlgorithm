@@ -19,13 +19,10 @@ public class SolutionMetadata {
         this.fitness = fitness;
     }
 
-    // --- GETTERS (Fondamentali per l'accesso esterno) ---
+    // --- GETTERS ---
     public int getId() { return id; }
     public String getTitle() { return title; }
-
-    // QUESTO era quello che mancava e causava l'errore:
     public LocalDateTime getCreationDate() { return creationDate; }
-
     public double getFitness() { return fitness; }
 
     @Override

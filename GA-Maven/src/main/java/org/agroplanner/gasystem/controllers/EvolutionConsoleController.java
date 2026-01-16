@@ -114,8 +114,8 @@ public class EvolutionConsoleController {
         // ==================================================================================
         // STEP 4: CRITICAL FAILURE (Exhausted Strategy)
         // ==================================================================================
-        // If we reach this point, the probabilistic recovery failed N times.
-        // We act as a Gateway: throwing a checked exception forces the MainController
+        // If this point is reached, the probabilistic recovery failed N times.
+        // acting as a Gateway: throwing a checked exception forces the MainController
         // to handle the "Session Abort" flow cleanly.
         String failureDetails = String.format(
                 "Converge failed after %d attempts (%.2fs).%n   -> Best invalid fitness found: %.6f",

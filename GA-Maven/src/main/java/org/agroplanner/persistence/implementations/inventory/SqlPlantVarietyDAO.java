@@ -27,7 +27,7 @@ public class SqlPlantVarietyDAO implements PlantVarietyDAOContract {
      * Prevents the "N+1 Selects" problem when loading lists of plants.
      */
     private static final String BASE_QUERY =
-            "SELECT pv.*, u.first_name, u.last_name, u.email, u.phone " + // <--- Aggiunto u.phone
+            "SELECT pv.*, u.first_name, u.last_name, u.email, u.phone " +
                     "FROM plant_varieties pv " +
                     "JOIN users u ON pv.author_id = u.id ";
 
@@ -179,7 +179,7 @@ public class SqlPlantVarietyDAO implements PlantVarietyDAOContract {
         return list;
     }
 
-    // --- HELPER PRIVATI ---
+    // --- HELPER ---
 
     private PlantVarietySheet mapRowToPlant(ResultSet rs) throws SQLException {
         PlantVarietySheet p = new PlantVarietySheet();

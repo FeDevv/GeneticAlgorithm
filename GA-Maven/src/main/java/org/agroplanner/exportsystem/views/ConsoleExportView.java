@@ -42,7 +42,6 @@ public class ConsoleExportView implements ExportViewContract {
     @Override
     public void showAvailableExports(List<ExportType> availableTypes) {
         System.out.println("\n");
-        // ASCII ART: EXPORT SYSTEM
         System.out.println("███████╗██╗  ██╗██████╗  ██████╗ ██████╗ ████████╗");
         System.out.println("██╔════╝╚██╗██╔╝██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝");
         System.out.println("█████╗   ╚███╔╝ ██████╔╝██║   ██║██████╔╝   ██║   ");

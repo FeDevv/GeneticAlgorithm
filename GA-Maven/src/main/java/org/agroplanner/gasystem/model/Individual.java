@@ -145,8 +145,6 @@ public class Individual {
 
     @Override
     public String toString() {
-        // Versione pulita per i log: Fitness e numero di geni.
-        // L'hash code (es. 10e92f8f) è inutile per l'utente, via.
         return String.format(Locale.US, "INDIVIDUAL [Fitness: %.6f | Genes: %d]",
                 fitness, chromosomes.size());
     }

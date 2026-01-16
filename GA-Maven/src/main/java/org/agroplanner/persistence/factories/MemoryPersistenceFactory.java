@@ -21,7 +21,6 @@ public class MemoryPersistenceFactory extends AgroPersistenceFactory {
         return new MemoryPlantVarietyDAO();
     }
 
-    // NUOVO
     @Override
     protected SolutionDAOContract createSolutionDAO() {
         return new MemorySolutionDAO();

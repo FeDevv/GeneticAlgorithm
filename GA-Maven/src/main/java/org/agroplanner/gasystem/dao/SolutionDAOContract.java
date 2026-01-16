@@ -28,6 +28,5 @@ public interface SolutionDAOContract {
 
     List<SolutionMetadata> findByUser(User user);
 
-    // MODIFICA: Ritorna LoadedSession invece di Individual
     Optional<LoadedSession> loadSolution(int solutionId);
 }

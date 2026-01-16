@@ -63,14 +63,12 @@ public class InventoryConsoleController {
                 Optional<PlantType> typeOpt = view.askForPlantType(PlantType.values());
 
                 if (typeOpt.isPresent()) {
-                    // --- RAMO PRINCIPALE (Utente ha selezionato un tipo) ---
                     PlantType selectedType = typeOpt.get();
                     List<PlantVarietySheet> availableVarieties = dao.findByType(selectedType);
 
                     if (!availableVarieties.isEmpty()) {
-                        // --- RAMO SUCCESSO (Ci sono varietà) ---
 
-                        // 3. Variety Selection
+                        // 2. Variety Selection
                         PlantVarietySheet selectedSheet = view.askForVarietySelection(availableVarieties);
 
                         // Constraint Check: Physical fit
@@ -78,28 +76,24 @@ public class InventoryConsoleController {
                             throw new InvalidInputException("Variety too large for this domain.");
                         }
 
-                        // 4. Quantity Input
+                        // 3. Quantity Input
                         int quantity = view.askForQuantity(selectedSheet.getVarietyName());
                         inventory.addEntry(selectedSheet, quantity);
 
-                        // 5. Feedback & Loop check
+                        // 4. Feedback & Loop check
                         view.showCurrentStatus(inventory.getTotalPopulationSize(), inventory.getMaxRadius());
                         keepAdding = view.askIfAddMore();
 
                     } else {
-                        // --- RAMO FALLIMENTO (Nessuna varietà nel DB) ---
                         view.showNoVarietiesFound(selectedType);
-                        // Il loop ricomincia naturalmente senza 'continue'
                     }
 
                 } else {
-                    // --- RAMO USCITA (Utente ha scelto "Indietro") ---
-                    keepAdding = false; // Sostituisce il 'break'
+                    keepAdding = false;
                 }
 
             } catch (InvalidInputException | DataPersistenceException e) {
                 view.showErrorMessage(e.getMessage());
-                // Il catch permette al loop di continuare naturalmente
             }
         }
         return inventory;

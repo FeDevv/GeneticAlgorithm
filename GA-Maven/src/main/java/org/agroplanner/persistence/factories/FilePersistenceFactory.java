@@ -21,7 +21,6 @@ public class FilePersistenceFactory extends AgroPersistenceFactory {
         return new FilePlantVarietyDAO();
     }
 
-    // NUOVO
     @Override
     protected SolutionDAOContract createSolutionDAO() {
         return new FileSolutionDAO();

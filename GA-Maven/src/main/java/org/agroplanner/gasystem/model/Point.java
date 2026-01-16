@@ -27,7 +27,6 @@ public class Point {
     private final double radius;
     private final PlantType type;
 
-    // --- NUOVI CAMPI SPECIFICI ---
     private final int varietyId;
     private final String varietyName;
 
@@ -44,8 +43,6 @@ public class Point {
         this.y = y;
         this.radius = radius;
         this.type = type;
-
-        // Assegnazione nuovi campi
         this.varietyId = varietyId;
         this.varietyName = varietyName;
     }
@@ -57,7 +54,6 @@ public class Point {
     public double getRadius() { return radius; }
     public PlantType getType() { return type; }
 
-    // Nuovi Getter
     public int getVarietyId() { return varietyId; }
     public String getVarietyName() { return varietyName; }
 
@@ -65,7 +61,6 @@ public class Point {
 
     @Override
     public String toString() {
-        // Esempio output: TOMATO(San Marzano)[id=5]@(10.5, 20.0)
         return String.format("%s(%s)[id=%d]@(%.2f, %.2f)", type.name(), varietyName, varietyId, x, y);
     }
 }

@@ -178,14 +178,14 @@ public class SqlSolutionDAO implements SolutionDAOContract {
                 try(ResultSet rs = pstmt.executeQuery()) {
                     if(rs.next()) {
                         loadedFitness = rs.getDouble("fitness");
-                        domainId = rs.getInt("domain_id"); // <--- LEGGIAMO FK
+                        domainId = rs.getInt("domain_id");
                     } else {
                         return Optional.empty();
                     }
                 }
             }
 
-            // 2. Load Geometric Context (Lazy Loading via Delegate)
+            // 2. Load Geometric Context
             loadedDomain = domainDAO.load(domainId);
             if (loadedDomain == null) {
                 throw new DataPersistenceException("Consistency Error: Domain ID " + domainId + " not found for solution " + solutionId);

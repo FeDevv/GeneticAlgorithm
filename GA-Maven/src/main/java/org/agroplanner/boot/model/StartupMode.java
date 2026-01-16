@@ -21,7 +21,7 @@ public enum StartupMode {
 
     private final int id;
     private final String label;
-    private final PersistenceType persistenceType; // Solo il tipo (enum), NON la factory
+    private final PersistenceType persistenceType;
     private final boolean guiActive;
 
     StartupMode(int id, String label, PersistenceType persistenceType, boolean guiActive) {
